@@ -116,18 +116,37 @@ const stored = async (key: string) => JSON.parse((await AsyncStorage.getItem(key
 // land, and every later one is silently dropped, as if the process had died
 // before it. (All of the mock's writes go through these three.) Returns the
 // relaunch: storage works again and App mounts fresh over what was saved.
-function crashAfterWrites(writes: number) {
-  let left = writes;
+//
+// `at` is either a count of writes, or a match on the keys a write touches:
+// writes land up to and including the first matching one (or up to just
+// before it, with `before: true`), and every later write is dropped.
+function crashAfterWrites(at: number | ((keys: string[]) => boolean), { before = false } = {}) {
+  let crashed = false;
+  let written = 0;
+  const lands = (keys: string[]) => {
+    if (crashed) return false;
+    written += 1;
+    if (typeof at === 'number' ? written < at : !at(keys)) return true;
+    crashed = true; // this is the write the crash happens around
+    return !before;
+  };
   // The mock's methods are already jest.fn()s, so wrap their implementations
   // (spyOn would hand back the same mock) and put them back on relaunch.
   const restores = (['multiSet', 'multiRemove', 'multiMerge'] as const).map((method) => {
     const mock = (AsyncStorage as any)[method] as jest.Mock;
     const original = mock.getMockImplementation()!;
-    mock.mockImplementation((...args: any[]) => (left-- > 0 ? original(...args) : new Promise(() => {})));
+    mock.mockImplementation((...args: any[]) => {
+      // multiRemove takes keys; multiSet / multiMerge take [key, value] pairs.
+      const keys = (args[0] as any[]).map((entry) => (Array.isArray(entry) ? entry[0] : entry));
+      return lands(keys) ? original(...args) : new Promise(() => {});
+    });
     return () => mock.mockImplementation(original);
   });
   return async () => {
     restores.forEach((restore) => restore());
+    // A matched write that never came means the crash this test is about
+    // never happened — fail rather than pass without testing anything.
+    if (typeof at !== 'number' && !crashed) throw new Error('crashAfterWrites: no write matched the crash point');
     await act(async () => root.unmount());
     await renderApp();
   };
@@ -335,21 +354,40 @@ describe('a retry survives a relaunch and is paid for once', () => {
     await renderApp();
   };
 
-  it('a crash right after paying coins for a retry: the retry is kept exactly when it was paid for', async () => {
-    await renderApp();
-    await loseRound();
-    const relaunchAfterCrash = crashAfterWrites(1);
+  // The coin retry's grant: the one write that saves the new balance together
+  // with the retried round.
+  const isRetryGrant = (keys: string[]) => keys.includes('wordle:coins') && keys.includes('wordle:round');
+  const payCoinsForRetryThenRelaunch = async (relaunchAfterCrash: () => Promise<void>) => {
     await act(async () => {
       root.root.findByType(SecondChanceModal).props.onCoinRetry();
     });
     await advance(1000);
     await relaunchAfterCrash();
     await advance(1500);
+  };
 
-    const paid = (await stored('wordle:coins')) === 100 - WIN_FLOW_CONFIG.retryCoinPrice;
-    const offeredAgain = root.root.findAllByType(SecondChanceModal).length === 1;
-    expect(offeredAgain).toBe(!paid);
-    if (paid) expect(rowDisplay(0)).toEqual(['', '', 'ghost:ր', '', 'ghost:ն']); // in the retry
+  it('a crash right after the coin retry is saved: the relaunch is in the retry, charged exactly once', async () => {
+    await renderApp();
+    await loseRound();
+    await payCoinsForRetryThenRelaunch(crashAfterWrites(isRetryGrant));
+
+    expect(root.root.findAllByType(SecondChanceModal)).toHaveLength(0);
+    expect(rowDisplay(0)).toEqual(['', '', 'ghost:ր', '', 'ghost:ն']); // the retry board
+    expect(await stored('wordle:coins')).toBe(100 - WIN_FLOW_CONFIG.retryCoinPrice);
+
+    await loseRound(NO_OVERLAP_GUESSES); // the retry was used: no second offer
+    expect(root.root.findAllByType(SecondChanceModal)).toHaveLength(0);
+    expect(root.root.findAllByType(ResultModal)).toHaveLength(1);
+    expect(await stored('wordle:coins')).toBe(100 - WIN_FLOW_CONFIG.retryCoinPrice);
+  });
+
+  it('a crash just before the coin retry is saved: Try again is offered again, coins untouched', async () => {
+    await renderApp();
+    await loseRound();
+    await payCoinsForRetryThenRelaunch(crashAfterWrites(isRetryGrant, { before: true }));
+
+    expect(root.root.findAllByType(SecondChanceModal)).toHaveLength(1);
+    expect(await stored('wordle:coins')).toBe(100);
   });
 
   it('a relaunch mid-retry keeps the found letters as ghosts and allows no second retry', async () => {
@@ -406,6 +444,19 @@ describe('paid power-ups survive a relaunch', () => {
     await submitWord('դպրոց'); // դ պ ո ց gray
     expect(grayKeys()).toBe(4);
     await tapPowerUp('Darts'); // paid; no arrow has landed yet
+
+    await relaunch();
+    expect(grayKeys()).toBe(4 + 3);
+    expect(await stored('wordle:coins')).toBe(1000 - WIN_FLOW_CONFIG.dartsPrice);
+  });
+
+  it('Darts eliminations stay gray after a relaunch once the arrows have landed, charged once', async () => {
+    await renderApp();
+    await submitWord('դպրոց'); // դ պ ո ց gray
+    await tapPowerUp('Darts');
+    await advance(1000); // every arrow has landed
+    expect(grayKeys()).toBe(4 + 3);
+    await pressKey('ա'); // play goes on, so the round is saved again after the landing
 
     await relaunch();
     expect(grayKeys()).toBe(4 + 3);

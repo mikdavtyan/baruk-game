@@ -6,6 +6,6 @@
 
 **Status:** done
 
-- [ ] A crash right after paying coins for a retry, followed by a relaunch, shows the retry board, not the Try again offer, and the coins were charged once.
+- [x] A crash right after paying coins for a retry, followed by a relaunch, shows the retry board, not the Try again offer, and the coins were charged once.
 - [x] A relaunch mid-retry shows the found letters as ghosts, and losing again goes straight to the loss result.
 - [x] Retries by ad and by coins behave as today when nothing crashes.

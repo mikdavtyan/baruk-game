@@ -7,4 +7,4 @@
 **Status:** done
 
 - [x] A Hint ghost is still shown in the active row after a relaunch, and the coins were charged once.
-- [ ] Darts eliminations are still gray after a relaunch, including a relaunch before the arrows have landed, and the coins were charged once.
+- [x] Darts eliminations are still gray after a relaunch, including a relaunch before the arrows have landed, and the coins were charged once.

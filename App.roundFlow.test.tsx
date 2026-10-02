@@ -384,9 +384,13 @@ describe('power-ups', () => {
     expect(await stored('wordle:coins')).toBe(1000);
     expect(root.root.findByType(Board).props.ghostHints).toEqual([]);
 
-    // A full row: nowhere to show a ghost either.
+    // A full row: nowhere to show a ghost either. (The first toast is gone
+    // first, so the one asserted below can only come from this tap.)
+    await advance(2500);
+    expect(toastMessages()).toEqual([]);
     await pressKey('ե');
     await press('Hint');
+    expect(toastMessages()).toEqual([NO_ROOM_TOAST]);
     expect(await stored('wordle:coins')).toBe(1000);
     expect(root.root.findByType(Board).props.ghostHints).toEqual([]);
 
