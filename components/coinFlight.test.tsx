@@ -70,6 +70,7 @@ it('Next during the share-bonus flight lands the pill on the exact balance, with
         streak={0}
         bestStreak={0}
         onStreakChange={() => {}}
+        afterRetry={false}
       />
     );
   }

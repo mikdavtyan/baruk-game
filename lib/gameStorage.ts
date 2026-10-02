@@ -33,6 +33,9 @@ export type PendingWin = {
   guessCount: number; // 1-6, how many guesses it took
   step: 'reward' | 'result';
   emojiGrid: string; // precomputed share text's emoji grid, frozen at win time
+  // The win came after a loss retry: its coins are scaled by
+  // WIN_FLOW_CONFIG.retryWinRewardFactor. Optional — older records lack it.
+  afterRetry?: boolean;
 };
 
 export type PendingLoss = {

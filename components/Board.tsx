@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import Row, { RowData } from './Row';
+import Row, { GhostHint, RowData } from './Row';
 import { MAX_GUESSES } from '../constants/theme';
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
   tileSize?: number;
   activeRowIndex?: number | null; // Hint's ghosts only ever apply to this row
   activeCellIndex?: number | null; // next-input cursor position within activeRowIndex
-  ghostHints?: { index: number; letter: string }[];
+  ghostHints?: GhostHint[];
 };
 
 export default function Board({

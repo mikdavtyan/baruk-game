@@ -24,11 +24,18 @@ type Props = {
   isCurrentRow?: boolean; // this tile belongs to the in-progress guess row
   isActiveCell?: boolean; // this exact tile is the next-input cursor position
   // A ghost letter for this slot (a Hint, or after a retry a letter already
-  // found green) — a low-opacity green preview the player can type straight
-  // over. Only shown while this tile has no real letter of its own, so
-  // backspace brings it back.
+  // found green) — a preview the player can type straight over. Only shown
+  // while this tile has no real letter of its own, so backspace brings it back.
   ghostLetter?: string | null;
+  // Which ghost it is, so the player can tell them apart at a glance:
+  // 'hint' — a pale green letter (a Hint showed it);
+  // 'carried' — found green before the retry ("I found this"): the letter at
+  // full strength in the correct green, inside a correct-green outline. Not a
+  // fill, so it never reads as a scored tile; never yellow.
+  ghostKind?: GhostKind;
 };
+
+export type GhostKind = 'hint' | 'carried';
 
 // GHEA Grapalat capitals are 0.765em tall, so 0.58 x tile size gives capitals ~44% of the tile.
 const LETTER_SIZE_RATIO = 0.58;
@@ -64,6 +71,7 @@ export default function Tile({
   size = 56,
   isCurrentRow = false,
   ghostLetter = null,
+  ghostKind = 'hint',
 }: Props) {
   const { theme, color, textColor, reduceMotion } = useTheme();
   const [rotation] = useState(() => new Animated.Value(0)); // 0 = flat, 1 = edge-on
@@ -179,7 +187,9 @@ export default function Tile({
   const borderWidth = scored ? 0 : TILE_BORDER_WIDTH;
   const borderColor = scored
     ? colors.bg
-    : isCurrentRow || awaitingFlip
+    : showGhost && ghostKind === 'carried'
+      ? color('correct')
+      : isCurrentRow || awaitingFlip
       ? color('tileActiveBorder')
       : color('tileBorder');
 
@@ -234,11 +244,20 @@ export default function Tile({
           </Animated.View>
         </View>
       )}
-      {showGhost && (
-        <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.center, styles.ghost]}>
+      {showGhost && ghostKind === 'hint' && (
+        <View testID="ghost-hint" pointerEvents="none" style={[StyleSheet.absoluteFill, styles.center, styles.ghost]}>
           <Text style={[styles.letter, { fontSize, lineHeight: fontSize * FONT_LINE_HEIGHT_EM, color: theme.correct }]}>
             {letterLabel(ghostLetter!)}
           </Text>
+        </View>
+      )}
+      {showGhost && ghostKind === 'carried' && (
+        <View testID="ghost-carried" pointerEvents="none" style={[StyleSheet.absoluteFill, styles.center]}>
+          <Animated.Text
+            style={[styles.letter, { fontSize, lineHeight: fontSize * FONT_LINE_HEIGHT_EM, color: textColor('correct') }]}
+          >
+            {letterLabel(ghostLetter!)}
+          </Animated.Text>
         </View>
       )}
       {letter !== '' && (

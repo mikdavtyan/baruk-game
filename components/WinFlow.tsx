@@ -59,7 +59,17 @@ type Props = {
   streak: number;
   bestStreak: number;
   onStreakChange: (streak: { current: number; best: number }) => void;
+  // This win came after a loss retry (App's retriesUsed > 0) — it pays
+  // reduced coins. Frozen into the pending win, so a resume pays the same.
+  afterRetry: boolean;
 };
+
+// The reward's coins before any ad, by guess count — reduced (floored) for a
+// win after a loss retry. What RewardModal shows is exactly what it credits.
+function rewardBase(guessCount: number, afterRetry: boolean): number {
+  const full = WIN_FLOW_CONFIG.rewardsByGuessCount[Math.min(guessCount, 6) - 1] ?? 5;
+  return afterRetry ? Math.floor(full * WIN_FLOW_CONFIG.retryWinRewardFactor) : full;
+}
 
 export default function WinFlow({
   active,
@@ -76,6 +86,7 @@ export default function WinFlow({
   bestStreak,
   onStreakChange,
   resume,
+  afterRetry,
 }: Props) {
   const { theme, reduceMotion } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
@@ -144,7 +155,14 @@ export default function WinFlow({
     const text = pair[Math.round(Math.random())];
     const emojiGrid = buildEmojiGrid(submittedGuesses);
     const wordKey = secretWordTokens.join('');
-    const nextPending: PendingWin = { wordKey, secretWordTokens, guessCount, step: 'reward', emojiGrid };
+    const nextPending: PendingWin = {
+      wordKey,
+      secretWordTokens,
+      guessCount,
+      step: 'reward',
+      emojiGrid,
+      ...(afterRetry ? { afterRetry: true } : {}),
+    };
 
     let cancelled = false;
 
@@ -442,7 +460,7 @@ export default function WinFlow({
                 pileRef={pileMeasureRef}
                 // From the pending record, not the live board — after a
                 // relaunch-resume the board is empty.
-                baseReward={WIN_FLOW_CONFIG.rewardsByGuessCount[Math.min(pending?.guessCount ?? submittedGuesses.length, 6) - 1] ?? 5}
+                baseReward={rewardBase(pending?.guessCount ?? submittedGuesses.length, !!pending?.afterRetry)}
                 adMultiplier={WIN_FLOW_CONFIG.adRewardMultiplier}
                 onWatchAd={showRewardedAd}
                 onNext={handleRewardNext}

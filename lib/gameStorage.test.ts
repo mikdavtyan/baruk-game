@@ -41,6 +41,7 @@ const worstPendingWin: PendingWin = {
   guessCount: MAX_GUESSES,
   step: 'reward',
   emojiGrid: FULL_EMOJI_GRID,
+  afterRetry: true,
 };
 
 const worstRound: SavedRound = {

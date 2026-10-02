@@ -401,7 +401,7 @@ describe('power-ups', () => {
     expect(controls().hintDimmed).toBe(false);
     await press('Hint');
     expect(await stored('wordle:coins')).toBe(1000 - WIN_FLOW_CONFIG.hintPrice);
-    expect(root.root.findByType(Board).props.ghostHints).toEqual([{ index: 3, letter: 'ու' }]);
+    expect(root.root.findByType(Board).props.ghostHints).toEqual([{ index: 3, letter: 'ու', kind: 'hint' }]);
     expect(rowDisplay(2)).toEqual(['ա', 'բ', 'գ', 'ghost:ու', '']);
   });
 

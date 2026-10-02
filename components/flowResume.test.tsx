@@ -95,7 +95,7 @@ describe('WinFlow resume', () => {
     await seedWin(pending);
 
     await mount(
-      <WinFlow {...sharedProps()} boardAreaRef={createRef<View>()} active={!!seededWin} resume={seededWin} secretWordTokens={TODAYS_WORD} submittedGuesses={[]} onNextWord={jest.fn()} />,
+      <WinFlow {...sharedProps()} boardAreaRef={createRef<View>()} active={!!seededWin} resume={seededWin} secretWordTokens={TODAYS_WORD} submittedGuesses={[]} onNextWord={jest.fn()} afterRetry={false} />,
     );
 
     expect(root.root.findByType(RewardModal).props.baseReward).toBe(WIN_FLOW_CONFIG.rewardsByGuessCount[1]);

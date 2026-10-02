@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
-import Tile from './Tile';
+import Tile, { GhostKind } from './Tile';
 import { LetterState, TILE_REVEAL_STAGGER_MS, WORD_LENGTH } from '../constants/theme';
 import {
   CELEBRATION_TILE_JUMP_HEIGHT,
@@ -26,11 +26,14 @@ type Props = RowData & {
   // for the one row currently being typed; every other row gets null, which
   // also tells Tile "this isn't the in-progress row" for its border styling.
   activeIndex?: number | null;
-  // Hint's active ghost suggestions for this row, if any — several can
-  // coexist. Only meaningful for the in-progress row; Board only ever
-  // passes a non-empty array there.
-  ghostHints?: { index: number; letter: string }[];
+  // The ghosts for this row, if any — Hint ghosts and, after a retry, the
+  // letters carried over from the lost board; several can coexist. Only
+  // meaningful for the in-progress row; Board only ever passes a non-empty
+  // array there.
+  ghostHints?: GhostHint[];
 };
+
+export type GhostHint = { index: number; letter: string; kind: GhostKind };
 
 export default function Row({
   letters,
@@ -115,6 +118,7 @@ export default function Row({
               isCurrentRow={activeIndex !== null}
               isActiveCell={i === activeIndex}
               ghostLetter={ghostHints.find((g) => g.index === i)?.letter ?? null}
+              ghostKind={ghostHints.find((g) => g.index === i)?.kind}
             />
           </Animated.View>
         );

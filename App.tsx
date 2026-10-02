@@ -16,7 +16,7 @@ import BottomControls from './components/BottomControls';
 import Header from './components/Header';
 import Keyboard, { ALL_LETTER_TOKENS, computeKeyGeometry } from './components/Keyboard';
 import LossFlow from './components/LossFlow';
-import { RowData } from './components/Row';
+import { GhostHint, RowData } from './components/Row';
 import RulesModal from './components/RulesModal';
 import Toast from './components/Toast';
 import WinFlow from './components/WinFlow';
@@ -580,7 +580,12 @@ function AppInner() {
   // position found green in any guess of this word, plus unused hint ghosts.
   const greenPositions = correctPositionGhosts([...retainedGuesses, ...submittedGuesses]);
   const carriedGhosts = retainedGuesses.length > 0 ? greenPositions : [];
-  const ghosts = [...carriedGhosts, ...hintGhosts.filter((h) => !carriedGhosts.some((c) => c.index === h.index))];
+  // Each ghost knows its kind, so Tile can tell "I found this" (carried) from
+  // "a Hint showed this"; where both land on one position, carried wins.
+  const ghosts: GhostHint[] = [
+    ...carriedGhosts.map((g) => ({ ...g, kind: 'carried' as const })),
+    ...hintGhosts.filter((h) => !carriedGhosts.some((c) => c.index === h.index)).map((h) => ({ ...h, kind: 'hint' as const })),
+  ];
   // Hint only ever reveals a position that's still unknown: not green in any
   // guess of this word (the board before a retry included), not already a
   // ghost — and only in an empty cell, the only place a ghost is visible.
@@ -815,6 +820,7 @@ function AppInner() {
         coins={coins}
         onCoinsChange={setCoinsState}
         onNextWord={handleNewGame}
+        afterRetry={retriesUsed > 0}
         points={points}
         onPointsChange={setPointsState}
         streak={streak}

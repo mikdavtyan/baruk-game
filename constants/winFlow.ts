@@ -4,6 +4,9 @@ export const WIN_FLOW_CONFIG = {
   // Coin reward by guess count (index 0 = won in 1 guess, ... index 5 = won in 6).
   rewardsByGuessCount: [30, 25, 20, 15, 10, 5],
   adRewardMultiplier: 3,
+  // A win after a loss retry pays this share of the coins (floored), before
+  // the ad multiplier. Points and streak are unaffected.
+  retryWinRewardFactor: 0.5,
   shareBonus: 200,
   // ՄԻԱՎՈՐՆԵՐ (points) awarded on a win, by guess count — (7 - guesses) * 10,
   // same index convention as rewardsByGuessCount above.
