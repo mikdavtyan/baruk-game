@@ -65,7 +65,7 @@ export const AD_FAKE_LOAD_MS = 900; // TODO: replace with the real ad SDK's own 
 
 // TODO: this app has no real public URL/listing yet — replace with the
 // actual store link or web URL before shipping the share feature.
-export const GAME_SHARE_URL = 'https://example.com/barbyte';
+export const GAME_SHARE_URL = 'https://example.com/baruk';
 
 // ---------------------------------------------------------------------------
 // Loss flow (idle -> lossMoment -> secondChance -> retry|lossResult) — see

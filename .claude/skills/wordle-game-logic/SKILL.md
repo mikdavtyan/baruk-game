@@ -1,6 +1,6 @@
 ---
 name: wordle-game-logic
-description: Armenian Wordle rules and App.tsx game state in hy-wordle. Use when touching typing/backspace/submit, evaluateGuess, keyboard key colors, the "ու" token, validWords/playableWords, the secret word and its shuffled word bag, Hint or Darts power-ups, New Game vs same-word loss retry, or debugging any gameplay bug.
+description: Armenian Wordle rules and App.tsx game state in Baruk. Use when touching typing/backspace/submit, evaluateGuess, keyboard key colors, the "ու" token, validWords/playableWords, the secret word and its shuffled word bag, Hint or Darts power-ups, New Game vs same-word loss retry, or debugging any gameplay bug.
 ---
 
 # Game logic

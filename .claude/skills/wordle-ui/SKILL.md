@@ -1,6 +1,6 @@
 ---
 name: wordle-ui
-description: Visual conventions for hy-wordle. Covers theming through useTheme().color(), React Native Animated patterns, coupled animation-timing constants, reduced motion, measured on-screen positions for overlays and coin/arrow flights, keyboard/board layout math, Armenian text rendering and the GHEA Grapalat font, and the game-icon art style. Use for any component, styling, animation, layout or icon work.
+description: Visual conventions for Baruk. Covers theming through useTheme().color(), React Native Animated patterns, coupled animation-timing constants, reduced motion, measured on-screen positions for overlays and coin/arrow flights, keyboard/board layout math, Armenian text rendering and the GHEA Grapalat font, and the game-icon art style. Use for any component, styling, animation, layout or icon work.
 ---
 
 # UI & animation

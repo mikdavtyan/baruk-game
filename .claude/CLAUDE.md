@@ -1,4 +1,4 @@
-# hy-wordle — ԲԱՌԲԱՅԹ, an Armenian Wordle
+# Baruk — an Armenian Wordle
 
 Expo SDK 57 · React Native 0.86 · React 19 · TypeScript strict. One screen, no router, no backend, no auth.
 `index.ts` → `App.tsx` (`AppInner` owns all game state) → `components/` (presentational, plus the two end-of-round orchestrators `WinFlow`/`LossFlow`). Pure logic in `lib/`, tunables in `constants/`. The only persistence is AsyncStorage, through `lib/gameStorage.ts`.

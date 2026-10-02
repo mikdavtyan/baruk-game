@@ -16,5 +16,5 @@ export function buildEmojiGrid(guesses: { states: LetterState[] }[]): string {
 // `result` is the guess count (1-6) for a win, or the literal 'X' for a loss
 // — same convention real Wordle uses for its own share text.
 export function buildShareText(result: number | 'X', emojiGrid: string): string {
-  return `ԲԱՌԲԱՅԹ ${result}/6\n${emojiGrid}\n${GAME_SHARE_URL}`;
+  return `Baruk ${result}/6\n${emojiGrid}\n${GAME_SHARE_URL}`;
 }

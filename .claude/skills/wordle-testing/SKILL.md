@@ -1,6 +1,6 @@
 ---
 name: wordle-testing
-description: How to write, run and debug tests in hy-wordle (jest-expo + react-test-renderer). Covers rendering the full App or a single flow, the mocks they need, fake timers with awaited setTimeout chains, finding keys by Armenian accessibility labels, pinning the secret word through the word bag, and which warnings are known noise. Use when adding or fixing tests, or when verifying a change.
+description: How to write, run and debug tests in Baruk (jest-expo + react-test-renderer). Covers rendering the full App or a single flow, the mocks they need, fake timers with awaited setTimeout chains, finding keys by Armenian accessibility labels, pinning the secret word through the word bag, and which warnings are known noise. Use when adding or fixing tests, or when verifying a change.
 ---
 
 # Testing

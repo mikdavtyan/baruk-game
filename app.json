@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "hy-wordle",
-    "slug": "hy-wordle",
+    "name": "Baruk",
+    "slug": "baruk",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

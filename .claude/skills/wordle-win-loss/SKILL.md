@@ -1,6 +1,6 @@
 ---
 name: wordle-win-loss
-description: End-of-round flows and economy in hy-wordle. Covers the WinFlow/LossFlow step machines, the reward, second-chance and result modals, coins, points (ՄԻԱՎՈՐՆԵՐ), streaks, loss retries, the share bonus, the rewarded-ad and leaderboard stubs, and AsyncStorage persistence and app-relaunch resume through lib/gameStorage.ts. Use when changing anything that happens after a round ends, or anything that is persisted.
+description: End-of-round flows and economy in Baruk. Covers the WinFlow/LossFlow step machines, the reward, second-chance and result modals, coins, points (ՄԻԱՎՈՐՆԵՐ), streaks, loss retries, the share bonus, the rewarded-ad and leaderboard stubs, and AsyncStorage persistence and app-relaunch resume through lib/gameStorage.ts. Use when changing anything that happens after a round ends, or anything that is persisted.
 ---
 
 # Win/loss flows & economy
