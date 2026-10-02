@@ -49,6 +49,7 @@ let root: any;
 beforeEach(async () => {
   jest.useFakeTimers();
   await AsyncStorage.clear();
+  await AsyncStorage.setItem('wordle:rulesSeen', 'true'); // past the first launch's rules popup
   await AsyncStorage.setItem('wordle:wordBag', JSON.stringify({ order: BAG_ORDER, pos: 0 }));
 });
 afterEach(() => {

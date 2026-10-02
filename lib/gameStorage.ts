@@ -18,6 +18,7 @@ const KEYS = {
   shareClaims: 'wordle:shareClaims',
   wordBag: 'wordle:wordBag',
   round: 'wordle:round',
+  rulesSeen: 'wordle:rulesSeen',
 } as const;
 
 export type Streak = { current: number; best: number };
@@ -156,6 +157,12 @@ export async function getRound(): Promise<SavedRound | null> {
     return null; // a malformed record is ignored, like any unreadable key
   }
 }
+
+// Whether the "How to play" popup has already opened by itself. Set the
+// moment it first does, so it never opens automatically again (the header's
+// rules button still opens it any time).
+export const getRulesSeen = () => getJSON<boolean>(KEYS.rulesSeen, false);
+export const setRulesSeen = () => setJSON(KEYS.rulesSeen, true);
 
 export const getPendingWin = () => getJSON<PendingWin | null>(KEYS.pendingWin, null);
 export const setPendingWin = (pending: PendingWin | null) => setJSON(KEYS.pendingWin, pending);

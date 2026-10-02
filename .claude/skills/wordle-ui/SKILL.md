@@ -21,19 +21,19 @@ description: Visual conventions for Baruk. Covers theming through useTheme().col
 - **Keys:** a key's state change fades the background, but the label switches color in one step at the midpoint. Fading label and background together makes the label vanish.
 - **Creating values:** `useState(() => new Animated.Value(x))`. `useRef(...).current` read during render fails the `react-hooks/refs` lint.
 - **Native driver:** `true` for transform and opacity; `false` only for color interpolation or numeric listeners. Never animate a color or layout prop and a native-driven transform on the same node. The comment above `KEY_EDGE_HEIGHT` in `constants/theme.ts` explains why 3D edges are separate Views.
-- **Durations:** in `constants/theme.ts` (board, keyboard, Darts, rules page) and `constants/winFlow.ts` (end-of-round flows). No inline magic numbers in new work.
+- **Durations:** in `constants/theme.ts` (board, keyboard, Darts, rules popup) and `constants/winFlow.ts` (end-of-round flows). No inline magic numbers in new work.
 - **Coupled timings:** `App.tsx` schedules game logic with `setTimeout` sums of these constants, and each sum must match what the component plays. If you change a sequence, update its sum:
   - `ROW_REVEAL_DURATION_MS` ↔ the Tile flip plus its stagger
   - the Darts unlock total in `handleDarts` ↔ the ArrowOverlay and BowIcon sequences
   - `LOSS_SHAKE_DURATION_MS` ↔ the Row loss shake
-- **Reduced motion:** `useTheme().reduceMotion`. App, WinFlow, LossFlow, ResultModal, SecondChanceModal, RulesCard, BowIcon and useCountUp skip flights and confetti and use short fades or instant values. New heavy motion needs a reduced path. Tile, Row and KeyboardKey don't check it today.
+- **Reduced motion:** `useTheme().reduceMotion`. App, WinFlow, LossFlow, ResultModal, SecondChanceModal, RulesModal, RulesCard, BowIcon and useCountUp skip flights and confetti and use short fades or instant values. New heavy motion needs a reduced path. Tile, Row and KeyboardKey don't check it today.
 - **Haptics:** always `.catch(() => {})`; key taps go through `lib/haptics.ts`.
 
 ## Positions & layout
 - **Flights and overlays:** positions come from `measureWindow(ref)` (`lib/measureWindow.ts`) at the moment the effect fires, never from an assumed layout. `null` must fall back to a no-flight path. Full-screen overlays that use these window coordinates render outside the SafeAreaView (see `ArrowOverlay` in `App.tsx`).
 - **Keyboard geometry:** `computeKeyGeometry` in `Keyboard.tsx` re-derives the keyboard layout analytically, and Darts aims with it. Mirror any key size/gap/row change there. `components/Keyboard.test.tsx` checks key sizes only, not x positions.
 - **Tile size:** tiles are sized by `fitTileSize` from the board area's `onLayout`; Board renders nothing until that measurement arrives.
-- **Rules page:** `RulesScreen` is a push-style page driven by one `rulesPush` value in `App.tsx`, and both screens stay mounted. iOS closes it with an edge swipe (PanResponder), Android with BackHandler.
+- **Rules popup:** "How to play" is `RulesModal` (`rulesOpen` in `App.tsx`), a centered panel over the shared `ModalBackdrop`, rendered last so it sits above everything, end-of-round modals included. `RulesCard` is only its body (the rules and the example-tile flips, started by the modal's `revealTrigger` once it has opened). Its colors are the `rules*` tokens: a light panel in light, a dark one in dark (the dark `card*` tokens belong to `ResultModal`). Only the X (`Փակել`) and Android's back button close it, never a backdrop tap. It opens by itself once, on the very first launch (`wordle:rulesSeen`, saved as it opens); the header's rules button opens it any time. Open/close: opacity + scale on the native driver (`RULES_MODAL_*`), a plain fade under reduced motion; it unmounts when its close ends.
 
 ## Text & icons
 - **Font:** one font, `FONT_FAMILY` (GHEA Grapalat Bold, the only weight bundled, so every `FONTS.*` resolves to it). Copy a sibling component's Text style rather than inventing metrics.

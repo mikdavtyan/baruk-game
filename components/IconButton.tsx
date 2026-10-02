@@ -2,11 +2,10 @@ import { ReactNode } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { SymbolView, SymbolViewProps } from 'expo-symbols';
 
-// The header's small flat icon buttons (back / theme toggle / rules) — no
-// circle background, just the icon, with a dimmed press state. Shared by
-// Header.tsx (the main screen) and RulesScreen.tsx, so the rules page's back
-// button is pixel-for-pixel the exact same component as the main screen's —
-// same size, shape, press effect — not a lookalike copy.
+// The small flat icon buttons (the header's theme toggle and rules button,
+// the rules popup's close X) — no circle background, just the icon, with a
+// dimmed press state. One shared component, so they all have the exact same
+// size, shape and press effect.
 export default function IconButton({
   icon,
   label,

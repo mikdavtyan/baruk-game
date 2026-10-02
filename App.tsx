@@ -1,16 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import {
   Animated,
-  BackHandler,
   Dimensions,
-  Easing,
   LayoutChangeEvent,
-  PanResponder,
-  Platform,
   StyleSheet,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -22,7 +17,7 @@ import Header from './components/Header';
 import Keyboard, { ALL_LETTER_TOKENS, computeKeyGeometry } from './components/Keyboard';
 import LossFlow from './components/LossFlow';
 import { RowData } from './components/Row';
-import RulesScreen from './components/RulesScreen';
+import RulesModal from './components/RulesModal';
 import ThemeTransitionProvider from './components/ThemeTransition';
 import Toast from './components/Toast';
 import WinFlow from './components/WinFlow';
@@ -37,20 +32,6 @@ import {
   REDUCED_MOTION_ARROW_STAGGER_MS,
   ROW_REVEAL_DURATION_MS,
   ROW_SHAKE_DURATION_MS,
-  RULES_CLOSE_DURATION_MS,
-  RULES_GAME_PARALLAX_FRACTION,
-  RULES_OPEN_DURATION_MS,
-  RULES_REDUCED_MOTION_DURATION_MS,
-  RULES_SWIPE_CANCEL_DURATION_MS,
-  RULES_SWIPE_CANCEL_VELOCITY,
-  RULES_SWIPE_COMPLETE_MAX_MS,
-  RULES_SWIPE_COMPLETE_MIN_MS,
-  RULES_SWIPE_COMPLETE_PROGRESS,
-  RULES_SWIPE_COMPLETE_VELOCITY,
-  RULES_SWIPE_DIRECTION_LOCK_PX,
-  RULES_SWIPE_DIRECTION_RATIO,
-  RULES_SWIPE_EDGE_ZONE,
-  RULES_SWIPE_MIN_VELOCITY,
   WORD_LENGTH,
   LetterState,
   FONT_FAMILY,
@@ -64,12 +45,14 @@ import {
   getPendingWin,
   getPoints,
   getRound,
+  getRulesSeen,
   getStreak,
   PendingLoss,
   PendingWin,
   SavedRound,
   saveAtomically,
   setRound,
+  setRulesSeen,
   WordBag,
 } from './lib/gameStorage';
 import { GamePhase, phaseFromPending } from './lib/gamePhase';
@@ -166,11 +149,9 @@ export default function App() {
 }
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
-const PUSH_EASING = Easing.bezier(0.32, 0.72, 0, 1);
 
 function AppInner() {
   const { color, isDark, reduceMotion } = useTheme();
-  const { width: windowWidth } = useWindowDimensions();
   const [fontsLoaded, fontError] = useFonts({
     [FONT_FAMILY]: require('./assets/fonts/GHEAGrapalat-Bold.otf'),
   });
@@ -290,182 +271,12 @@ function AppInner() {
   const dartsButtonRef = useRef<View>(null);
   const keyboardAreaRef = useRef<View>(null);
 
-  // The "How to play" page — a real separate screen (RulesScreen), pushed in
-  // like an iOS navigation push, not a modal. Both screens stay mounted the
-  // whole time (see rulesEverOpened below); this Animated.Value alone drives
-  // both screens' transforms, so they're always perfectly in sync.
-  const [rulesPush] = useState(() => new Animated.Value(0)); // 0 = closed, 1 = open
-  // Mounts RulesScreen the first time it's opened, then never unmounts it.
-  const [rulesEverOpened, setRulesEverOpened] = useState(false);
-  // Whether the rules page is the one currently on top — drives which of
-  // the two screens is inert (pointerEvents/accessibility), not the
-  // animation itself.
-  const [rulesOnTop, setRulesOnTop] = useState(false);
-  // Guards against a second open/close firing mid-animation (both the "?"
-  // and back buttons, and the hardware back button, check this).
-  const isRulesAnimatingRef = useRef(false);
-  // Bumped once the OPEN push actually finishes, so RulesCard's example
-  // tiles only flip in after the page has visibly finished sliding in.
-  const [rulesRevealTrigger, setRulesRevealTrigger] = useState(0);
-
-  const handleOpenRules = () => {
-    if (isRulesAnimatingRef.current || rulesOnTop) return;
-    isRulesAnimatingRef.current = true;
-    setRulesEverOpened(true);
-    setRulesOnTop(true);
-    // Mount before animating, and wait two frames so the page is laid out
-    // and styled first — it must never flash unstyled or empty.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        Animated.timing(rulesPush, {
-          toValue: 1,
-          duration: reduceMotion ? RULES_REDUCED_MOTION_DURATION_MS : RULES_OPEN_DURATION_MS,
-          easing: reduceMotion ? Easing.linear : PUSH_EASING,
-          useNativeDriver: true,
-        }).start(({ finished }) => {
-          isRulesAnimatingRef.current = false;
-          if (finished) setRulesRevealTrigger((n) => n + 1);
-        });
-      });
-    });
-  };
-
-  const handleCloseRules = () => {
-    if (isRulesAnimatingRef.current || !rulesOnTop) return;
-    isRulesAnimatingRef.current = true;
-    Animated.timing(rulesPush, {
-      toValue: 0,
-      duration: reduceMotion ? RULES_REDUCED_MOTION_DURATION_MS : RULES_CLOSE_DURATION_MS,
-      easing: reduceMotion ? Easing.linear : PUSH_EASING,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      isRulesAnimatingRef.current = false;
-      if (finished) setRulesOnTop(false);
-    });
-  };
-
-  // Android's hardware/gesture back button — the closest RN equivalent of
-  // "system back (Android back button, browser back) closes the page":
-  // closes the rules page (with the same animation) instead of exiting the
-  // app, whenever it's the one on top.
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!rulesOnTop) return false;
-      handleCloseRules();
-      return true;
-    });
-    return () => sub.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rulesOnTop]);
-
-  // The shared tail of "the page is now closed" — used by both the
-  // animated back-button close above and a completed swipe below (which has
-  // already moved rulesPush to 0 itself, so it must NOT replay that
-  // animation a second time).
-  const finishRulesCloseNoAnimation = () => {
-    isRulesAnimatingRef.current = false;
-    setRulesOnTop(false);
-  };
-
-  // iOS-only edge-swipe-to-go-back. Not needed on Android (the hardware/
-  // gesture back button above already covers it) or in a browser tab (no
-  // such context exists here) — see constants/theme.ts. A raw PanResponder,
-  // not a distinct animation: it drives the exact same `rulesPush` value the
-  // open/close animation uses, so dragging *is* that same animation,
-  // finger-driven, 1:1, and a completed swipe ends in the exact state a
-  // button-press close would.
-  //
-  // rulesOnTop/windowWidth are read from refs (kept in sync after every
-  // commit) rather than closed over directly, since the PanResponder itself
-  // is only ever created once (a live gesture's handlers shouldn't change
-  // identity mid-drag) and would otherwise see stale values.
-  const rulesOnTopRef = useRef(rulesOnTop);
-  const windowWidthRef = useRef(windowWidth);
-  useLayoutEffect(() => {
-    rulesOnTopRef.current = rulesOnTop;
-    windowWidthRef.current = windowWidth;
-  });
-  const swipeCancelledRef = useRef(false);
-
-  const animateSwipeCancel = () => {
-    Animated.timing(rulesPush, {
-      toValue: 1,
-      duration: RULES_SWIPE_CANCEL_DURATION_MS,
-      easing: PUSH_EASING,
-      useNativeDriver: true,
-    }).start(() => {
-      isRulesAnimatingRef.current = false;
-    });
-  };
-
-  // The handlers only read refs during gesture events, never during render.
-  // eslint-disable-next-line react-hooks/refs
-  const [rulesSwipeResponder] = useState(() =>
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
-        if (Platform.OS !== 'ios') return false;
-        if (isRulesAnimatingRef.current || !rulesOnTopRef.current) return false;
-        if (evt.nativeEvent.touches.length > 1) return false;
-        if (gestureState.x0 > RULES_SWIPE_EDGE_ZONE) return false;
-        const { dx, dy } = gestureState;
-        if (Math.abs(dx) < RULES_SWIPE_DIRECTION_LOCK_PX) return false;
-        return dx > 0 && Math.abs(dx) > Math.abs(dy) * RULES_SWIPE_DIRECTION_RATIO;
-      },
-      onPanResponderGrant: () => {
-        swipeCancelledRef.current = false;
-        // Blocks the "?"/back buttons and a second gesture from starting —
-        // exactly like being mid-animation, since this drag *is* one.
-        isRulesAnimatingRef.current = true;
-      },
-      onPanResponderMove: (evt, gestureState) => {
-        if (swipeCancelledRef.current) return;
-        if (evt.nativeEvent.touches.length > 1) {
-          // A second finger touched — cancel now rather than waiting for release.
-          swipeCancelledRef.current = true;
-          animateSwipeCancel();
-          return;
-        }
-        const progress = Math.max(0, Math.min(1, gestureState.dx / windowWidthRef.current));
-        rulesPush.setValue(1 - progress);
-      },
-      onPanResponderRelease: (_evt, gestureState) => {
-        if (swipeCancelledRef.current) return;
-        const progress = Math.max(0, Math.min(1, gestureState.dx / windowWidthRef.current));
-        const velocity = gestureState.vx;
-        const shouldComplete =
-          velocity < RULES_SWIPE_CANCEL_VELOCITY
-            ? false
-            : progress > RULES_SWIPE_COMPLETE_PROGRESS || velocity > RULES_SWIPE_COMPLETE_VELOCITY;
-
-        if (shouldComplete) {
-          const remainingPx = windowWidthRef.current - gestureState.dx;
-          const duration = Math.max(
-            RULES_SWIPE_COMPLETE_MIN_MS,
-            Math.min(RULES_SWIPE_COMPLETE_MAX_MS, remainingPx / Math.max(velocity, RULES_SWIPE_MIN_VELOCITY)),
-          );
-          Animated.timing(rulesPush, {
-            toValue: 0,
-            duration,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }).start(({ finished }) => {
-            if (finished) {
-              finishRulesCloseNoAnimation();
-            } else {
-              isRulesAnimatingRef.current = false;
-            }
-          });
-        } else {
-          animateSwipeCancel();
-        }
-      },
-      onPanResponderTerminate: () => {
-        if (swipeCancelledRef.current) return;
-        swipeCancelledRef.current = true;
-        animateSwipeCancel();
-      },
-    }),
-  );
+  // The "How to play" popup (RulesModal): opened by the header's rules
+  // button, and by itself on the very first launch only (see the first load).
+  // It closes itself on Android's back button.
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const handleOpenRules = () => setRulesOpen(true);
+  const handleCloseRules = useCallback(() => setRulesOpen(false), []);
 
   const handleBoardAreaLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -596,8 +407,24 @@ function AppInner() {
   // The first load (see the wordBag/resumed state above). Placed after every
   // state it restores.
   useEffect(() => {
-    Promise.all([loadWordBag(), getPendingWin(), getPendingLoss(), getRound(), getCoins(), getPoints(), getStreak()]).then(
-      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak]) => {
+    Promise.all([
+      loadWordBag(),
+      getPendingWin(),
+      getPendingLoss(),
+      getRound(),
+      getCoins(),
+      getPoints(),
+      getStreak(),
+      getRulesSeen(),
+    ]).then(
+      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen]) => {
+        // The rules popup opens by itself on the very first launch only; the
+        // flag is saved as it opens, so closing the app with it still open
+        // doesn't bring it back.
+        if (!rulesSeen) {
+          setRulesOpen(true);
+          setRulesSeen();
+        }
         setCoinsState(savedCoins);
         setPointsState(savedPoints);
         setStreakState(savedStreak.current);
@@ -922,27 +749,14 @@ function AppInner() {
   // fails, render anyway with system fonts), and for the word bag.
   if ((!fontsLoaded && !fontError) || !wordBag || !resumed) return null;
 
-  // Normal mode: an iOS-style push — the rules page slides in from the
-  // right while the game screen slides slightly left under a dimming
-  // overlay. Reduced motion: no movement at all — the game stays exactly
-  // where it is, and the rules page just fades in over it.
-  const gameTranslateX = reduceMotion
-    ? 0
-    : rulesPush.interpolate({ inputRange: [0, 1], outputRange: [0, -windowWidth * RULES_GAME_PARALLAX_FRACTION] });
-  const dimOpacity = reduceMotion ? 0 : rulesPush.interpolate({ inputRange: [0, 1], outputRange: [0, 0.3] });
-  const rulesTranslateX = reduceMotion ? 0 : rulesPush.interpolate({ inputRange: [0, 1], outputRange: [windowWidth, 0] });
-  const rulesOpacity = reduceMotion ? rulesPush : 1;
-
   return (
     <SafeAreaProvider>
-      {/* The game screen itself — never unmounted, ever, including while the
-          rules page is open; its board/keyboard/coins/etc. state is
-          completely untouched by any of this. */}
-      <Animated.View
-        style={[styles.container, { transform: [{ translateX: gameTranslateX }] }]}
-        pointerEvents={rulesOnTop ? 'none' : 'auto'}
-        importantForAccessibility={rulesOnTop ? 'no-hide-descendants' : 'auto'}
-        accessibilityElementsHidden={rulesOnTop}
+      {/* The game screen itself — never unmounted. Hidden from screen
+          readers while the rules popup covers it. */}
+      <View
+        style={styles.container}
+        importantForAccessibility={rulesOpen ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={rulesOpen}
       >
       <AnimatedSafeAreaView
         style={[styles.container, { backgroundColor: color('background') }]}
@@ -993,7 +807,7 @@ function AppInner() {
             which app.json pins to light. */}
         <StatusBar style={isDark ? 'light' : 'dark'} />
       </AnimatedSafeAreaView>
-      </Animated.View>
+      </View>
       <WinFlow
         active={phase === 'won'}
         resume={resumed?.win ?? null}
@@ -1041,28 +855,8 @@ function AppInner() {
           the SafeAreaView so its coordinate space matches measureInWindow's
           window-relative one exactly, with no safe-area offset to account for. */}
       <ArrowOverlay volleyId={dartsVolley.id} origin={dartsVolley.origin} targets={dartsVolley.targets} />
-      {/* Dims the game screen while the rules page is open/opening — sits
-          above the game, below the rules page. */}
-      <Animated.View style={[styles.dimOverlay, { opacity: dimOpacity }]} pointerEvents="none" />
-      {rulesEverOpened && (
-        <Animated.View
-          style={[
-            styles.rulesWrapper,
-            { transform: [{ translateX: rulesTranslateX }], opacity: rulesOpacity },
-            Platform.OS === 'ios' && styles.rulesShadow,
-          ]}
-          pointerEvents={rulesOnTop ? 'auto' : 'none'}
-          importantForAccessibility={rulesOnTop ? 'auto' : 'no-hide-descendants'}
-          accessibilityElementsHidden={!rulesOnTop}
-          {...rulesSwipeResponder.panHandlers}
-        >
-          <RulesScreen
-            onBack={handleCloseRules}
-            revealTrigger={rulesRevealTrigger}
-            visible={rulesOnTop}
-          />
-        </Animated.View>
-      )}
+      {/* Above everything, end-of-round modals included. */}
+      <RulesModal open={rulesOpen} onClose={handleCloseRules} />
     </SafeAreaProvider>
   );
 }
@@ -1070,34 +864,6 @@ function AppInner() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  dimOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#000',
-  },
-  rulesWrapper: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    // A solid background of its own — the rules page must never show the
-    // game (or anything else) through it while sliding.
-    backgroundColor: '#000',
-  },
-  // A soft shadow on the rules page's left edge while it's sliding — iOS
-  // only. Android's shadow equivalent (`elevation`) draws a rectangular
-  // shadow around the whole view, not just one edge, so it's skipped there
-  // rather than looking wrong.
-  rulesShadow: {
-    shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
   },
   // Takes all space between header and keyboard; the board is centered in it.
   boardArea: {

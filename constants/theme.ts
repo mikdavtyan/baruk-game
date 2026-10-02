@@ -56,30 +56,36 @@ export type ThemeTokens = {
   // plus its own 3D bottom edge, same idea as keyEdge.
   submitOn: string;
   submitOnEdge: string;
-  // The "How to play" page's rules card (see RulesCard.tsx) — a dark,
-  // gradient-filled card in BOTH themes (deliberately not the same as the
-  // rest of the light theme's chrome), plus a 3D bottom edge like the
-  // game's keys/buttons and a soft ambient shadow. The gradient itself
-  // can't run through `color()` (no Animated support for a native
-  // LinearGradient's `colors` prop), so it's read as a plain snapshot from
-  // `theme` and just snaps on a theme toggle, same as e.g. icon tintColors.
+  // The end-of-round result card (see ResultModal.tsx) — a dark,
+  // gradient-filled card in BOTH themes, plus a 3D bottom edge like the
+  // game's keys/buttons. The gradient itself can't run through `color()`
+  // (no Animated support for a native LinearGradient's `colors` prop), so
+  // it's read as a plain snapshot from `theme` and just snaps on a theme
+  // toggle, same as e.g. icon tintColors.
   cardGradientStart: string;
   cardGradientEnd: string;
   cardBorder: string;
   cardEdge: string;
-  cardAmbientShadow: string;
   cardText: string;
   cardTextMuted: string;
-  cardDivider: string;
-  cardBadgeBg: string;
-  cardBadgeText: string;
-  // The rules page's example rows: one tile keeps the game's own
-  // correct/present/absent color, the other four are neutral in the
-  // card's own palette — deliberately NOT the same as the real board's
-  // (transparent) unsubmitted tiles.
   cardTileFill: string;
   cardTileBorder: string;
-  cardTileText: string;
+  // The "How to play" popup (see RulesModal.tsx / RulesCard.tsx): its own
+  // light panel in the light theme and dark panel in the dark theme, with a
+  // 3D bottom edge like the game's keys/buttons. Its example rows' neutral
+  // tiles are solid fills in the panel's palette — deliberately NOT the
+  // real board's (transparent) unsubmitted tiles.
+  rulesSurface: string;
+  rulesBorder: string;
+  rulesEdge: string;
+  rulesText: string;
+  rulesTextMuted: string;
+  rulesDivider: string;
+  rulesBadgeBg: string;
+  rulesBadgeText: string;
+  rulesTileFill: string;
+  rulesTileBorder: string;
+  rulesTileText: string;
   // The gold coin's own drop shadow (see Coin.tsx) — a fixed warm shadow in
   // both themes since the coin's own colors never change.
   coinShadow: string;
@@ -133,15 +139,21 @@ export const lightTheme: ThemeTokens = {
   cardGradientEnd: '#2A2724',
   cardBorder: 'rgba(255,255,255,0.06)',
   cardEdge: '#1A1816',
-  cardAmbientShadow: 'rgba(60,45,30,0.18)',
   cardText: '#FFFFFF',
   cardTextMuted: '#BDB6AA',
-  cardDivider: 'rgba(255,255,255,0.08)',
-  cardBadgeBg: '#F7F5F0',
-  cardBadgeText: '#2A2724',
   cardTileFill: '#3A3631',
   cardTileBorder: '#4A4640',
-  cardTileText: '#F7F5F0',
+  rulesSurface: '#FFFFFF', // = surface
+  rulesBorder: '#DDD9D0', // = border
+  rulesEdge: '#DDD9D0', // = keyEdge
+  rulesText: '#1F2328', // = text
+  rulesTextMuted: '#6B6963', // = textMuted
+  rulesDivider: '#E6E3DC', // = keyBackground
+  rulesBadgeBg: '#1F2328', // = text
+  rulesBadgeText: '#FFFFFF',
+  rulesTileFill: '#F7F5F0', // = background
+  rulesTileBorder: '#DDD9D0', // = border
+  rulesTileText: '#1F2328', // = typedLetter
   coinShadow: 'rgba(110,60,0,0.35)',
 };
 
@@ -185,15 +197,21 @@ export const darkTheme: ThemeTokens = {
   cardGradientEnd: '#1D2125',
   cardBorder: 'rgba(255,255,255,0.06)',
   cardEdge: '#0A0B0C',
-  cardAmbientShadow: 'rgba(0,0,0,0.35)',
   cardText: '#EDEDED', // = text, unchanged
   cardTextMuted: '#807F87', // = textMuted, unchanged
-  cardDivider: '#2A2E33', // = the card's old (pre-gradient) border color, unchanged
-  cardBadgeBg: '#EDEDED', // = primaryBackground, unchanged
-  cardBadgeText: '#121416', // = primaryText, unchanged
   cardTileFill: '#16191C',
   cardTileBorder: '#33383D',
-  cardTileText: '#FFFFFF', // = typedLetter, unchanged
+  rulesSurface: '#1C1F22', // = surface
+  rulesBorder: '#33373B', // = border
+  rulesEdge: '#0A0B0C', // = cardEdge
+  rulesText: '#EDEDED', // = text
+  rulesTextMuted: '#9A99A1', // a step lighter than textMuted, for body text on the panel
+  rulesDivider: '#2A2E33',
+  rulesBadgeBg: '#EDEDED', // = primaryBackground
+  rulesBadgeText: '#121416', // = primaryText
+  rulesTileFill: '#16191C', // = cardTileFill
+  rulesTileBorder: '#33383D', // = cardTileBorder
+  rulesTileText: '#FFFFFF', // = typedLetter
   coinShadow: 'rgba(0,0,0,0.55)',
 };
 
@@ -318,27 +336,14 @@ export const KEY_PRESS_DURATION_MS = 80;
 // exactly the same height as the real header's buttons.
 export const HEADER_HEIGHT = 60;
 
-// "How to play" page — an iOS-style push, not a modal (see RulesScreen.tsx).
-export const RULES_OPEN_DURATION_MS = 280;
-export const RULES_CLOSE_DURATION_MS = 240;
-// The game screen's own subtle parallax slide while the rules page is open.
-export const RULES_GAME_PARALLAX_FRACTION = 0.25;
+// "How to play" popup (see RulesModal.tsx): fades in while scaling up from
+// RULES_MODAL_START_SCALE, and back out on close. Reduced motion: a plain
+// short fade, no scale.
+export const RULES_MODAL_OPEN_MS = 260;
+export const RULES_MODAL_CLOSE_MS = 200;
+export const RULES_MODAL_START_SCALE = 0.94;
 export const RULES_REDUCED_MOTION_DURATION_MS = 150;
-// The rules page's 3 example tiles flip once, this far apart, right after
-// the page finishes opening.
+// The popup's 3 example tiles flip once, this far apart, right after it
+// finishes opening.
 export const RULES_TILE_REVEAL_STAGGER_MS = 150;
 
-// The rules page's iOS-only edge-swipe-to-go-back gesture (App.tsx) — the
-// system already provides this on Android (the hardware/gesture back button
-// already closes the page, see App.tsx's BackHandler) and in a real browser
-// tab context, which doesn't exist here, so it's only needed on iOS.
-export const RULES_SWIPE_EDGE_ZONE = 24; // px from the left edge a drag must start within
-export const RULES_SWIPE_DIRECTION_LOCK_PX = 10; // movement needed before committing to a direction
-export const RULES_SWIPE_DIRECTION_RATIO = 1.2; // |dx| must exceed |dy| * this to count as horizontal
-export const RULES_SWIPE_COMPLETE_PROGRESS = 0.35;
-export const RULES_SWIPE_COMPLETE_VELOCITY = 0.5; // px/ms
-export const RULES_SWIPE_CANCEL_VELOCITY = -0.3; // px/ms, moving back left
-export const RULES_SWIPE_MIN_VELOCITY = 1.2; // px/ms, floor used only for the completion duration formula
-export const RULES_SWIPE_COMPLETE_MIN_MS = 120;
-export const RULES_SWIPE_COMPLETE_MAX_MS = 240;
-export const RULES_SWIPE_CANCEL_DURATION_MS = 200;

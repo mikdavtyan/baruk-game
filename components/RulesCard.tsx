@@ -1,6 +1,5 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Animated, Easing, LayoutChangeEvent, Platform, StyleProp, StyleSheet, TextStyle, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView } from 'expo-symbols';
 import BowIcon from './BowIcon';
 import Tile from './Tile';
@@ -8,15 +7,16 @@ import { FONTS, KEY_EDGE_HEIGHT, LetterState, RULES_TILE_REVEAL_STAGGER_MS, TILE
 import { letterLabel } from '../lib/letterDisplay';
 import { useTheme } from '../lib/ThemeContext';
 
+// The rules themselves — the body of the "How to play" popup (RulesModal.tsx
+// draws the panel, title and close button around it).
 type Props = {
-  // Bumped once the page's open push-transition actually finishes, so the
-  // three example rows' colored tile only flips in afterward — never while
-  // (or before) the page itself is still sliding in.
+  // Bumped once the popup's open animation actually finishes, so the three
+  // example rows' colored tile only flips in afterward — never while (or
+  // before) the popup itself is still appearing.
   revealTrigger: number;
-  // Whether the rules page is actually the one on top right now. Used only
-  // to snap the example tiles back to neutral the instant this goes false
-  // (close finished) or true (a fresh open is about to start) — never to
-  // animate anything itself.
+  // Whether the popup is open right now. Used only to snap the example tiles
+  // back to neutral the instant this goes false (closing) or true (a fresh
+  // open is about to start) — never to animate anything itself.
   visible: boolean;
 };
 
@@ -75,8 +75,7 @@ const HINT_ROWS: { icon: 'search' | 'bow'; caption: TextPart[] }[] = [
 // look, scaled down — for the two hint-row badges. Not a Pressable at all
 // (these icons are inert here, per the "no hint logic or animation" note).
 // Deliberately keeps the general app `keyBackground`/`keyEdge` look (not the
-// card's own dark palette) — it's meant to stand out as a real in-game
-// button against the card.
+// panel's own palette) — it's meant to read as a real in-game button.
 function StaticBadge({ children }: { children: ReactNode }) {
   const { color } = useTheme();
   return (
@@ -90,7 +89,7 @@ function StaticBadge({ children }: { children: ReactNode }) {
   );
 }
 
-// A plain, solidly-filled example tile — the card's own neutral look, not
+// A plain, solidly-filled example tile — the panel's own neutral look, not
 // the real board's (transparent) unsubmitted-tile look. The one highlighted
 // tile per row is the real Tile component instead, in the real game color.
 function NeutralTile({ letter, size }: { letter: string; size: number }) {
@@ -103,12 +102,12 @@ function NeutralTile({ letter, size }: { letter: string; size: number }) {
           width: size,
           height: size,
           borderRadius: Math.round(size * 0.24),
-          backgroundColor: color('cardTileFill'),
-          borderColor: color('cardTileBorder'),
+          backgroundColor: color('rulesTileFill'),
+          borderColor: color('rulesTileBorder'),
         },
       ]}
     >
-      <Animated.Text style={[styles.neutralTileText, { fontSize: size * 0.5, color: color('cardTileText') }]}>
+      <Animated.Text style={[styles.neutralTileText, { fontSize: size * 0.5, color: color('rulesTileText') }]}>
         {letter}
       </Animated.Text>
     </Animated.View>
@@ -140,7 +139,7 @@ function ExampleRow({ example, revealed }: { example: Example; revealed: boolean
   );
 }
 
-// The highlighted example tile: its letter in the card's neutral look until
+// The highlighted example tile: its letter in the panel's neutral look until
 // revealed, then a flip to the real game color with the same letter — the
 // swap happens edge-on, at the flip's midpoint, like the board's own reveal.
 function FlipExampleTile({ token, state, revealed, size }: { token: string; state: LetterState; revealed: boolean; size: number }) {
@@ -192,14 +191,14 @@ function RulesText({
 }) {
   const { color } = useTheme();
   return (
-    <Animated.Text style={[styles.bodyText, { color: color('cardTextMuted') }, style]}>
+    <Animated.Text style={[styles.bodyText, { color: color('rulesTextMuted') }, style]}>
       {children.map((part, i) =>
         part.bold ? (
           <Animated.Text
             key={i}
             style={[
               styles.boldText,
-              { color: color('cardText') },
+              { color: color('rulesText') },
               // The game font only ships one (already-bold) weight, so
               // font-weight alone can't distinguish this from the rest of
               // the text — this faint doubled-up shadow is the RN stand-in
@@ -208,7 +207,7 @@ function RulesText({
               // "currentColor" — reusing the same animated color keeps it in
               // sync instead.
               Platform.OS === 'ios' && {
-                textShadowColor: color('cardText'),
+                textShadowColor: color('rulesText'),
                 textShadowOffset: { width: 0.5, height: 0 },
                 textShadowRadius: 0,
               },
@@ -230,10 +229,9 @@ export default function RulesCard({ revealTrigger, visible }: Props) {
 
   // Snaps straight back to neutral — no animation to disable first, since
   // FlipExampleTile only animates the *forward* neutral -> colored flip —
-  // the instant the page stops being the one on top (close finished) and,
-  // as a safety net, again right as a fresh open begins (before the
-  // two-frame wait and the slide). Skipped entirely under reduced motion,
-  // where the tiles are just always shown in their final colored state.
+  // the instant the popup starts closing and, as a safety net, again right
+  // as a fresh open begins. Skipped entirely under reduced motion, where the
+  // tiles are just always shown in their final colored state.
   const [prevVisible, setPrevVisible] = useState(visible);
   if (visible !== prevVisible) {
     setPrevVisible(visible);
@@ -241,8 +239,8 @@ export default function RulesCard({ revealTrigger, visible }: Props) {
   }
 
   // Also keyed on `visible` (not just revealTrigger) so its cleanup clears
-  // any still-pending staggered reveal timers the instant the page stops
-  // being on top — closing mid-flip can never leave a half-flipped tile.
+  // any still-pending staggered reveal timers the instant the popup starts
+  // closing — closing mid-flip can never leave a half-flipped tile.
   useEffect(() => {
     if (reduceMotion) return; // shown directly already — nothing to stagger
     if (!visible || revealTrigger === 0) return;
@@ -253,82 +251,47 @@ export default function RulesCard({ revealTrigger, visible }: Props) {
   }, [revealTrigger, reduceMotion, visible]);
 
   return (
-    <View
-      style={[
-        styles.cardShadowWrapper,
-        Platform.select({
-          ios: {
-            shadowColor: theme.cardAmbientShadow,
-            shadowOffset: { width: 0, height: 16 },
-            shadowOpacity: 1,
-            shadowRadius: 32,
-          },
-          android: { elevation: 8 },
-        }),
-      ]}
-    >
-      <LinearGradient
-        colors={[theme.cardGradientStart, theme.cardGradientEnd]}
-        style={styles.cardGradient}
-      >
-        <Animated.View
-          style={[styles.card, { borderColor: color('cardBorder'), borderBottomColor: color('cardEdge') }]}
-        >
-          <View style={styles.attemptsRow}>
-            <Animated.View style={[styles.attemptsBadge, { backgroundColor: color('cardBadgeBg') }]}>
-              <Animated.Text style={[styles.attemptsBadgeText, { color: color('cardBadgeText') }]}>6</Animated.Text>
-            </Animated.View>
-            <RulesText style={styles.attemptsText}>
-              {[{ text: 'ԴՈՒՔ ՈՒՆԵՔ 6 ՀՆԱՐԱՎՈՐՈՒԹՅՈՒՆ ԲԱՌԸ ԳՏՆԵԼՈՒ ՀԱՄԱՐ' }]}
-            </RulesText>
-          </View>
-
-          <View style={styles.examplesBlock}>
-            {EXAMPLES.map((example, i) => (
-              <ExampleRow key={i} example={example} revealed={i < revealedCount} />
-            ))}
-          </View>
-
-          <Animated.View style={[styles.divider, { backgroundColor: color('cardDivider') }]} />
-
-          <View style={styles.hintRows}>
-            {HINT_ROWS.map((row, i) => (
-              <View key={i} style={styles.hintRow}>
-                <StaticBadge>
-                  {row.icon === 'search' ? (
-                    <SymbolView
-                      name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
-                      size={20}
-                      tintColor={theme.keyText}
-                    />
-                  ) : (
-                    <BowIcon size={20} volleyId={0} shotCount={0} />
-                  )}
-                </StaticBadge>
-                <RulesText style={styles.hintText}>{row.caption}</RulesText>
-              </View>
-            ))}
-          </View>
+    <View>
+      <View style={styles.attemptsRow}>
+        <Animated.View style={[styles.attemptsBadge, { backgroundColor: color('rulesBadgeBg') }]}>
+          <Animated.Text style={[styles.attemptsBadgeText, { color: color('rulesBadgeText') }]}>6</Animated.Text>
         </Animated.View>
-      </LinearGradient>
+        <RulesText style={styles.attemptsText}>
+          {[{ text: 'ԴՈՒՔ ՈՒՆԵՔ 6 ՀՆԱՐԱՎՈՐՈՒԹՅՈՒՆ ԲԱՌԸ ԳՏՆԵԼՈՒ ՀԱՄԱՐ' }]}
+        </RulesText>
+      </View>
+
+      <View style={styles.examplesBlock}>
+        {EXAMPLES.map((example, i) => (
+          <ExampleRow key={i} example={example} revealed={i < revealedCount} />
+        ))}
+      </View>
+
+      <Animated.View style={[styles.divider, { backgroundColor: color('rulesDivider') }]} />
+
+      <View style={styles.hintRows}>
+        {HINT_ROWS.map((row, i) => (
+          <View key={i} style={styles.hintRow}>
+            <StaticBadge>
+              {row.icon === 'search' ? (
+                <SymbolView
+                  name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
+                  size={20}
+                  tintColor={theme.keyText}
+                />
+              ) : (
+                <BowIcon size={20} volleyId={0} shotCount={0} />
+              )}
+            </StaticBadge>
+            <RulesText style={styles.hintText}>{row.caption}</RulesText>
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  cardShadowWrapper: {
-    marginHorizontal: 16,
-    borderRadius: 20,
-  },
-  cardGradient: {
-    borderRadius: 20,
-  },
-  card: {
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderBottomWidth: KEY_EDGE_HEIGHT,
-  },
   attemptsRow: {
     flexDirection: 'row',
     alignItems: 'center',

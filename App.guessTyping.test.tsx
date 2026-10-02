@@ -45,6 +45,7 @@ beforeEach(async () => {
   // The round (typed letters included) is saved and restored across mounts,
   // so each test starts from empty storage.
   await AsyncStorage.clear();
+  await AsyncStorage.setItem('wordle:rulesSeen', 'true'); // past the first launch's rules popup
 });
 afterEach(() => {
   act(() => {
