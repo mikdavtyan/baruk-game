@@ -44,7 +44,7 @@ const KEY_RADIUS = 8;
 // can't compose two live color interpolations into one. So each is handled
 // separately: `resting*Token` below picks which *theme token* currently
 // applies for a given state, and is read through ThemeContext's `color()`,
-// which follows the theme switch in the same frame; the *snapshot*
+// which fades with the theme toggle (lib/ThemeContext.tsx); the *snapshot*
 // keyColors/keyEdgeColor pair further down is only used for the brief
 // (KEY_COLOR_FADE_MS) transition right when a key's own state changes.
 function keyColors(s: LetterState, theme: ThemeTokens) {
@@ -88,7 +88,7 @@ export default function KeyboardKey({
   onPress,
   slowFade = false,
 }: Props) {
-  const { theme, color } = useTheme();
+  const { theme, color, textColor: themedText } = useTheme();
   // 0 = showing fromState's colors, 1 = showing state's colors.
   const [progress] = useState(() => new Animated.Value(1));
   // The state the key is fading from. Key states only ever strengthen (see
@@ -132,7 +132,7 @@ export default function KeyboardKey({
       toValue: 1,
       duration: isDartsHit ? KEY_IMPACT_COLOR_MS : KEY_COLOR_FADE_MS,
       easing: Easing.out(Easing.quad),
-      useNativeDriver: false, // colors are animated on the JS side
+      useNativeDriver: false, // the label's color rides this too, and Text colors stay on the JS side
     });
     fade.start(({ finished }) => finished && setIsStateFading(false));
 
@@ -171,7 +171,7 @@ export default function KeyboardKey({
   // the theme-reactive `color()` instead, so they follow a theme switch —
   // only the brief state-change window above uses the snapshot fade.
   const backgroundColor = isStateFading ? stateFadeBg : color(restingBgToken(state));
-  const textColor = isStateFading ? stateFadeText : isResult(state) ? '#ffffff' : color('keyText');
+  const textColor = isStateFading ? stateFadeText : isResult(state) ? '#ffffff' : themedText('keyText');
   const edgeColor = isStateFading ? stateFadeEdge : color(restingEdgeToken(state));
 
   // One haptic tied directly to the same handler that actually processes

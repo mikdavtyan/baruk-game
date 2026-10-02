@@ -2,7 +2,6 @@ import { forwardRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import Coin from './Coin';
 import IconButton from './IconButton';
-import { useThemeToggle } from './ThemeTransition';
 import ThemeToggleIcon from './ThemeToggleIcon';
 import { FONTS } from '../constants/theme';
 import { useTheme } from '../lib/ThemeContext';
@@ -24,8 +23,7 @@ const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRul
   // prop, not a style, so it can't be smoothly cross-faded the way an
   // Animated.Text/View's color/backgroundColor can. Everything else here
   // uses `color()` so it morphs in place with the rest of the app.
-  const { theme, isDark, color } = useTheme();
-  const toggleTheme = useThemeToggle();
+  const { theme, isDark, color, textColor, toggleTheme } = useTheme();
   const displayedCoins = useCountUp(coins);
 
   // Left and right side groups share the center's flex weight, so the score
@@ -46,13 +44,13 @@ const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRul
       </View>
       <View style={styles.scoreBlock}>
         <Animated.Text
-          style={[styles.scoreLabel, { color: color('textMuted') }]}
+          style={[styles.scoreLabel, { color: textColor('textMuted') }]}
           numberOfLines={1}
           adjustsFontSizeToFit
         >
           ՄԻԱՎՈՐՆԵՐ
         </Animated.Text>
-        <Animated.Text style={[styles.scoreValue, { color: color('headerValueColor') }]}>{score}</Animated.Text>
+        <Animated.Text style={[styles.scoreValue, { color: textColor('headerValueColor') }]}>{score}</Animated.Text>
       </View>
       <View style={styles.sideGroupRight}>
         <IconButton
@@ -63,7 +61,7 @@ const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRul
         />
         <Animated.View ref={coinPillRef} collapsable={false} style={[styles.coinCounter, { backgroundColor: color('pill') }]}>
           <Coin size={22} />
-          <Animated.Text style={[styles.coinCounterText, { color: color('pillText') }]}>
+          <Animated.Text style={[styles.coinCounterText, { color: textColor('pillText') }]}>
             {displayedCoins}
           </Animated.Text>
         </Animated.View>

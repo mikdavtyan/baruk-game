@@ -18,7 +18,6 @@ import Keyboard, { ALL_LETTER_TOKENS, computeKeyGeometry } from './components/Ke
 import LossFlow from './components/LossFlow';
 import { RowData } from './components/Row';
 import RulesModal from './components/RulesModal';
-import ThemeTransitionProvider from './components/ThemeTransition';
 import Toast from './components/Toast';
 import WinFlow from './components/WinFlow';
 import {
@@ -141,9 +140,7 @@ function correctPositionGhosts(guesses: SubmittedGuess[]): Ghost[] {
 export default function App() {
   return (
     <ThemeProvider>
-      <ThemeTransitionProvider>
-        <AppInner />
-      </ThemeTransitionProvider>
+      <AppInner />
     </ThemeProvider>
   );
 }

@@ -25,7 +25,7 @@ Run everything with `npm test`; run one file with `npx jest lib/evaluateGuess`. 
 - **App renders nothing until the bag loads:** after `TestRenderer.create(<App />)`, flush once more inside `act` before looking for the board.
 - **Native-driver animations finish almost immediately in Jest:** there's no native animation module, so you can't sample a fade or flip mid-way. Assert state before it starts and after it ends; check real timing on a device.
 - **`onLayout`:** when rendering `<App />`, fire every `onLayout` (as the App tests do), not just the first.
-- **Theme transition:** see `components/ThemeTransition.test.tsx`. Its cover's fades finish instantly in Jest, so assert the cover color and the theme before and after, not mid-fade.
+- **Theme fade:** see `lib/ThemeContext.test.tsx`. Its JS-driven half follows fake timers, so the snapshot's midpoint flip can be timed; the native-driven `color()` nodes only show their end value (the provider pins both values at the end). Read a node with `(node as any).__getValue()` and compare through `normalizeColor`.
 - **Effects start animations:** in one synchronous `act(() => { update(); advanceTimers(); })` the timers run *before* the effect that starts the animation. Update and advance in separate `act` calls.
 - **Ghost hints:** they render only on the active row, so after a loss (no active row) the tiles show none even though the state still holds them.
 - **Dependencies and lint:** `require('react-test-renderer')` typed as `any` is the pattern (no types installed). `@testing-library/*` is not a dependency. Lint allows `require` in test files.

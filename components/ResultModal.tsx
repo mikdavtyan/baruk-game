@@ -107,17 +107,17 @@ function StatBlock({
   tintWhileNonZero?: string; // the loss result's points: reddish while rolling down, back to normal at 0
   countUpMs?: number;
 }) {
-  const { color } = useTheme();
+  const { textColor } = useTheme();
   const displayed = useCountUp(value, countUpMs);
-  const valueColor = tintWhileNonZero && displayed !== 0 ? tintWhileNonZero : color('cardText');
+  const valueColor = tintWhileNonZero && displayed !== 0 ? tintWhileNonZero : textColor('cardText');
   return (
     <View style={styles.statBlock}>
-      <Animated.Text style={[styles.statLabel, { color: color('cardTextMuted') }]}>{label}</Animated.Text>
+      <Animated.Text style={[styles.statLabel, { color: textColor('cardTextMuted') }]}>{label}</Animated.Text>
       <View style={styles.statValueRow}>
         {icon}
         <Animated.Text style={[styles.statValue, { color: valueColor }]}>{displayed}</Animated.Text>
       </View>
-      {sub ? <Animated.Text style={[styles.statSub, { color: color('cardTextMuted') }]}>{sub}</Animated.Text> : null}
+      {sub ? <Animated.Text style={[styles.statSub, { color: textColor('cardTextMuted') }]}>{sub}</Animated.Text> : null}
       {pill ? (
         <View style={styles.statPill}>
           <Animated.Text style={styles.statPillText}>{pill}</Animated.Text>
@@ -161,7 +161,7 @@ const UNRANKED_TEXT = '#BDB6AA';
 const LOSS_RIBBON_HEIGHT = 40;
 
 function LeaderboardRow({ rank, name, points, isPlayer }: { rank: number; name: string; points: number; isPlayer: boolean }) {
-  const { theme, color } = useTheme();
+  const { theme, textColor } = useTheme();
   return (
     <Animated.View
       style={[
@@ -173,7 +173,7 @@ function LeaderboardRow({ rank, name, points, isPlayer }: { rank: number; name: 
         <Animated.Text style={[styles.rankText, !RANK_TINTS[rank] && { color: UNRANKED_TEXT }]}>{rank}</Animated.Text>
       </View>
       <View style={[styles.avatarCircle, { backgroundColor: theme.cardTileBorder }]}>
-        <Animated.Text style={[styles.avatarText, { color: color('cardText') }]}>{name.charAt(0)}</Animated.Text>
+        <Animated.Text style={[styles.avatarText, { color: textColor('cardText') }]}>{name.charAt(0)}</Animated.Text>
       </View>
       {/* The player's own row shows just one indicator, not both a "you" tag
           AND the leaderboard's placeholder "ԴՈՒՔ" name — the tag replaces
@@ -186,11 +186,11 @@ function LeaderboardRow({ rank, name, points, isPlayer }: { rank: number; name: 
           </View>
         </View>
       ) : (
-        <Animated.Text style={[styles.leaderName, { color: color('cardText') }]} numberOfLines={1}>
+        <Animated.Text style={[styles.leaderName, { color: textColor('cardText') }]} numberOfLines={1}>
           {name}
         </Animated.Text>
       )}
-      <Animated.Text style={[styles.leaderPoints, { color: color('cardText') }]}>{points}</Animated.Text>
+      <Animated.Text style={[styles.leaderPoints, { color: textColor('cardText') }]}>{points}</Animated.Text>
     </Animated.View>
   );
 }
@@ -216,7 +216,7 @@ export default function ResultModal({
   disabled,
   reduceMotion = false,
 }: Props) {
-  const { theme, color } = useTheme();
+  const { theme, color, textColor } = useTheme();
   const insets = useSafeAreaInsets();
   const isLoss = variant === 'loss';
 
@@ -234,7 +234,7 @@ export default function ResultModal({
               <Animated.View
                 style={[styles.card, isLoss && styles.lossCard, { borderColor: color('cardBorder'), borderBottomColor: color('cardEdge') }]}
               >
-                <Animated.Text style={[styles.cardLabel, { color: color('cardTextMuted') }]}>
+                <Animated.Text style={[styles.cardLabel, { color: textColor('cardTextMuted') }]}>
                   ԹԱՔՆՎԱԾ ԲԱՌՆ ԷՐ
                 </Animated.Text>
                 <WordReveal tokens={secretWordTokens} variant={variant} />
@@ -282,14 +282,14 @@ export default function ResultModal({
         </Section>
 
         <Section index={1}>
-          <Animated.Text style={[styles.leaderTitle, { color: color('cardText') }]}>ԱՌԱՋԱՏԱՐՆԵՐ</Animated.Text>
+          <Animated.Text style={[styles.leaderTitle, { color: textColor('cardText') }]}>ԱՌԱՋԱՏԱՐՆԵՐ</Animated.Text>
           <View style={styles.leaderList}>
             {top3.map((r) => (
               <LeaderboardRow key={r.entry.id} rank={r.rank} name={r.entry.name} points={r.entry.points} isPlayer={r.entry.id === 'player'} />
             ))}
             {playerRow && !playerInTop3 && (
               <>
-                <Animated.Text style={[styles.ellipsis, { color: color('textMuted') }]}>···</Animated.Text>
+                <Animated.Text style={[styles.ellipsis, { color: textColor('textMuted') }]}>···</Animated.Text>
                 <LeaderboardRow rank={playerRow.rank} name={playerRow.entry.name} points={playerRow.entry.points} isPlayer />
               </>
             )}

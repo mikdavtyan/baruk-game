@@ -309,10 +309,10 @@ export const ROW_SHAKE_DURATION_MS = 260;
 // becomes the active one (see Tile.tsx).
 export const TILE_SHINE_DURATION_MS = 450;
 
-// The light/dark switch (components/ThemeTransition.tsx): a cover in the new
-// theme's background fades in, the theme switches under it, it fades out.
-export const THEME_COVER_IN_MS = 150;
-export const THEME_COVER_OUT_MS = 200;
+// The light/dark switch (lib/ThemeContext.tsx): every themed color fades in
+// place over this long, eased in-out; the plain `theme` snapshot flips at the
+// midpoint. Kept short on purpose — see docs/adr/0004.
+export const THEME_FADE_MS = 300;
 
 // Short game toasts (e.g. "no hint left") over the top of the board.
 export const TOAST_FADE_MS = 180;

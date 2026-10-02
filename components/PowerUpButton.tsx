@@ -32,7 +32,7 @@ const PowerUpButton = forwardRef<View, Props>(function PowerUpButton(
   { icon, label, price, disabled, dimmed = disabled, onPress },
   ref,
 ) {
-  const { color } = useTheme();
+  const { color, textColor } = useTheme();
   const [scale] = useState(() => new Animated.Value(1));
 
   const handlePressIn = () => {
@@ -49,10 +49,8 @@ const PowerUpButton = forwardRef<View, Props>(function PowerUpButton(
 
   return (
     <View style={styles.wrapper}>
-      {/* Split into two layers on purpose: RN's Animated can't mix a
-          native-driven animation (this press scale) with a JS-driven one
-          (the themed fill/edge colors, via `color()`) on the *same* node —
-          see Tile.tsx for the full explanation. */}
+      {/* Two layers: the press scale on the pressable, the themed fill/edge
+          colors (native-driven `color()`) on their own views below. */}
       <AnimatedPressable
         ref={ref}
         disabled={disabled}
@@ -72,7 +70,7 @@ const PowerUpButton = forwardRef<View, Props>(function PowerUpButton(
       </AnimatedPressable>
       <View style={styles.priceRow}>
         <Coin size={18} />
-        <Animated.Text style={[styles.priceText, { color: color('textMuted') }]}>{price}</Animated.Text>
+        <Animated.Text style={[styles.priceText, { color: textColor('textMuted') }]}>{price}</Animated.Text>
       </View>
     </View>
   );

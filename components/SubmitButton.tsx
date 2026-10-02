@@ -26,7 +26,7 @@ const LABEL: Record<GuessValidity, string> = {
 // clears the unrecognized word so the player can immediately retype,
 // instead of leaving them stuck staring at a red button they can't act on.
 export default function SubmitButton({ validity, onPress, onClearInvalid }: Props) {
-  const { color } = useTheme();
+  const { color, textColor: themedText } = useTheme();
   const disabled = validity === 'incomplete';
   // Pressable never calls onPress at all while disabled, so this can't fire
   // a haptic for a press that didn't actually submit/clear anything.
@@ -44,7 +44,7 @@ export default function SubmitButton({ validity, onPress, onClearInvalid }: Prop
   // already), so only the other two need `color()`.
   const bg = validity === 'valid' ? color('submitOn') : validity === 'invalid' ? INVALID_COLOR : color('keyBackground');
   const edge = validity === 'valid' ? color('submitOnEdge') : validity === 'invalid' ? INVALID_EDGE_COLOR : color('keyEdge');
-  const textColor = validity === 'incomplete' ? color('textMuted') : '#ffffff';
+  const textColor = validity === 'incomplete' ? themedText('textMuted') : '#ffffff';
 
   return (
     <Button3D

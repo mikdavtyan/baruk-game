@@ -25,7 +25,7 @@ type Props = {
 // back out, on the native driver; reduced motion is a plain short fade. It
 // stays mounted until its close animation ends, then renders nothing.
 export default function RulesModal({ open, onClose }: Props) {
-  const { theme, color, reduceMotion } = useTheme();
+  const { theme, color, textColor, reduceMotion } = useTheme();
   const [mounted, setMounted] = useState(open);
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
@@ -92,7 +92,7 @@ export default function RulesModal({ open, onClose }: Props) {
           >
             <View style={styles.header}>
               <View style={styles.headerSide} />
-              <Animated.Text style={[styles.title, { color: color('rulesText') }]} numberOfLines={1} adjustsFontSizeToFit>
+              <Animated.Text style={[styles.title, { color: textColor('rulesText') }]} numberOfLines={1} adjustsFontSizeToFit>
                 ԻՆՉՊԵ՞Ս ԽԱՂԱԼ
               </Animated.Text>
               <View style={[styles.headerSide, styles.headerSideRight]}>

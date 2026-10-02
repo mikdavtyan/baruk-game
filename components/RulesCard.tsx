@@ -93,7 +93,7 @@ function StaticBadge({ children }: { children: ReactNode }) {
 // the real board's (transparent) unsubmitted-tile look. The one highlighted
 // tile per row is the real Tile component instead, in the real game color.
 function NeutralTile({ letter, size }: { letter: string; size: number }) {
-  const { color } = useTheme();
+  const { color, textColor } = useTheme();
   return (
     <Animated.View
       style={[
@@ -107,7 +107,7 @@ function NeutralTile({ letter, size }: { letter: string; size: number }) {
         },
       ]}
     >
-      <Animated.Text style={[styles.neutralTileText, { fontSize: size * 0.5, color: color('rulesTileText') }]}>
+      <Animated.Text style={[styles.neutralTileText, { fontSize: size * 0.5, color: textColor('rulesTileText') }]}>
         {letter}
       </Animated.Text>
     </Animated.View>
@@ -189,16 +189,16 @@ function RulesText({
   style?: StyleProp<TextStyle>;
   children: TextPart[];
 }) {
-  const { color } = useTheme();
+  const { theme, textColor } = useTheme();
   return (
-    <Animated.Text style={[styles.bodyText, { color: color('rulesTextMuted') }, style]}>
+    <Animated.Text style={[styles.bodyText, { color: textColor('rulesTextMuted') }, style]}>
       {children.map((part, i) =>
         part.bold ? (
           <Animated.Text
             key={i}
             style={[
               styles.boldText,
-              { color: color('rulesText') },
+              { color: textColor('rulesText') },
               // The game font only ships one (already-bold) weight, so
               // font-weight alone can't distinguish this from the rest of
               // the text — this faint doubled-up shadow is the RN stand-in
@@ -207,7 +207,9 @@ function RulesText({
               // "currentColor" — reusing the same animated color keeps it in
               // sync instead.
               Platform.OS === 'ios' && {
-                textShadowColor: color('rulesText'),
+                // Not on the native-animated allowlist, so a plain snapshot
+                // (it switches at the theme fade's midpoint).
+                textShadowColor: theme.rulesText,
                 textShadowOffset: { width: 0.5, height: 0 },
                 textShadowRadius: 0,
               },
@@ -224,7 +226,7 @@ function RulesText({
 }
 
 export default function RulesCard({ revealTrigger, visible }: Props) {
-  const { theme, color, reduceMotion } = useTheme();
+  const { theme, color, textColor, reduceMotion } = useTheme();
   const [revealedCount, setRevealedCount] = useState(reduceMotion ? EXAMPLES.length : 0);
 
   // Snaps straight back to neutral — no animation to disable first, since
@@ -254,7 +256,7 @@ export default function RulesCard({ revealTrigger, visible }: Props) {
     <View>
       <View style={styles.attemptsRow}>
         <Animated.View style={[styles.attemptsBadge, { backgroundColor: color('rulesBadgeBg') }]}>
-          <Animated.Text style={[styles.attemptsBadgeText, { color: color('rulesBadgeText') }]}>6</Animated.Text>
+          <Animated.Text style={[styles.attemptsBadgeText, { color: textColor('rulesBadgeText') }]}>6</Animated.Text>
         </Animated.View>
         <RulesText style={styles.attemptsText}>
           {[{ text: 'ԴՈՒՔ ՈՒՆԵՔ 6 ՀՆԱՐԱՎՈՐՈՒԹՅՈՒՆ ԲԱՌԸ ԳՏՆԵԼՈՒ ՀԱՄԱՐ' }]}

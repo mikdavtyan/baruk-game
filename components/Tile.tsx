@@ -49,12 +49,12 @@ const isResult = (s: LetterState) => s === 'correct' || s === 'present' || s ===
 // state, so 'white' is a plain constant, not itself something to animate. An
 // unsubmitted tile (empty or mid-typing) has no fill at all — just its
 // border — so `bg` is the plain constant 'transparent' for those too.
-function tileColors(state: LetterState, color: ColorFn) {
+function tileColors(state: LetterState, color: ColorFn, textColor: ColorFn) {
   if (state === 'correct') return { bg: color('correct'), text: '#ffffff' };
   if (state === 'present') return { bg: color('present'), text: '#ffffff' };
   if (state === 'absent') return { bg: color('absent'), text: '#ffffff' };
   if (state === 'neutral') return { bg: NEUTRAL_TILE_BG, text: NEUTRAL_TILE_TEXT };
-  return { bg: 'transparent', text: color('typedLetter') }; // empty / filled
+  return { bg: 'transparent', text: textColor('typedLetter') }; // empty / filled
 }
 
 export default function Tile({
@@ -65,7 +65,7 @@ export default function Tile({
   isCurrentRow = false,
   ghostLetter = null,
 }: Props) {
-  const { theme, color, reduceMotion } = useTheme();
+  const { theme, color, textColor, reduceMotion } = useTheme();
   const [rotation] = useState(() => new Animated.Value(0)); // 0 = flat, 1 = edge-on
   // The state actually painted. When a scored result arrives it lags behind
   // `state` until the flip reaches its halfway point, so the color is never
@@ -158,7 +158,7 @@ export default function Tile({
   }, [isCurrentRow, reduceMotion, shine]);
   const shineTranslateX = shine.interpolate({ inputRange: [0, 1], outputRange: [-size, size * 1.3] });
 
-  const colors = tileColors(shownState, color);
+  const colors = tileColors(shownState, color, textColor);
   const fontSize = size * LETTER_SIZE_RATIO;
   const rotateX = rotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '90deg'] });
 
@@ -188,10 +188,11 @@ export default function Tile({
   return (
     // Split into nested layers on purpose: RN's Animated can't mix a
     // native-driven animation (this outer view's flip rotateX; the letter's
-    // entrance/exit/pop transform+opacity below) with a JS-driven one (every
-    // themed color, via `color()`) on the *same* node — doing so throws
-    // "Style property ... is not supported by native animated module" and
-    // breaks the native-driven one. So each layer here carries only one kind.
+    // pop scale below) with a JS-driven one (the letter's themed color, via
+    // `textColor()`) on the *same* node — doing so throws "Style property ...
+    // is not supported by native animated module" and breaks the native-driven
+    // one. So each layer here carries only one kind. (The fill/border layer's
+    // themed `color()`s are native-driven, like the flip.)
     <Animated.View
       style={[
         styles.tile,
