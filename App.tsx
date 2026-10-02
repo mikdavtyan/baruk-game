@@ -63,11 +63,13 @@ import {
   getPendingLoss,
   getPendingWin,
   getPoints,
+  getRound,
   getStreak,
   PendingLoss,
   PendingWin,
-  setCoins as persistCoins,
-  setWordBag as persistWordBag,
+  SavedRound,
+  saveAtomically,
+  setRound,
   WordBag,
 } from './lib/gameStorage';
 import { GamePhase, phaseFromPending } from './lib/gamePhase';
@@ -140,6 +142,7 @@ type Ghost = { index: number; letter: string };
 
 const HINT_EXHAUSTED_TOAST = 'ԲՈԼՈՐ ՏԱՌԵՐՆ ԱՐԴԵՆ ԲԱՑ ԵՆ';
 const DARTS_EXHAUSTED_TOAST = 'ՍԽԱԼ ՏԱՌԵՐ ԱՅԼԵՎՍ ՉԿԱՆ';
+const HINT_NO_ROOM_TOAST = 'ՀՈՒՇՄԱՆ ՀԱՄԱՐ ԴԱՏԱՐԿ ՎԱՆԴԱԿ ՉԿԱ';
 
 // Every position any of `guesses` scored correct, as a ghost of that letter.
 function correctPositionGhosts(guesses: SubmittedGuess[]): Ghost[] {
@@ -173,47 +176,29 @@ function AppInner() {
   });
   // The persisted shuffled word bag (lib/wordBag.ts); the current secret
   // word is its current entry. Loaded together with any pending end-of-round
-  // record, which decides the starting phase and is handed to WinFlow /
-  // LossFlow to resume their modal. The game renders nothing until then.
+  // record (handed to WinFlow / LossFlow to resume their modal), the saved
+  // round and the coins/points/streak — all before the first render, so a
+  // restored win or loss flow never decides with balances not loaded yet.
+  // The starting phase comes from the pending records, else the saved round.
   const [wordBag, setWordBagState] = useState<WordBag | null>(null);
   const [resumed, setResumed] = useState<{ win: PendingWin | null; loss: PendingLoss | null } | null>(null);
   // The round's explicit state machine — see lib/gamePhase.ts.
   const [phase, setPhase] = useState<GamePhase>('playing');
-  useEffect(() => {
-    Promise.all([loadWordBag(), getPendingWin(), getPendingLoss()]).then(([bag, win, loss]) => {
-      setWordBagState(bag);
-      setResumed({ win, loss });
-      setPhase(phaseFromPending(win, loss));
-    });
-  }, []);
   const secretWord = useMemo(() => (wordBag ? currentWordTokens(wordBag) : []), [wordBag]);
   // Each guess (submitted or in-progress) is an array of key-tokens rather
   // than raw characters, so a two-character key like "ու" still counts as
   // exactly one of the 5 entries in a guess.
   const [submittedGuesses, setSubmittedGuesses] = useState<SubmittedGuess[]>([]);
-  // The win flow's own persisted coin balance (see lib/gameStorage.ts) — the
-  // single source of truth Header displays and WinFlow both reads and
-  // credits. Loaded once on mount; 0 until that resolves.
+  // The persisted coin balance (see lib/gameStorage.ts) — the single source
+  // of truth Header displays and the flows read and credit.
   const [coins, setCoinsState] = useState(0);
-  useEffect(() => {
-    getCoins().then(setCoinsState);
-  }, []);
   // ՄԻԱՎՈՐՆԵՐ — the running points total (see constants/winFlow.ts's
   // WIN_FLOW_CONFIG.pointsByGuessCount); WinFlow credits it on each win.
   const [points, setPointsState] = useState(0);
-  useEffect(() => {
-    getPoints().then(setPointsState);
-  }, []);
   // Streak is lifted here (not owned by WinFlow) since LossFlow also reads
   // and resets the exact same persisted value.
   const [streak, setStreakState] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
-  useEffect(() => {
-    getStreak().then((s) => {
-      setStreakState(s.current);
-      setBestStreak(s.best);
-    });
-  }, []);
   // Bumped only by a genuine New Game (never by a same-word loss retry) —
   // LossFlow resets its per-round retry count whenever this changes.
   const [roundId, setRoundId] = useState(0);
@@ -283,6 +268,13 @@ function AppInner() {
   // keys should use the slow arrow-impact fade" (see Keyboard.tsx) — always
   // correct since a token only ever enters this list right as its arrow lands.
   const [dartsRevealedAbsent, setDartsRevealedAbsent] = useState<string[]>([]);
+  // Every Darts target paid for this word — saved the moment it's paid, so a
+  // relaunch before the arrows land still shows them eliminated.
+  // dartsRevealedAbsent above follows the arrows; this follows the payments.
+  const [paidDarts, setPaidDarts] = useState<string[]>([]);
+  // Retries used on this word, saved with the round so a relaunch mid-retry
+  // can't grant another (LossFlow starts its own count from it).
+  const [retriesUsed, setRetriesUsed] = useState(0);
   // Increments each time Darts actually fires, so ArrowOverlay/BowIcon know
   // to launch a fresh volley; `origin`/`targets` are real on-screen positions
   // (window space), resolved once at fire time — see handleDarts.
@@ -601,6 +593,60 @@ function AppInner() {
     setGuess(initialGuess());
   };
 
+  // The first load (see the wordBag/resumed state above). Placed after every
+  // state it restores.
+  useEffect(() => {
+    Promise.all([loadWordBag(), getPendingWin(), getPendingLoss(), getRound(), getCoins(), getPoints(), getStreak()]).then(
+      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak]) => {
+        setCoinsState(savedCoins);
+        setPointsState(savedPoints);
+        setStreakState(savedStreak.current);
+        setBestStreak(savedStreak.best);
+        // A saved round for another word (e.g. the word list changed) is ignored.
+        const restored = round && round.wordKey === currentWordTokens(bag).join('') ? round : null;
+        if (restored) {
+          setSubmittedGuesses(restored.submittedGuesses);
+          setGuess(restored.typing);
+          setRetainedGuesses(restored.retainedGuesses);
+          setHintGhosts(restored.hintGhosts);
+          setPaidDarts(restored.paidDarts);
+          setDartsRevealedAbsent(restored.paidDarts);
+          setRetriesUsed(restored.retriesUsed);
+        }
+        const startPhase = phaseFromPending(win, loss, restored?.submittedGuesses);
+        // A result restored from the round alone replays its flow from the start.
+        if (!win && !loss && startPhase !== 'playing' && restored) {
+          setResultRowIndex(restored.submittedGuesses.length - 1);
+        }
+        setWordBagState(bag);
+        setResumed({ win, loss });
+        setPhase(startPhase);
+      },
+    );
+  }, []);
+
+  // The saved round, kept current: saved whenever any part of it changes, so a
+  // relaunch puts the round back exactly where it was (see
+  // docs/adr/0001-rounds-survive-relaunch.md). Changes that also move coins
+  // save it with them in one atomic write instead (Hint, Darts, the retry
+  // grant, a new game). Nothing is saved before the first load completes.
+  const isLoaded = wordBag !== null && resumed !== null;
+  const currentRound = useMemo<SavedRound>(
+    () => ({
+      wordKey: secretWord.join(''),
+      submittedGuesses,
+      typing: guess,
+      retainedGuesses,
+      hintGhosts,
+      paidDarts,
+      retriesUsed,
+    }),
+    [secretWord, submittedGuesses, guess, retainedGuesses, hintGhosts, paidDarts, retriesUsed],
+  );
+  useEffect(() => {
+    if (isLoaded) setRound(currentRound);
+  }, [isLoaded, currentRound]);
+
   // The board reset shared by the loss retry, ՀԱՋՈՐԴ ԲԱՌԸ and ՆՈՐ ԽԱՂ. It
   // runs while the round's modal still fully covers the board: `commit`
   // applies the whole reset (board and keyboard) in one render and the board
@@ -618,7 +664,10 @@ function AppInner() {
   // and a fresh board, keyboard and Hint/Darts state, all in one render.
   const handleNewGame = (onBoardShown: () => void) => {
     const nextBag = wordBag ? advanceBag(wordBag, PLAYABLE_WORDS) : null;
-    if (nextBag) persistWordBag(nextBag);
+    // The next word, and the old round and its end-of-round records gone —
+    // one atomic write, so a kill can't bring the old result back on top of
+    // anything already credited for it.
+    saveAtomically({ ...(nextBag ? { wordBag: nextBag } : {}), round: null, pendingWin: null, pendingLoss: null });
     resetBoard(
       () => {
         if (nextBag) setWordBagState(nextBag);
@@ -630,6 +679,8 @@ function AppInner() {
         setHintGhosts([]);
         setRetainedGuesses([]);
         setDartsRevealedAbsent([]);
+        setPaidDarts([]);
+        setRetriesUsed(0);
         setIsDartsFiring(false);
         setToast(null);
         setRoundId((n) => n + 1); // a genuine new round — LossFlow resets its retry count
@@ -637,6 +688,24 @@ function AppInner() {
       onBoardShown,
     );
   };
+
+  // A retry was just paid for (coins) or earned (ad): saved before any
+  // animation, in one atomic write — the pending loss gone, the saved round
+  // already the retried round (handleLossRetry below then shows exactly
+  // this), and for coins the new balance. Round state isn't touched until
+  // then, so the round autosave can't overwrite it with the lost board.
+  const handleRetryGranted = (lostGuesses: SubmittedGuess[], coinsAfter?: number) =>
+    saveAtomically({
+      pendingLoss: null,
+      round: {
+        ...currentRound,
+        submittedGuesses: [],
+        typing: initialGuess(),
+        retainedGuesses: [...retainedGuesses, ...lostGuesses],
+        retriesUsed: retriesUsed + 1,
+      },
+      ...(coinsAfter === undefined ? {} : { coins: coinsAfter }),
+    });
 
   // The loss flow's same-word retry (ad or coin, see LossFlow.tsx): board
   // clears, but — unlike a real New Game — the player doesn't lose what
@@ -652,6 +721,7 @@ function AppInner() {
     resetBoard(
       () => {
         setRetainedGuesses((prev) => [...prev, ...lostGuesses]);
+        setRetriesUsed((n) => n + 1);
         setSubmittedGuesses([]);
         setGuess(initialGuess());
         setPhase('playing');
@@ -689,12 +759,13 @@ function AppInner() {
   const ghosts = [...carriedGhosts, ...hintGhosts.filter((h) => !carriedGhosts.some((c) => c.index === h.index))];
   // Hint only ever reveals a position that's still unknown: not green in any
   // guess of this word (the board before a retry included), not already a
-  // ghost. Empty cells first, so the revealed ghost is actually visible.
+  // ghost — and only in an empty cell, the only place a ghost is visible.
   const knownPositions = new Set([...greenPositions, ...ghosts].map((g) => g.index));
   const unknownPositions = Array.from({ length: WORD_LENGTH }, (_, i) => i).filter((i) => !knownPositions.has(i));
-  const emptyUnknownPositions = unknownPositions.filter((i) => guess.tokens[i] === '');
-  const hintTargets = emptyUnknownPositions.length > 0 ? emptyUnknownPositions : unknownPositions;
+  const hintTargets = unknownPositions.filter((i) => guess.tokens[i] === '');
   const hintExhausted = unknownPositions.length === 0;
+  // Unknown positions remain, but every one of them has a typed letter.
+  const hintNoRoom = !hintExhausted && hintTargets.length === 0;
   // Darts targets random keyboard keys that aren't in the secret word at
   // all (any key, not just ones already typed), and aren't already gray.
   const dartsCandidates = ALL_LETTER_TOKENS.filter(
@@ -705,14 +776,16 @@ function AppInner() {
   // something left (and the player can pay) or it's exhausted — then a tap
   // just explains why, free. Exhausted or unaffordable buttons are dimmed.
   const { hintPrice, dartsPrice } = WIN_FLOW_CONFIG;
-  const hintDisabled = isGameLocked || (!hintExhausted && coins < hintPrice);
+  const hintDisabled = isGameLocked || (!hintExhausted && !hintNoRoom && coins < hintPrice);
   const dartsDisabled = isGameLocked || isDartsFiring || (!dartsExhausted && coins < dartsPrice);
 
-  // Charges the power-up — the balance is saved first, as everywhere else.
-  const chargeCoins = async (price: number) => {
+  // Charges the power-up and saves what it bought (into the saved round) in
+  // one atomic write — a kill can never take the coins without keeping the
+  // purchase. Saved first, as everywhere else; the UI state follows.
+  const chargeCoins = async (price: number, purchase: Partial<SavedRound>) => {
     const next = coins - price;
+    await saveAtomically({ coins: next, round: { ...currentRound, ...purchase } });
     setCoinsState(next);
-    await persistCoins(next);
   };
 
   // Adds a low-opacity green "ghost" of the secret word's real letter at a
@@ -726,10 +799,15 @@ function AppInner() {
       showToast(HINT_EXHAUSTED_TOAST);
       return;
     }
+    if (hintNoRoom) {
+      showToast(HINT_NO_ROOM_TOAST);
+      return;
+    }
     powerUpBusyRef.current = true;
     const index = hintTargets[Math.floor(Math.random() * hintTargets.length)];
-    await chargeCoins(hintPrice);
-    setHintGhosts((prev) => [...prev, { index, letter: secretWord[index] }]);
+    const nextGhosts = [...hintGhosts, { index, letter: secretWord[index] }];
+    await chargeCoins(hintPrice, { hintGhosts: nextGhosts });
+    setHintGhosts(nextGhosts);
     powerUpBusyRef.current = false;
   };
 
@@ -765,7 +843,10 @@ function AppInner() {
     const targets = pickRandomTokens(dartsCandidates, 3);
     setIsDartsFiring(true);
     powerUpBusyRef.current = true;
-    await chargeCoins(dartsPrice);
+    // Every target is saved as paid now, before any arrow lands.
+    const nextPaidDarts = [...new Set([...paidDarts, ...targets])];
+    await chargeCoins(dartsPrice, { paidDarts: nextPaidDarts });
+    setPaidDarts(nextPaidDarts);
     powerUpBusyRef.current = false;
 
     if (reduceMotion) {
@@ -898,7 +979,7 @@ function AppInner() {
             onSubmit={handleEnter}
             onClearInvalid={handleClearInvalidGuess}
             hintDisabled={hintDisabled}
-            hintDimmed={hintDisabled || hintExhausted}
+            hintDimmed={hintDisabled || hintExhausted || hintNoRoom}
             onHint={handleHint}
             dartsDisabled={dartsDisabled}
             dartsDimmed={dartsDisabled || dartsExhausted}
@@ -951,6 +1032,8 @@ function AppInner() {
           setBestStreak(s.best);
         }}
         onRetry={handleLossRetry}
+        onRetryGranted={handleRetryGranted}
+        initialRetriesUsed={retriesUsed}
         onNewGame={handleNewGame}
       />
       {/* Fixed, full-screen overlay above everything (App.tsx measures real

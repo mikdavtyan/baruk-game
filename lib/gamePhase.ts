@@ -1,3 +1,4 @@
+import { LetterState, MAX_GUESSES } from '../constants/theme';
 import { PendingLoss, PendingWin } from './gameStorage';
 
 // The round's one explicit state machine (App.tsx owns it):
@@ -16,9 +17,20 @@ import { PendingLoss, PendingWin } from './gameStorage';
 // included — and nothing is ever reset without the player seeing it.
 export type GamePhase = 'playing' | 'revealing' | 'lost-awaiting-decision' | 'won' | 'finished';
 
-export function phaseFromPending(pendingWin: PendingWin | null, pendingLoss: PendingLoss | null): GamePhase {
+//
+// Without a pending record, a restored round's submitted guesses decide: a
+// result counts the moment its guess is submitted, so a relaunch during the
+// reveal or the win celebration continues as that win or loss.
+export function phaseFromPending(
+  pendingWin: PendingWin | null,
+  pendingLoss: PendingLoss | null,
+  submittedGuesses: { states: LetterState[] }[] = [],
+): GamePhase {
   if (pendingLoss) return pendingLoss.step === 'secondChance' ? 'lost-awaiting-decision' : 'finished';
   if (pendingWin) return 'won';
+  const last = submittedGuesses[submittedGuesses.length - 1];
+  if (last && last.states.every((s) => s === 'correct')) return 'won';
+  if (submittedGuesses.length >= MAX_GUESSES) return 'lost-awaiting-decision';
   return 'playing';
 }
 

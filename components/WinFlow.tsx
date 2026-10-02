@@ -22,15 +22,14 @@ import {
   getPoints,
   hasClaimedShareBonus,
   PendingWin,
+  saveAtomically,
   setCoins as persistCoins,
   setPendingWin,
-  setPoints as persistPoints,
-  setStreak as persistStreak,
 } from '../lib/gameStorage';
 import { getLeaderboard, RankedEntry } from '../lib/leaderboard';
 import { measureWindow } from '../lib/measureWindow';
 import { showRewardedAd } from '../lib/rewardedAd';
-import { buildEmojiGrid, buildShareText } from '../lib/shareText';
+import { buildEmojiGrid, buildShareText, shareBonusAvailable } from '../lib/shareText';
 import { useTheme } from '../lib/ThemeContext';
 
 type SubmittedGuess = { tokens: string[]; states: LetterState[] };
@@ -247,21 +246,25 @@ export default function WinFlow({
     // ՄԻԱՎՈՐՆԵՐ — awarded on every win, by guess count (see A9's spec).
     const pointsGain = WIN_FLOW_CONFIG.pointsByGuessCount[Math.min(pending.guessCount, 6) - 1] ?? 0;
     const nextPoints = points + pointsGain;
-    onPointsChange(nextPoints);
-    await persistPoints(nextPoints);
-
     const coinStart = coins;
-    pendingFlightRef.current = true;
-    await creditCoins(finalAmount);
-
+    const nextCoins = coins + finalAmount;
     const nextStreak = streak + 1;
     const nextBest = Math.max(bestStreak, nextStreak);
+    const resultPending: PendingWin = { ...pending, step: 'result' };
+
+    // Saved first, all in one atomic write — a kill mid-save must never let a
+    // relaunch offer this reward again on top of a partial credit.
+    await saveAtomically({
+      points: nextPoints,
+      coins: nextCoins,
+      streak: { current: nextStreak, best: nextBest },
+      pendingWin: resultPending,
+    });
+    onPointsChange(nextPoints);
+    pendingFlightRef.current = true;
+    onCoinsChange(nextCoins);
     setStreakGrew(true);
     onStreakChange({ current: nextStreak, best: nextBest });
-    await persistStreak({ current: nextStreak, best: nextBest });
-
-    const resultPending: PendingWin = { ...pending, step: 'result' };
-    await setPendingWin(resultPending);
     setPending(resultPending);
     getLeaderboard(nextPoints).then(setLeaderboard);
 
@@ -339,7 +342,7 @@ export default function WinFlow({
     if (!pending) return;
     try {
       const result = await Share.share({ message: buildShareText(pending.guessCount, pending.emojiGrid) });
-      if (result.action === Share.sharedAction) {
+      if (shareBonusAvailable() && result.action === Share.sharedAction) {
         const already = await hasClaimedShareBonus(pending.wordKey);
         if (!already) {
           const startValue = coins;
@@ -374,11 +377,11 @@ export default function WinFlow({
 
   // ՀԱՋՈՐԴ ԲԱՌԸ: App resets and remounts the board under the still-opaque
   // modal; once that fresh board is on screen, the result content and the
-  // backdrop fade out together.
+  // backdrop fade out together. App also clears the pending win, in the same
+  // atomic write as the next word.
   const handleNext = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setPendingWin(null);
     finishCoinFlightNow();
     onNextWord(() =>
       Animated.parallel([
@@ -461,7 +464,7 @@ export default function WinFlow({
                 streakGrew={streakGrew}
                 bestStreak={bestStreak}
                 leaderboard={leaderboard}
-                shareBadgeVisible={shareBadgeVisible}
+                shareBadgeVisible={shareBadgeVisible && shareBonusAvailable()}
                 onShare={handleShare}
                 onNext={handleNext}
                 nextLabel="ՀԱՋՈՐԴ ԲԱՌԸ"

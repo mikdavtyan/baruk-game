@@ -5,7 +5,7 @@ const expoConfig = require("eslint-config-expo/flat");
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ["dist/*"],
+    ignores: ["dist/*", ".claude/**"],
   },
   {
     // jest.mock factories are hoisted above imports, so they must require();

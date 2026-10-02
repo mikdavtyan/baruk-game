@@ -16,6 +16,7 @@
 // re-entrant press as the cause and pointing squarely at this missing
 // upper-bound check.
 import React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import App from './App';
 import Tile from './components/Tile';
 import { letterLabel } from './lib/letterDisplay';
@@ -39,8 +40,11 @@ jest.mock('react-native-safe-area-context', () =>
 // to completion synchronously within the test (via advanceTimersByTime
 // below) instead of its completion callback firing after the test — and the
 // whole file — has already torn down.
-beforeEach(() => {
+beforeEach(async () => {
   jest.useFakeTimers();
+  // The round (typed letters included) is saved and restored across mounts,
+  // so each test starts from empty storage.
+  await AsyncStorage.clear();
 });
 afterEach(() => {
   act(() => {

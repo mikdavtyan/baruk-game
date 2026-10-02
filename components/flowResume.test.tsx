@@ -126,6 +126,8 @@ describe('LossFlow resume', () => {
       finalGuesses={[]}
       secretWordTokens={secretWordTokens}
       onRetry={onRetry}
+      onRetryGranted={() => Promise.resolve()}
+      initialRetriesUsed={0}
       onNewGame={jest.fn()}
     />
   );
@@ -207,6 +209,8 @@ describe('LossFlow retry transition', () => {
       finalGuesses={[]}
       secretWordTokens={LOST_WORD}
       onRetry={onRetry}
+      onRetryGranted={() => Promise.resolve()}
+      initialRetriesUsed={0}
       onNewGame={jest.fn()}
     />
   );

@@ -369,6 +369,37 @@ describe('power-ups', () => {
     expect(root.root.findByType(Board).props.ghostHints).toHaveLength(3);
   });
 
+  it('Hint only reveals an empty unknown cell; with none in the row it is free, dimmed and explains why', async () => {
+    const NO_ROOM_TOAST = 'ՀՈՒՇՄԱՆ ՀԱՄԱՐ ԴԱՏԱՐԿ ՎԱՆԴԱԿ ՉԿԱ';
+    await renderApp();
+    await submitWord('դպրոց'); // ր green at index 2
+    await submitWord('բետոն'); // ն green at index 4
+
+    // The only empty cell (4) is already known.
+    for (const token of ['ա', 'բ', 'գ', 'դ']) await pressKey(token);
+    expect(controls().hintDimmed).toBe(true);
+    expect(controls().hintDisabled).toBe(false);
+    await press('Hint');
+    expect(toastMessages()).toEqual([NO_ROOM_TOAST]);
+    expect(await stored('wordle:coins')).toBe(1000);
+    expect(root.root.findByType(Board).props.ghostHints).toEqual([]);
+
+    // A full row: nowhere to show a ghost either.
+    await pressKey('ե');
+    await press('Hint');
+    expect(await stored('wordle:coins')).toBe(1000);
+    expect(root.root.findByType(Board).props.ghostHints).toEqual([]);
+
+    // Free cell 3 (unknown) and 4 (known): the hint must land in 3.
+    await pressBackspace();
+    await pressBackspace();
+    expect(controls().hintDimmed).toBe(false);
+    await press('Hint');
+    expect(await stored('wordle:coins')).toBe(1000 - WIN_FLOW_CONFIG.hintPrice);
+    expect(root.root.findByType(Board).props.ghostHints).toEqual([{ index: 3, letter: 'ու' }]);
+    expect(rowDisplay(2)).toEqual(['ա', 'բ', 'գ', 'ghost:ու', '']);
+  });
+
   it('the bow only ever targets letters that are not gray yet, and when none is left dims and explains for free', async () => {
     await renderApp();
     await submitWord('բդեշխ'); // 5 letters already gray

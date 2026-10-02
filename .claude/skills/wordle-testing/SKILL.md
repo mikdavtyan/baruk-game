@@ -11,6 +11,7 @@ Run everything with `npm test`; run one file with `npx jest lib/evaluateGuess`. 
 - **Pure logic:** a colocated `lib/*.test.ts` or `constants/*.test.ts`. Always include an `ու` case, because that's where token bugs show up.
 - **Typing and input races:** `App.guessTyping.test.tsx`.
 - **Whole rounds (win, loss, retry, New Game, economy):** `App.roundFlow.test.tsx`. Reuse its helpers (`submitWord`, `loseRound`, `retryByAd`, `advance`, `stored`, `keyState`, `rowDisplay` for what each cell shows incl. ghosts) and its word pinning.
+- **Relaunch and crash safety (saved round, atomic writes, share bonus per platform):** `App.persistence.test.tsx`. A relaunch is `root.unmount()` + `renderApp()` over the same storage; `crashAfterWrites(n)` lets n storage writes land and drops the rest, then relaunches. Mock the platform with `jest.replaceProperty(Platform, 'OS', …)` and the share sheet with `jest.spyOn(Share, 'share')`. Kept separate from `App.roundFlow.test.tsx` because each App test leaks heap and that file is near the worker's limit.
 - **Second-chance modal (entrance order, button frames, ad loading, hero):** `components/SecondChanceModal.test.tsx`.
 - **One flow in isolation, relaunch-resume, retry transition:** `components/flowResume.test.tsx`. It seeds a `wordle:pending*` record in AsyncStorage and then mounts WinFlow or LossFlow inside `ThemeProvider`.
 

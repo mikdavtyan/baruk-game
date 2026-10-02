@@ -39,7 +39,8 @@ Both handlers go through `resetBoard` (see `wordle-ui`), in one render, while th
 | submittedGuesses, guess, phase, resultRowIndex, lossShakeRowIndex | reset | reset |
 | retainedGuesses | cleared | appended with `lostGuesses` (keyboard colors + carried ghosts come from it) |
 | hintGhosts | cleared | kept |
-| dartsRevealedAbsent, isDartsFiring | cleared | kept |
+| dartsRevealedAbsent, paidDarts, isDartsFiring | cleared | kept |
+| retriesUsed | 0 | +1 |
 | roundId | +1 (LossFlow resets its retry count) | unchanged |
 | keyboard colors | reset to neutral | kept |
 | board | remounted (`boardKey` +1) | remounted (`boardKey` +1) |
@@ -47,6 +48,6 @@ Both handlers go through `resetBoard` (see `wordle-ui`), in one render, while th
 `lostGuesses` comes from LossFlow's frozen board, not from `submittedGuesses`, which is empty after a relaunch.
 
 ## Power-ups
-- **Hint:** a ghost of `secretWord[i]` at a random still-unknown position — not green in any guess of this word (retained guesses included), not already a ghost — preferring empty cells.
-- **Darts:** up to 3 tokens that are not in `secretWord` and not already gray (fewer if fewer are left). Targets are decided before any animation; a key turns absent when its arrow lands.
-- **Charging:** `WIN_FLOW_CONFIG.hintPrice`/`dartsPrice`, charged (balance saved first) only when something is revealed. With nothing left the button is dimmed but still tappable: a toast explains, free. Unaffordable → disabled.
+- **Hint:** a ghost of `secretWord[i]` at a random still-unknown position — not green in any guess of this word (retained guesses included), not already a ghost — and only in an empty cell (the only place a ghost shows). If unknown positions remain but none is empty, the button is dimmed, a tap is free and shows `HINT_NO_ROOM_TOAST`.
+- **Darts:** up to 3 tokens that are not in `secretWord` and not already gray (fewer if fewer are left). Targets are decided before any animation and saved as paid (`paidDarts`) with the charge; a key turns absent when its arrow lands (`dartsRevealedAbsent`), and a relaunch shows every paid target absent.
+- **Charging:** `WIN_FLOW_CONFIG.hintPrice`/`dartsPrice`, charged only when something is revealed, saved in one atomic write with what was bought (`chargeCoins(price, purchase)` updates the saved round). With nothing left the button is dimmed but still tappable: a toast explains, free. Unaffordable → disabled.

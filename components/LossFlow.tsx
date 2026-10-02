@@ -21,16 +21,15 @@ import {
   getPoints,
   hasClaimedShareBonus,
   PendingLoss,
+  saveAtomically,
   setCoins as persistCoins,
   setPendingLoss,
-  setPoints as persistPoints,
-  setStreak as persistStreak,
 } from '../lib/gameStorage';
 import { hasSomethingToSave } from '../lib/gamePhase';
 import { getLeaderboard, RankedEntry } from '../lib/leaderboard';
 import { measureWindow } from '../lib/measureWindow';
 import { showRewardedAd } from '../lib/rewardedAd';
-import { buildEmojiGrid, buildShareText } from '../lib/shareText';
+import { buildEmojiGrid, buildShareText, shareBonusAvailable } from '../lib/shareText';
 import { useTheme } from '../lib/ThemeContext';
 
 type SubmittedGuess = { tokens: string[]; states: LetterState[] };
@@ -69,6 +68,12 @@ type Props = {
   // keyboard too), calling back once the fresh board is on screen. The retry
   // gets the lost board to carry over (empty if it was a different word).
   onRetry: (lostGuesses: SubmittedGuess[], onBoardShown: () => void) => void;
+  // Saves a granted retry before any animation (App.tsx's handleRetryGranted):
+  // in one atomic write the pending loss is cleared, the saved round becomes
+  // the retried round and, for a coin retry, the reduced balance is saved —
+  // so a kill can never charge for a retry without granting it.
+  onRetryGranted: (lostGuesses: SubmittedGuess[], coinsAfter?: number) => Promise<void>;
+  initialRetriesUsed: number; // from the saved round — a relaunch mid-retry can't grant another
   onNewGame: (onBoardShown: () => void) => void;
   resume: PendingLoss | null; // a pending loss from before a relaunch (App reads it before first render)
   onFinished: () => void; // the loss result is decided — App's phase -> 'finished'
@@ -88,6 +93,8 @@ export default function LossFlow({
   bestStreak,
   onStreakChange,
   onRetry,
+  onRetryGranted,
+  initialRetriesUsed,
   onNewGame,
   resume,
   onFinished,
@@ -135,7 +142,7 @@ export default function LossFlow({
   const departCountRef = useRef(0);
   const coinButtonRef = useRef<View>(null);
   const wasActiveRef = useRef(!!resume); // a resumed loss is already showing
-  const retriesUsedRef = useRef(resume?.retriesUsed ?? 0);
+  const retriesUsedRef = useRef(resume?.retriesUsed ?? initialRetriesUsed);
   const roundIdRef = useRef(roundId);
 
   useEffect(() => {
@@ -193,10 +200,6 @@ export default function LossFlow({
     board: SubmittedGuess[],
     wordTokens: string[],
   ) => {
-    onPointsChange(0);
-    onStreakChange({ current: 0, best: finalBest });
-    await Promise.all([persistPoints(0), persistStreak({ current: 0, best: finalBest })]);
-
     const pending: PendingLoss = {
       wordKey: key,
       secretWordTokens: wordTokens,
@@ -208,7 +211,11 @@ export default function LossFlow({
       bestStreak: finalBest,
       emojiGrid: grid,
     };
-    await setPendingLoss(pending);
+    // One atomic write: a kill mid-save must never leave points reset while
+    // the Try again offer is still the saved step.
+    await saveAtomically({ points: 0, streak: { current: 0, best: finalBest }, pendingLoss: pending });
+    onPointsChange(0);
+    onStreakChange({ current: 0, best: finalBest });
     getLeaderboard(0).then(setLeaderboard);
     onFinished();
   };
@@ -327,12 +334,14 @@ export default function LossFlow({
       Animated.timing(contentOpacity, { toValue: 0, duration: MODAL_EXIT_MS, easing: Easing.out(Easing.quad), useNativeDriver: true }),
     ]).start(onDone);
 
+  // The lost board a retry carries over. A pending loss resumed after the
+  // word changed was a different word — nothing to carry.
+  const carriedBoard = () => (wordKey === secretWordTokens.join('') ? frozenBoard : []);
+
   // The retry counter and modal state change only after the exit finishes.
+  // (The grant itself was already saved — see onRetryGranted.)
   const proceedWithGrantedRetry = () => {
-    setPendingLoss(null);
-    // A pending loss resumed after the word changed was a different word
-    // — nothing to carry.
-    onRetry(wordKey === secretWordTokens.join('') ? frozenBoard : [], () =>
+    onRetry(carriedBoard(), () =>
       fadeOutModal(() => {
         retriesUsedRef.current += 1;
         setStep('idle');
@@ -344,10 +353,11 @@ export default function LossFlow({
     );
   };
 
-  const handleAdRetrySucceeded = () => {
+  const handleAdRetrySucceeded = async () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
     setClosingSnapshot(secondChanceView);
+    await onRetryGranted(carriedBoard());
     proceedWithGrantedRetry();
   };
 
@@ -360,8 +370,8 @@ export default function LossFlow({
     const startValue = coins;
     const next = coins - price;
     pendingFlightRef.current = true;
+    await onRetryGranted(carriedBoard(), next); // saved first, with the grant, before any animation
     onCoinsChange(next);
-    await persistCoins(next); // saved first, before any animation
 
     if (reduceMotion || !headerPillRect) {
       setPillValue(next);
@@ -427,7 +437,7 @@ export default function LossFlow({
   const handleShare = async () => {
     try {
       const result = await Share.share({ message: buildShareText('X', emojiGrid) });
-      if (result.action === Share.sharedAction) {
+      if (shareBonusAvailable() && result.action === Share.sharedAction) {
         const already = await hasClaimedShareBonus(wordKey);
         if (!already) {
           await claimShareBonus(wordKey);
@@ -459,11 +469,11 @@ export default function LossFlow({
   };
 
   // ՆՈՐ ԽԱՂ: App resets and remounts the board under the modal, then the
-  // modal fades out over it (see fadeOutModal).
+  // modal fades out over it (see fadeOutModal). App also clears the pending
+  // loss, in the same atomic write as the next word.
   const handleNewGame = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
-    setPendingLoss(null);
     finishCoinFlightNow();
     onNewGame(() =>
       fadeOutModal(() => {
@@ -526,7 +536,7 @@ export default function LossFlow({
                 streakGrew={false}
                 bestStreak={bestStreakAtRisk}
                 leaderboard={leaderboard}
-                shareBadgeVisible={shareBadgeVisible}
+                shareBadgeVisible={shareBadgeVisible && shareBonusAvailable()}
                 onShare={handleShare}
                 onNext={handleNewGame}
                 nextLabel="ՆՈՐ ԽԱՂ"
