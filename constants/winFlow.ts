@@ -27,6 +27,9 @@ export const WIN_FLOW_CONFIG = {
 // U+055C exclamation mark PRAISE_WORDS uses — keep them consistent.
 export const LOSS_TITLE_CLOSE = 'ՔԻՉ ՄՆԱ՜Ց'; // 3+ green in the last guess
 export const LOSS_TITLE = 'ԱՓՍՈ՜Ս';
+// The second-chance modal's subtitle when nothing is at stake (0 points, no
+// streak): the retry is about finding the word. ՝ is U+055D, the Armenian comma.
+export const LOSS_SUBTITLE_FIND_WORD = 'ՄԵԿ ՓՈՐՁ ԷԼ\u055D ԲԱՌԸ ԳՏՆԵԼՈՒ ՀԱՄԱՐ';
 
 export const PRAISE_WORDS: [string, string][] = [
   ['ՀԱՆՃԱՐԵ՜Ղ', 'ԱՆՀԱՎԱՏԱԼԻ՜'],
@@ -91,6 +94,10 @@ export const RETRY_COIN_FLIGHT_PIECES = 6; // always 6 coins, regardless of pric
 // itself) -> title -> hero -> ad button -> coin button -> decline.
 export const SECOND_CHANCE_ENTER_DELAYS_MS = { title: 200, hero: 350, ad: 550, coin: 650, decline: 800 };
 export const SECOND_CHANCE_ENTER_MS = 220;
+// The "find the word" variant's hero: its 5 found-letter tiles pop in one
+// after another (scale + fade, native driver) once the hero stage is shown.
+export const FOUND_TILE_ENTER_MS = 260;
+export const FOUND_TILE_STAGGER_MS = 70;
 
 export const LOSS_RESULT_ROLLDOWN_MS = 700; // points/streak rolling down to 0
 export const SMOKE_PUFF_DURATION_MS = 900;

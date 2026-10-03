@@ -292,8 +292,7 @@ describe('loss', () => {
 
 describe('board reset (retry, ՆՈՐ ԽԱՂ)', () => {
   beforeEach(async () => {
-    // Points to save, so a loss offers Try again (with nothing to save it
-    // goes straight to the result).
+    // Points at stake, so the Try again offer is the normal (flame) modal.
     await AsyncStorage.multiSet([
       ['wordle:coins', JSON.stringify(100)],
       ['wordle:points', JSON.stringify(100)],
@@ -498,12 +497,12 @@ describe('end-of-game flow always shows', () => {
     expect(await stored('wordle:points')).toBe(100); // not reset — the retry saved the round
   });
 
-  it('with nothing to save (0 points, no streak) a loss goes straight to the result', async () => {
+  it('with nothing at stake (0 points, no streak) a loss still offers Try again, visibly', async () => {
     await renderApp();
     await loseRound();
-    expect(root.root.findAllByType(SecondChanceModal)).toHaveLength(0);
-    expect(root.root.findAllByType(ResultModal)).toHaveLength(1);
-    expect(contentOpacity(root.root.findByType(ResultModal))).toBe(1);
+    expect(root.root.findAllByType(SecondChanceModal)).toHaveLength(1);
+    expect(root.root.findAllByType(ResultModal)).toHaveLength(0);
+    expect(contentOpacity(root.root.findByType(SecondChanceModal))).toBe(1);
   });
 
   it('leaving and coming back while the Try again offer is up shows it again, points untouched', async () => {

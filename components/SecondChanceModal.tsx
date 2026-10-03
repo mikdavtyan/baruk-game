@@ -10,10 +10,14 @@ import OutlinedWord from './OutlinedWord';
 import PlayIcon from './PlayIcon';
 import Ribbon from './Ribbon';
 import ShineSweep from './ShineSweep';
-import Tile from './Tile';
 import { FONTS, HEADER_HEIGHT, LetterState, NEUTRAL_TILE_BG, NEUTRAL_TILE_EDGE, NEUTRAL_TILE_TEXT, WORD_LENGTH } from '../constants/theme';
+import { letterLabel } from '../lib/letterDisplay';
+import { useTheme } from '../lib/ThemeContext';
 import {
+  FOUND_TILE_ENTER_MS,
+  FOUND_TILE_STAGGER_MS,
   LOSS_HERO_COUNT_UP_MS,
+  LOSS_SUBTITLE_FIND_WORD,
   LOSS_HERO_FLAME_DROP_MS,
   SECOND_CHANCE_ENTER_DELAYS_MS,
   SECOND_CHANCE_ENTER_MS,
@@ -86,13 +90,65 @@ function Spinner() {
 
 type Guess = { tokens: string[]; states: LetterState[] };
 
+// Each position's letter if any guess on the lost board found it green, else
+// null. From the board the caller froze (LossFlow's frozenBoard / the pending
+// record), so a relaunch shows the same letters.
+function foundLetters(guesses: Guess[]): (string | null)[] {
+  return Array.from({ length: WORD_LENGTH }, (_, i) => guesses.find((g) => g.states[i] === 'correct')?.tokens[i] ?? null);
+}
+
+// The "find the word" hero: 5 small tiles, found letters as scored green
+// tiles (white letter, like the board's), unknown ones empty outlines. They
+// pop in one after another once `shown` (native driver); reduced motion: at once.
+function FoundLettersRow({ letters, shown, reduceMotion }: { letters: (string | null)[]; shown: boolean; reduceMotion: boolean }) {
+  const { color } = useTheme();
+  const [enter] = useState(() => letters.map(() => new Animated.Value(reduceMotion ? 1 : 0)));
+  // Created once (Easing.back overshoots, so opacity is clamped).
+  const [nodes] = useState(() =>
+    enter.map((v) => ({
+      opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
+      scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }),
+    })),
+  );
+  useEffect(() => {
+    if (!shown || reduceMotion) return;
+    Animated.stagger(
+      FOUND_TILE_STAGGER_MS,
+      enter.map((v) =>
+        Animated.timing(v, { toValue: 1, duration: FOUND_TILE_ENTER_MS, easing: Easing.out(Easing.back(1.6)), useNativeDriver: true }),
+      ),
+    ).start();
+  }, [shown, reduceMotion, enter]);
+  return (
+    <View testID="found-letters" style={styles.miniTiles}>
+      {letters.map((letter, i) => (
+        <Animated.View
+          key={i}
+          testID={`found-letter-${i}`}
+          style={[
+            styles.foundTile,
+            {
+              backgroundColor: letter ? color('correct') : 'transparent',
+              borderColor: letter ? color('correct') : color('tileBorder'),
+              opacity: nodes[i].opacity,
+              transform: [{ scale: nodes[i].scale }],
+            },
+          ]}
+        >
+          {letter && <Animated.Text style={styles.foundTileLetter}>{letterLabel(letter)}</Animated.Text>}
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
+
 type Props = {
   titleText: string; // LOSS_TITLE_CLOSE or LOSS_TITLE — computed by the caller from the last guess's green count
   pointsAtRisk: number;
   streakAtRisk: number;
   coinPrice: number;
   canAffordCoinRetry: boolean;
-  finalGuesses: Guess[]; // the board that just lost — the zero-points hero shows its last row
+  finalGuesses: Guess[]; // the (frozen) board that just lost — the nothing-at-stake hero shows its found letters
   coinButtonRef: RefObject<View | null>;
   onWatchAd: () => Promise<boolean>;
   onAdRetrySucceeded: () => void;
@@ -166,30 +222,27 @@ export default function SecondChanceModal({
   };
 
   const hasPoints = pointsAtRisk > 0;
+  // Nothing at stake (from the pending record's numbers, so a relaunch shows
+  // the same variant): the retry is about finding the word.
   const nothingAtStake = pointsAtRisk === 0 && streakAtRisk === 0;
-  const lastGuess = finalGuesses[finalGuesses.length - 1];
-  const foundCount = new Set(
-    finalGuesses.flatMap((g) => g.states.flatMap((s, i) => (s === 'correct' ? [i] : []))),
-  ).size;
 
   return (
     <View style={[styles.fill, { paddingTop: insets.top + HEADER_HEIGHT, paddingBottom: insets.bottom + 24 }]}>
       <View style={styles.top}>
         <Ribbon text="ԽԱՂՆ ԱՎԱՐՏՎԵՑ" bandColors={['#D0674F', '#A94632']} bandEdgeColor="#8C3A28" tailColor="#7C3324" />
         <View style={styles.titleSlot}>{stage >= STAGE.title && <OutlinedWord text={titleText} />}</View>
+        {nothingAtStake && (
+          <Enter visible={stage >= STAGE.title} reduceMotion={reduceMotion}>
+            <Animated.Text style={styles.subtitle}>{LOSS_SUBTITLE_FIND_WORD}</Animated.Text>
+          </Enter>
+        )}
       </View>
 
       <View style={styles.middle}>
         <Enter visible={heroShown} reduceMotion={reduceMotion}>
-          {nothingAtStake && lastGuess ? (
+          {nothingAtStake ? (
             <View style={styles.heroCenter}>
-              <View style={styles.miniTiles}>
-                {Array.from({ length: WORD_LENGTH }, (_, i) => (
-                  <Tile key={i} letter={lastGuess.tokens[i] ?? ''} state={lastGuess.states[i] ?? 'empty'} size={HERO_TILE_SIZE} />
-                ))}
-              </View>
-              <Animated.Text style={styles.foundText}>{`ԳՏԱԾ ՏԱՌԵՐ՝ ${foundCount}/${WORD_LENGTH}`}</Animated.Text>
-              <Animated.Text style={styles.sentence}>ՓՈՐՁԻ՛Ր ԵՎՍ ՄԵԿ ԱՆԳԱՄ</Animated.Text>
+              <FoundLettersRow letters={foundLetters(finalGuesses)} shown={heroShown} reduceMotion={reduceMotion} />
             </View>
           ) : (
             <View style={styles.heroCenter}>
@@ -345,13 +398,30 @@ const styles = StyleSheet.create({
   },
   miniTiles: {
     flexDirection: 'row',
+    gap: 6,
   },
-  foundText: {
-    marginTop: 14,
-    fontFamily: FONTS.title,
+  foundTile: {
+    width: HERO_TILE_SIZE,
+    height: HERO_TILE_SIZE,
+    borderRadius: Math.round(HERO_TILE_SIZE * 0.24),
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  foundTileLetter: {
+    fontFamily: FONTS.tile,
+    fontSize: Math.round(HERO_TILE_SIZE * 0.58),
+    color: '#FFFFFF', // white on a scored tile, in both themes (fixed game art)
+    includeFontPadding: false,
+  },
+  subtitle: {
+    marginTop: 4,
+    maxWidth: 300,
+    textAlign: 'center',
+    fontFamily: FONTS.body,
     fontSize: 15,
-    color: '#EFEAE0',
-    letterSpacing: 0.5,
+    lineHeight: 20,
+    color: '#D8D2C6',
   },
   streakPill: {
     marginTop: 12,

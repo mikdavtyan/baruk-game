@@ -1,5 +1,5 @@
 import React, { createRef } from 'react';
-import { Dimensions, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import Button3D from './Button3D';
 import Flame from './Flame';
 import OutlinedWord from './OutlinedWord';
@@ -133,21 +133,37 @@ describe('ad loading', () => {
 });
 
 describe('hero', () => {
-  it('with no points and no streak at stake: the last guess as mini tiles and the found count', () => {
-    render({ pointsAtRisk: 0, streakAtRisk: 0 });
-    const tiles = root.root.findAllByType(unmemo(Tile));
-    expect(tiles.map((t: any) => [t.props.letter, t.props.state, t.props.size])).toEqual(
-      BOARD[1].tokens.map((token, i) => [token, BOARD[1].states[i], 32]),
+  // Nothing at stake: the "find the word" variant. Found green across the
+  // board: բ (position 1, row 1), ե and ն (positions 2 and 5, row 2).
+  const foundTiles = () =>
+    root.root.findAll(
+      (n: any) => typeof n.type === 'string' && typeof n.props.testID === 'string' && n.props.testID.startsWith('found-letter-'),
     );
+  const tileText = (tile: any) => tile.findAllByType(Text).map((t: any) => t.props.children).join('');
+  const opacityOf = (tile: any) => StyleSheet.flatten(tile.props.style).opacity; // resolved on the host view
+
+  it('with no points and no streak at stake: the subtitle and every found letter in place, no flame', () => {
+    render({ pointsAtRisk: 0, streakAtRisk: 0 });
+    expect(foundTiles().map(tileText)).toEqual(['Բ', 'Ե', '', '', 'Ն']);
     const texts = root.root.findAllByType(Text).map((t: any) => t.props.children);
-    expect(texts).toContain('ԳՏԱԾ ՏԱՌԵՐ՝ 3/5'); // positions 0, 1, 4 found green
-    expect(texts).toContain('ՓՈՐՁԻ՛Ր ԵՎՍ ՄԵԿ ԱՆԳԱՄ');
+    expect(texts).toContain('ՄԵԿ ՓՈՐՁ ԷԼ\u055D ԲԱՌԸ ԳՏՆԵԼՈՒ ՀԱՄԱՐ');
+    expect(texts).not.toContain('ՓՈՐՁԻ՛Ր ԵՎՍ ՄԵԿ ԱՆԳԱՄ');
     expect(root.root.findAllByType(Flame)).toHaveLength(0);
+    expect(root.root.findAllByType(unmemo(Tile))).toHaveLength(0); // its own small tiles, not board Tiles
+  });
+
+  it('the found-letter tiles wait for the hero stage to pop in; with reduced motion they are there at once', () => {
+    render({ pointsAtRisk: 0, streakAtRisk: 0 });
+    expect(foundTiles().map(opacityOf)).toEqual([0, 0, 0, 0, 0]);
+    act(() => root.unmount());
+    render({ pointsAtRisk: 0, streakAtRisk: 0, reduceMotion: true });
+    expect(foundTiles().map(opacityOf)).toEqual([1, 1, 1, 1, 1]);
   });
 
   it('with points at stake: keeps the flame + points hero', () => {
     render({ pointsAtRisk: 40, streakAtRisk: 3 });
     expect(root.root.findAllByType(Flame)).toHaveLength(1);
     expect(root.root.findAllByType(unmemo(Tile))).toHaveLength(0);
+    expect(foundTiles()).toHaveLength(0);
   });
 });

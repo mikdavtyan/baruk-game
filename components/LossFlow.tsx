@@ -25,7 +25,6 @@ import {
   setCoins as persistCoins,
   setPendingLoss,
 } from '../lib/gameStorage';
-import { hasSomethingToSave } from '../lib/gamePhase';
 import { getLeaderboard, RankedEntry } from '../lib/leaderboard';
 import { measureWindow } from '../lib/measureWindow';
 import { showRewardedAd } from '../lib/rewardedAd';
@@ -245,11 +244,12 @@ function LossFlow({
     setStreakAtRisk(streak);
     setBestStreakAtRisk(bestStreak);
 
-    // Always an end-of-round modal: the Try again offer if there's something
-    // to save and a retry left, otherwise straight to the result. Decided and
-    // persisted right away (not after the pause), so leaving the app now
-    // resumes this exact modal on return.
-    const toResult = retriesUsedRef.current >= WIN_FLOW_CONFIG.maxLossRetries || !hasSomethingToSave(points, streak);
+    // Always an end-of-round modal: the Try again offer while a retry is left
+    // for this word — even with nothing at stake (0 points, no streak: the
+    // modal's "find the word" variant) — otherwise straight to the result.
+    // Decided and persisted right away (not after the pause), so leaving the
+    // app now resumes this exact modal on return.
+    const toResult = retriesUsedRef.current >= WIN_FLOW_CONFIG.maxLossRetries;
     const run = async () => {
       setStep('lossMoment');
       const saved = toResult

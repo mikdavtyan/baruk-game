@@ -41,8 +41,11 @@ The persisted state of the end-of-round screens after a result (pending win or p
 _Avoid_: pending state, modal state
 
 **Retry**:
-The one same-word second chance after a loss, paid with an ad or coins. Also called the **second chance** in the UI.
+The one same-word second chance after a loss, paid with an ad or coins. Also called the **second chance** in the UI. Offered whenever one is left for the word, even with nothing at stake (0 points, no streak): then it's about finding the word.
 _Avoid_: continue, revive, extra life
+
+**Found letters**:
+The positions found green anywhere on a lost board, with their letters. The nothing-at-stake second chance shows them; a retry carries them over as ghosts.
 
 **Retained guesses**:
 The submitted guesses from before a retry, kept so the keyboard colors and found letters carry into the retry.

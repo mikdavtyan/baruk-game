@@ -7,8 +7,7 @@ import { PendingLoss, PendingWin } from './gameStorage';
 //                          │  └─not over─▶ playing
 //                          └─6th miss─▶ lost-awaiting-decision ──retry──▶ playing
 //                                          │
-//                                          └─declined / out of retries / nothing
-//                                            to save──▶ finished ──ՆՈՐ ԽԱՂ──▶ playing
+//                                          └─declined / out of retries──▶ finished ──ՆՈՐ ԽԱՂ──▶ playing
 //
 // The end-of-round phases are persisted as the flows' pending records
 // (lib/gameStorage.ts): a pending loss at step 'secondChance' is
@@ -34,7 +33,3 @@ export function phaseFromPending(
   return 'playing';
 }
 
-// Whether a loss has anything the Try again offer could save.
-export function hasSomethingToSave(points: number, streak: number): boolean {
-  return points > 0 || streak > 0;
-}
