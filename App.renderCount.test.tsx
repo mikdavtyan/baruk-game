@@ -85,7 +85,10 @@ async function measure(action: () => Promise<void>) {
 // there is no JS work at all (lib/ThemeContext.test.tsx checks every fade
 // timing is native-driven).
 const KEYSTROKE_MAX_RENDERS = 60;
-const TOGGLE_MAX_RENDERS = 80;
+// The toggle re-renders only snapshot leaves (icon tints, the status bar…);
+// each tinted icon is ~4 renders (ThemedSymbol → SymbolView → native). 90
+// since the tab bar + Home's gear added icons.
+const TOGGLE_MAX_RENDERS = 90;
 // Never re-rendered by a keystroke or a theme toggle.
 const UNTOUCHED = [
   'Keyboard',
@@ -97,6 +100,8 @@ const UNTOUCHED = [
   'ShopScreen',
   // The menu under the game page, and its pages.
   'MenuScreen',
+  'MainTabs',
+  'TabBar',
   'MenuBackground',
   'Avatar',
   'FortuneWheelIcon',

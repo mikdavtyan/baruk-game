@@ -425,3 +425,15 @@ export const MENU_BG_TILES: MenuBackgroundTile[] = [
 // The tiles' corner radius and border, as fractions of their size / px.
 export const MENU_BG_TILE_CORNER_RATIO = 0.24;
 export const MENU_BG_TILE_BORDER = 2;
+
+// The main screen's tab bar (TabBar.tsx / MainTabs.tsx). The active tab's
+// cell rises on a plate, its icon grows and its name fades + scales in;
+// switching slides the content toward the new tab. All native driver.
+export const TAB_BAR_HEIGHT = 62; // plus the bottom safe-area inset
+export const TAB_ICON_SIZE = 26;
+export const TAB_ICON_ACTIVE_SCALE = 1.3;
+export const TAB_RAISE = 16; // px the active cell's icon and plate rise above the bar's center
+export const TAB_PLATE_SIZE = 58;
+export const TAB_LABEL_START_SCALE = 0.6;
+export const TAB_ACTIVATE_MS = 220; // the raise/grow/label of the new tab, and the old one settling back
+export const TAB_SLIDE_MS = 240; // the content slide between tabs

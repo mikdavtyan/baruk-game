@@ -2,6 +2,7 @@ import { createRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, us
 import { useFonts } from 'expo-font';
 import {
   Animated,
+  BackHandler,
   Dimensions,
   LayoutChangeEvent,
   StyleSheet,
@@ -18,7 +19,9 @@ import Keyboard, { ALL_LETTER_TOKENS, computeKeyGeometry } from './components/Ke
 import LossFlow from './components/LossFlow';
 import { GhostHint, HintLanding, RowData } from './components/Row';
 import EmptyPage from './components/EmptyPage';
-import MenuScreen, { MENU_PAGE_TITLES, MenuPage } from './components/MenuScreen';
+import MainTabs from './components/MainTabs';
+import MenuScreen from './components/MenuScreen';
+import { TabId } from './components/TabBar';
 import ProfileModal from './components/ProfileModal';
 import RulesModal from './components/RulesModal';
 import { PushPageLayer, usePushPage } from './components/PushPage';
@@ -342,15 +345,16 @@ function AppInner() {
     rulesOpenRef.current = rulesOpen;
     shopOnTopRef.current = shopPage.onTop;
   });
-  // Navigation: the app opens on the menu (MenuScreen); the game is the
-  // Classic page pushed over it (`gamePage`), and the bottom bar's empty pages
-  // share one more (`infoPage`, showing `infoPageKind`). The shop is pushed
-  // over either. All game state lives here, so leaving the game changes nothing.
+  // Navigation: the main screen is the tabs (MainTabs: ԽԱՆՈՒԹ, ԱՆԻՎ, ՄԵՆՅՈՒ —
+  // Home, the menu, where the app opens — ԱՌԱՋԱԴՐԱՆՔՆԵՐ, ԱՌԱՋԱՏԱՐՆԵՐ). Pushed
+  // over them: the Classic game (`gamePage`) and Settings (`settingsPage`,
+  // from Home's gear); the shop page (`shopPage`) is pushed over the game.
+  // All game state lives here, so leaving the game changes nothing.
   // Android back goes to whatever covers the game first (the rules popup, the
   // shop): their handlers can register before the page's in the same commit.
   const gamePage = usePushPage({ isCovered: () => rulesOpenRef.current || shopOnTopRef.current });
-  const infoPage = usePushPage();
-  const [infoPageKind, setInfoPageKind] = useState<MenuPage>('wheel');
+  const settingsPage = usePushPage();
+  const [activeTab, setActiveTab] = useState<TabId>('home');
   // The local profile (wordle:profile), edited in the ՊՐՈՖԻԼ popup the menu's
   // profile opens; saved (normalized) when the popup closes.
   const [profile, setProfileState] = useState<Profile>(DEFAULT_PROFILE);
@@ -373,10 +377,25 @@ function AppInner() {
       setRulesSeen();
     }
   };
-  const handleOpenMenuPage = (kind: MenuPage) => {
-    setInfoPageKind(kind);
-    infoPage.open();
-  };
+  // Android back on a tab other than Home goes Home; on Home it's left to the
+  // system (exit). Registered once, at mount, so every page or popup opened
+  // later registers after it and handles back first — and it also stands
+  // aside while one is up.
+  const navRef = useRef({ activeTab, covered: false });
+  useLayoutEffect(() => {
+    navRef.current = {
+      activeTab,
+      covered: gamePage.onTop || settingsPage.onTop || shopPage.onTop || rulesOpen || profileOpen,
+    };
+  });
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (navRef.current.covered || navRef.current.activeTab === 'home') return false;
+      setActiveTab('home');
+      return true;
+    });
+    return () => sub.remove();
+  }, []);
 
   // Buys an item pack in the shop: the coins and the inventory change in ONE
   // atomic write (docs/adr/0003), then the UI follows. ShopScreen only calls
@@ -989,7 +1008,8 @@ function AppInner() {
   const onDarts = useStableCallback(handleDarts);
   const onOpenRules = useStableCallback(handleOpenRules);
   const onOpenClassic = useStableCallback(handleOpenClassic);
-  const onOpenMenuPage = useStableCallback(handleOpenMenuPage);
+  const onSelectTab = useStableCallback((tab: TabId) => setActiveTab(tab));
+  const onOpenShopTab = useStableCallback(() => setActiveTab('shop'));
   const onOpenProfile = useStableCallback(() => setProfileOpen(true));
   const onCloseProfile = useStableCallback(handleCloseProfile);
   // The Classic card's subtitle: a result waiting (a pending reward, second
@@ -1030,9 +1050,59 @@ function AppInner() {
     [shopPage.close, shopPage.onTop, coins, inventory, adsLeft, onBuyPack, onWatchShopAd],
   );
 
-  const infoPageContent = useMemo(
-    () => <EmptyPage title={MENU_PAGE_TITLES[infoPageKind]} onBack={infoPage.close} visible={infoPage.onTop} />,
-    [infoPageKind, infoPage.close, infoPage.onTop],
+  const settingsPageContent = useMemo(
+    () => <EmptyPage title="ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ" onBack={settingsPage.close} visible={settingsPage.onTop} />,
+    [settingsPage.close, settingsPage.onTop],
+  );
+  // Each tab's content, memoized (with stable props), so a keystroke in the
+  // game re-renders no tab. The menu background runs only while Home is the
+  // visible tab.
+  const anyPageOnTop = gamePage.onTop || settingsPage.onTop || shopPage.onTop;
+  const tabContents = useMemo(
+    () => ({
+      home: (
+        <MenuScreen
+          profile={profile}
+          points={points}
+          coins={coins}
+          classicSubtitle={classicSubtitle}
+          onOpenClassic={onOpenClassic}
+          onOpenShop={onOpenShopTab}
+          onOpenSettings={settingsPage.open}
+          onOpenProfile={onOpenProfile}
+          backgroundPaused={activeTab !== 'home' || anyPageOnTop}
+        />
+      ),
+      shop: (
+        <ShopScreen
+          visible={activeTab === 'shop'}
+          coins={coins}
+          inventory={inventory}
+          adsLeft={adsLeft}
+          onBuyPack={onBuyPack}
+          onWatchAd={onWatchShopAd}
+        />
+      ),
+      wheel: <EmptyPage title="ԲԱԽՏԻ ԱՆԻՎ" visible={activeTab === 'wheel'} />,
+      tasks: <EmptyPage title="ԱՌԱՋԱԴՐԱՆՔՆԵՐ" visible={activeTab === 'tasks'} />,
+      leaders: <EmptyPage title="ԱՌԱՋԱՏԱՐՆԵՐ" visible={activeTab === 'leaders'} />,
+    }),
+    [
+      profile,
+      points,
+      coins,
+      classicSubtitle,
+      onOpenClassic,
+      onOpenShopTab,
+      settingsPage.open,
+      onOpenProfile,
+      activeTab,
+      anyPageOnTop,
+      inventory,
+      adsLeft,
+      onBuyPack,
+      onWatchShopAd,
+    ],
   );
 
   // Wait for the fonts so text never flashes in the system font (if loading
@@ -1044,26 +1114,16 @@ function AppInner() {
       {/* Everything the shop can be pushed over (the menu and its pages): it
           slides a little left under the shop. */}
       <Animated.View style={[styles.container, { transform: [{ translateX: shopPage.gameTranslateX }] }]}>
-      {/* The menu, under every page: it slides a little left under the game
-          or an empty page, and is inert while one covers it. */}
+      {/* The tabs (and their bar), under every page: they slide a little left
+          under the game or Settings, and are inert while one covers them. */}
       <Animated.View
         style={[styles.container, { transform: [{ translateX: gamePage.gameTranslateX }] }]}
-        pointerEvents={gamePage.onTop || infoPage.onTop || shopPage.onTop ? 'none' : 'auto'}
-        importantForAccessibility={gamePage.onTop || infoPage.onTop || shopPage.onTop || rulesOpen || profileOpen ? 'no-hide-descendants' : 'auto'}
-        accessibilityElementsHidden={gamePage.onTop || infoPage.onTop || shopPage.onTop || rulesOpen || profileOpen}
+        pointerEvents={anyPageOnTop ? 'none' : 'auto'}
+        importantForAccessibility={anyPageOnTop || rulesOpen || profileOpen ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={anyPageOnTop || rulesOpen || profileOpen}
       >
-        <Animated.View style={[styles.container, { transform: [{ translateX: infoPage.gameTranslateX }] }]}>
-          <MenuScreen
-            profile={profile}
-            points={points}
-            coins={coins}
-            classicSubtitle={classicSubtitle}
-            onOpenClassic={onOpenClassic}
-            onOpenShop={shopPage.open}
-            onOpenPage={onOpenMenuPage}
-            onOpenProfile={onOpenProfile}
-            backgroundPaused={gamePage.onTop || infoPage.onTop || shopPage.onTop}
-          />
+        <Animated.View style={[styles.container, { transform: [{ translateX: settingsPage.gameTranslateX }] }]}>
+          <MainTabs active={activeTab} onSelect={onSelectTab} contents={tabContents} />
         </Animated.View>
       </Animated.View>
       {/* The Classic game page — pre-mounted (offscreen and inert until
@@ -1182,8 +1242,8 @@ function AppInner() {
       {/* The Hint light and its sparks — the same window-coordinate overlay idea. */}
       <HintFlightOverlay flight={hintFlight} />
       </PushPageLayer>
-      <PushPageLayer page={infoPage} testID="page-info">
-        {infoPageContent}
+      <PushPageLayer page={settingsPage} testID="page-settings">
+        {settingsPageContent}
       </PushPageLayer>
       </Animated.View>
       {/* Above everything, the game page and its end-of-round modals included. */}

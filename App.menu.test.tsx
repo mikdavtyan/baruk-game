@@ -1,8 +1,7 @@
-// The menu (home) screen: the app opens on it; ԴԱՍԱԿԱՆ pushes the game page
+// The menu (the Home tab): the app opens on it; ԴԱՍԱԿԱՆ pushes the game page
 // (back arrow / Android back return, the round untouched); ՕՐՎԱ ԲԱՌ is coming
-// soon; the bottom bar opens the shop and four empty pages; the coin pill
-// opens the shop from the menu and from the game; the first-launch rules
-// popup waits for the first Classic open.
+// soon; the game's coin pill opens the shop page; the first-launch rules
+// popup waits for the first Classic open. The tab bar: App.tabs.test.tsx.
 import React from 'react';
 import { BackHandler, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -184,52 +183,16 @@ it('ՕՐՎԱ ԲԱՌ only shows the ՇՈՒՏՈՎ toast', async () => {
   expect(root.root.findAllByType(Toast).map((t: any) => t.props.message)).toEqual(['ՇՈՒՏՈՎ']);
   await advance(1000);
   expect(pageShown(root, PAGE.game)).toBe(false);
-  expect(pageShown(root, PAGE.info)).toBe(false);
+  expect(pageShown(root, PAGE.settings)).toBe(false);
   expect(shopShown()).toBe(false);
 });
 
-describe('the bottom bar', () => {
-  it('ԽԱՆՈՒԹ opens the shop with its contents; its back arrow closes it', async () => {
-    await renderApp();
-    await pressLabel(root, 'ԽԱՆՈՒԹ', menu(root));
-    expect(shopShown()).toBe(true);
-    expect(textsIn(page(root, PAGE.shop))).toContain('ՀԶՈՐՈՒԹՅՈՒՆՆԵՐ');
-    await pressLabel(root, 'Հետ', page(root, PAGE.shop));
-    expect(shopShown()).toBe(false);
-  });
+// The old bottom bar is now the tab bar (and Settings a page from Home's
+// gear): App.tabs.test.tsx covers each tab, the shop tab and Settings.
 
-  it.each(['ԲԱԽՏԻ ԱՆԻՎ', 'ԱՌԱՋԱԴՐԱՆՔՆԵՐ', 'ԱՌԱՋԱՏԱՐՆԵՐ', 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ'])(
-    '%s opens an empty page (its title and a back arrow only) that closes again',
-    async (title) => {
-      await renderApp();
-      await pressLabel(root, title, menu(root));
-      expect(pageShown(root, PAGE.info)).toBe(true);
-      expect(textsIn(page(root, PAGE.info))).toEqual([title]);
-      await pressLabel(root, 'Հետ', page(root, PAGE.info));
-      expect(pageShown(root, PAGE.info)).toBe(false);
-      expect(await pressBack()).toBeFalsy(); // back on the menu
-    },
-  );
-
-  it('the bottom buttons are icon-only: no text, each with its Armenian label', async () => {
-    await renderApp();
-    const bar = root.root.find((n: any) => n.props.testID === 'menu-bottom-bar' && typeof n.type === 'string');
-    expect(textsIn(bar)).toEqual([]);
-    const labels = bar
-      .findAll((n: any) => typeof n.type === 'string' && n.props.accessibilityRole === 'button')
-      .map((n: any) => n.props.accessibilityLabel);
-    expect(labels).toEqual(['ԽԱՆՈՒԹ', 'ԲԱԽՏԻ ԱՆԻՎ', 'ԱՌԱՋԱԴՐԱՆՔՆԵՐ', 'ԱՌԱՋԱՏԱՐՆԵՐ', 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ']);
-  });
-});
-
+// On Home the coin pill switches to the Shop tab (App.tabs.test.tsx).
 describe('the coin pill opens the shop', () => {
-  it('from the menu', async () => {
-    await renderApp();
-    await pressLabel(root, 'Խանութ', menu(root));
-    expect(shopShown()).toBe(true);
-  });
-
-  it('from the game', async () => {
+  it('from the game, as a page over it', async () => {
     await renderApp();
     await openClassic(root);
     await pressLabel(root, 'Խանութ', page(root, PAGE.game));

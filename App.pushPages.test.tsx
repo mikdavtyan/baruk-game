@@ -12,7 +12,7 @@ import { BackHandler, Dimensions, Platform, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import App from './App';
 import { PAGE_SWIPE_EDGE_ZONE } from './constants/theme';
-import { menu, page, PAGE, pageShown, pressLabel } from './test-utils/navigation';
+import { menu, page, PAGE, pageShown, pressable, pressLabel } from './test-utils/navigation';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -118,15 +118,33 @@ describe('a closed page is invisible and inert, whatever its transform', () => {
   });
 });
 
+// How a player opens each page: the game and Settings from Home (the card,
+// the gear), the shop page from the game's coin pill.
+const openers: Record<string, () => Promise<void>> = {
+  [PAGE.game]: async () => {
+    await act(async () => pressable(menu(root), 'ԴԱՍԱԿԱՆ').props.onPress());
+  },
+  [PAGE.settings]: async () => {
+    await act(async () => pressable(menu(root), 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ').props.onPress());
+  },
+  [PAGE.shop]: async () => {
+    await pressLabel(root, 'ԴԱՍԱԿԱՆ', menu(root));
+    await act(async () => pressable(page(root, PAGE.game), 'Խանութ').props.onPress());
+  },
+};
+
 describe.each([
-  ['the game', PAGE.game, 'ԴԱՍԱԿԱՆ'],
-  ['the shop', PAGE.shop, 'ԽԱՆՈՒԹ'],
-  ['an info page', PAGE.info, 'ԱՌԱՋԱՏԱՐՆԵՐ'],
-])('%s page', (_name, id, opener) => {
+  ['the game', PAGE.game],
+  ['the shop', PAGE.shop],
+  ['the Settings', PAGE.settings],
+])('%s page', (_name, id) => {
+  const open = async () => {
+    await openers[id]();
+  };
   it('is shown while open and hidden again once its close has finished (back arrow)', async () => {
     await renderApp();
     expect(page(root, id) ? hidden(id) : true).toBe(true); // never opened: not even mounted, or hidden
-    await act(async () => menu(root).findAll((n: any) => n.props.accessibilityLabel === opener && n.props.onPress)[0].props.onPress());
+    await open();
     expect(visible(id)).toBe(true); // shown at once, before the slide starts
     await advance(1000);
     expect(pageShown(root, id)).toBe(true);
@@ -139,7 +157,8 @@ describe.each([
 
   it('Android back closes it, then it is hidden', async () => {
     await renderApp();
-    await pressLabel(root, opener, menu(root));
+    await open();
+    await advance(1000);
     await pressBack();
     expect(hidden(id)).toBe(true);
   });
@@ -147,7 +166,8 @@ describe.each([
   it('the iOS edge swipe closes it: shown during the drag, hidden after', async () => {
     jest.replaceProperty(Platform, 'OS', 'ios');
     await renderApp();
-    await pressLabel(root, opener, menu(root));
+    await open();
+    await advance(1000);
     const view = page(root, id);
     const { width } = Dimensions.get('window');
     // A synthetic finger for PanResponder: it sums each event's move from the

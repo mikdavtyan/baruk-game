@@ -6,7 +6,7 @@ import { act } from 'react';
 export const PAGE = {
   game: 'page-game',
   shop: 'page-shop',
-  info: 'page-info', // the bottom bar's empty pages (wheel, tasks, leaders, settings)
+  settings: 'page-settings', // from Home's gear
 } as const;
 
 export const CLASSIC_LABEL = 'ԴԱՍԱԿԱՆ';
@@ -49,4 +49,34 @@ export const page = (root: any, id: string) =>
 export const pageShown = (root: any, id: string) => {
   const view = page(root, id);
   return !!view && view.props.accessibilityElementsHidden !== true;
+};
+
+// The tab bar (always at the bottom of the main screen): tab ids and the
+// Armenian labels players (and tests) press them by.
+export const TAB = {
+  shop: 'ԽԱՆՈՒԹ',
+  wheel: 'ԱՆԻՎ',
+  home: 'ՄԵՆՅՈՒ',
+  tasks: 'ԱՌԱՋԱԴՐԱՆՔՆԵՐ',
+  leaders: 'ԱՌԱՋԱՏԱՐՆԵՐ',
+} as const;
+export type TabId = keyof typeof TAB;
+
+export const tabBar = (root: any) => root.root.find((n: any) => n.props.testID === 'tab-bar' && typeof n.type === 'string');
+
+// Taps a tab and lets its switch (the slide, the raised cell) finish.
+export async function selectTab(root: any, tab: TabId) {
+  await pressLabel(root, TAB[tab], tabBar(root));
+}
+
+// A tab's content view, or undefined while it was never visited (tabs mount lazily).
+export const tabContent = (root: any, tab: TabId) =>
+  root.root.findAll((n: any) => n.props.testID === `tab-${tab}` && typeof n.type === 'string')[0];
+
+// Whether a tab's content is displayed (an inactive tab is display:'none').
+export const tabShown = (root: any, tab: TabId) => {
+  const view = tabContent(root, tab);
+  if (!view) return false;
+  const style = [view.props.style].flat(Infinity).reduce((all: any, s: any) => ({ ...all, ...(s || {}) }), {});
+  return style.display !== 'none';
 };

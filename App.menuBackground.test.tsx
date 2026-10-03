@@ -103,11 +103,11 @@ it('the loops stop while the game page is open, and start again back on the menu
   expect(running()).toBe(MENU_BG_TILES.length);
 });
 
-it('the loops stop while any page (the shop) covers the menu', async () => {
+it('the loops stop while any page (Settings) covers the menu', async () => {
   await renderApp();
-  await pressLabel(root, 'ԽԱՆՈՒԹ', menu(root));
+  await pressLabel(root, 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ', menu(root));
   expect(running()).toBe(0);
-  await pressLabel(root, 'Հետ', page(root, PAGE.shop));
+  await pressLabel(root, 'Հետ', page(root, PAGE.settings));
   expect(running()).toBe(MENU_BG_TILES.length);
 });
 

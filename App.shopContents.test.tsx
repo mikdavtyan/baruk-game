@@ -9,7 +9,7 @@ import App from './App';
 import ShopScreen from './components/ShopScreen';
 import Toast from './components/Toast';
 import { unmemo } from './test-utils/unmemo';
-import { openClassic } from './test-utils/navigation';
+import { openClassic, page, PAGE } from './test-utils/navigation';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -120,7 +120,8 @@ const relaunch = async () => {
   await act(async () => root.unmount());
   await renderApp();
 };
-const shop = () => root.root.findByType(unmemo(ShopScreen));
+// The shop page over the game (the Shop tab is another ShopScreen, never visited here).
+const shop = () => page(root, PAGE.shop).findByType(unmemo(ShopScreen));
 // The text a host element (by testID) inside the shop page shows.
 const textOf = (testID: string) => {
   const node = shop().findAll((n: any) => typeof n.type === 'string' && n.props.testID === testID)[0];
@@ -136,7 +137,8 @@ const pressInShop = async (label: string) => {
 };
 const openShop = async () => {
   await act(async () => {
-    root.root.findAll((n: any) => n.props.accessibilityLabel === 'Խանութ' && n.props.onPress)[0].props.onPress();
+    // The game's coin pill (renderApp opened Classic); Home's would switch tabs.
+    page(root, PAGE.game).findAll((n: any) => n.props.accessibilityLabel === 'Խանութ' && n.props.onPress)[0].props.onPress();
   });
   await advance(1000);
 };

@@ -23,8 +23,10 @@ import { packDiscountPercent } from '../lib/shop';
 import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
 
 type Props = {
-  onBack: () => void;
-  visible: boolean; // the page is the one on top
+  // The push page's back arrow. Without it (the Shop tab) there's no arrow,
+  // and the tab bar below owns the bottom safe area.
+  onBack?: () => void;
+  visible: boolean; // the page (or tab) is the one in front
   coins: number;
   inventory: Inventory;
   adsLeft: number; // rewarded ads still available today
@@ -40,8 +42,12 @@ const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 const ITEM_ICON_SIZE = 20;
 const DIMMED_OPACITY = 0.45;
 
-// The shop page (ԽԱՆՈՒԹ), pushed in over the game by PushPage.tsx: a top bar
-// (back arrow, title, live balance), then in a scroll view what the player
+// A push page has the bottom safe area; as a tab, the tab bar below owns it.
+const PAGE_EDGES = ['top', 'bottom', 'left', 'right'] as const;
+const TAB_EDGES = ['top', 'left', 'right'] as const;
+
+// The shop (ԽԱՆՈՒԹ): the Shop tab, and the page pushed over the game. A top bar
+// (back arrow on the page only, title, live balance), then in a scroll view what the player
 // holds (ՔՈ ՊԱՇԱՐԸ), item packs (ՀԶՈՐՈՒԹՅՈՒՆՆԵՐ) and coins (ՄԵՏԱՂԱԴՐԱՄՆԵՐ:
 // a daily-limited rewarded ad, and real-money packs coming soon). An
 // unaffordable pack or a used-up ad is dimmed but tappable, and explains why
@@ -104,19 +110,21 @@ function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onW
   return (
     <AnimatedSafeAreaView
       style={[styles.screen, { backgroundColor: color('background') }]}
-      edges={['top', 'bottom', 'left', 'right']}
+      edges={onBack ? PAGE_EDGES : TAB_EDGES}
       accessibilityElementsHidden={!visible}
     >
       {/* Same height and the same IconButton as the game's own header, so the
           back arrow lines up with the header's buttons. */}
       <View style={styles.header}>
         <View style={styles.headerSide}>
-          <IconButton
-            icon={{ ios: 'chevron.left', android: 'arrow_back_ios_new', web: 'arrow_back_ios_new' }}
-            label="Հետ"
-            color={theme.headerIconColor}
-            onPress={onBack}
-          />
+          {onBack && (
+            <IconButton
+              icon={{ ios: 'chevron.left', android: 'arrow_back_ios_new', web: 'arrow_back_ios_new' }}
+              label="Հետ"
+              color={theme.headerIconColor}
+              onPress={onBack}
+            />
+          )}
         </View>
         <Animated.Text style={[styles.title, { color: textColor('text') }]} numberOfLines={1} adjustsFontSizeToFit>
           ԽԱՆՈՒԹ

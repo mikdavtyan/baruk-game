@@ -1,13 +1,11 @@
-import { memo, ReactNode, useState } from 'react';
+import { memo, useState } from 'react';
 import { Animated, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
-import { SymbolViewProps } from 'expo-symbols';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Avatar from './Avatar';
 import Button3D from './Button3D';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
-import FortuneWheelIcon from './FortuneWheelIcon';
 import MenuBackground from './MenuBackground';
-import { ThemedSymbol } from './ThemedSnapshot';
+import { ThemedIconButton } from './ThemedSnapshot';
 import Toast from './Toast';
 import { Profile } from '../constants/profile';
 import { FONTS } from '../constants/theme';
@@ -15,15 +13,6 @@ import { letterLabel } from '../lib/letterDisplay';
 import { useTheme } from '../lib/ThemeContext';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
-
-// The pages the bottom bar opens (besides the shop). Empty for now.
-export type MenuPage = 'wheel' | 'tasks' | 'leaders' | 'settings';
-export const MENU_PAGE_TITLES: Record<MenuPage, string> = {
-  wheel: 'ԲԱԽՏԻ ԱՆԻՎ',
-  tasks: 'ԱՌԱՋԱԴՐԱՆՔՆԵՐ',
-  leaders: 'ԱՌԱՋԱՏԱՐՆԵՐ',
-  settings: 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ',
-};
 
 export const COMING_SOON = 'ՇՈՒՏՈՎ';
 // The game's name, drawn as board tiles: Բ Ա Ռ ՈՒ Կ (5 tokens).
@@ -33,15 +22,9 @@ const TITLE_TILE_SIZE = 46;
 const CARD_HEIGHT = 84;
 const CARD_MAX_WIDTH = 340;
 const CARD_WIDTH_FRACTION = 0.82;
-const BAR_BUTTON_SIZE = 54;
-const BAR_ICON_SIZE = 28;
-
-const ICONS: Record<'shop' | 'tasks' | 'leaders' | 'settings', SymbolViewProps['name']> = {
-  shop: { ios: 'bag.fill', android: 'shopping_bag', web: 'shopping_bag' },
-  tasks: { ios: 'book.fill', android: 'menu_book', web: 'menu_book' },
-  leaders: { ios: 'trophy.fill', android: 'emoji_events', web: 'emoji_events' },
-  settings: { ios: 'gearshape.fill', android: 'settings', web: 'settings' },
-};
+const GEAR_ICON = { ios: 'gearshape.fill', android: 'settings', web: 'settings' } as const;
+// The tab bar below owns the bottom safe area.
+const EDGES = ['top', 'left', 'right'] as const;
 
 type Props = {
   profile: Profile;
@@ -49,17 +32,17 @@ type Props = {
   coins: number;
   classicSubtitle: string; // ԽԱՂԱԼ / ՇԱՐՈՒՆԱԿԵԼ · N/6 / ՇԱՐՈՒՆԱԿԵԼ (App derives it)
   onOpenClassic: () => void;
-  onOpenShop: () => void;
-  onOpenPage: (page: MenuPage) => void;
+  onOpenShop: () => void; // the coin pill: App switches to the Shop tab
+  onOpenSettings: () => void; // the gear: Settings, a push page
   onOpenProfile: () => void;
   backgroundPaused: boolean; // a page covers the menu: its drifting tiles stop
 };
 
-// The home screen the app opens on. Top: the profile (avatar, name, points)
-// and the coin pill (opens the shop). Center: the title and the two game
-// cards — ԴԱՍԱԿԱՆ (the Classic game page) and ՕՐՎԱ ԲԱՌ (coming soon). Bottom:
-// five icon-only buttons. Memoized with stable props from App, so a
-// keystroke in the game never re-renders it.
+// The Home tab (ՄԵՆՅՈՒ), where the app opens. Top: the profile (avatar, name,
+// points), the Settings gear and the coin pill (the Shop tab). Center: the
+// title and the two game cards — ԴԱՍԱԿԱՆ (the Classic game page) and ՕՐՎԱ ԲԱՌ
+// (coming soon). The tab bar is below it (MainTabs). Memoized with stable
+// props from App, so a keystroke in the game never re-renders it.
 function MenuScreen({
   profile,
   points,
@@ -67,7 +50,7 @@ function MenuScreen({
   classicSubtitle,
   onOpenClassic,
   onOpenShop,
-  onOpenPage,
+  onOpenSettings,
   onOpenProfile,
   backgroundPaused,
 }: Props) {
@@ -77,32 +60,11 @@ function MenuScreen({
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const showComingSoon = () => setToast((t) => ({ id: (t?.id ?? 0) + 1, message: COMING_SOON }));
 
-  const barButton = (label: string, icon: ReactNode, onPress: () => void) => (
-    <Pressable
-      key={label}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      hitSlop={4}
-      style={({ pressed }) => pressed && styles.pressed}
-    >
-      <Animated.View
-        style={[
-          styles.barButton,
-          { backgroundColor: color('popupSurface'), borderColor: color('popupBorder'), borderBottomColor: color('popupEdge') },
-        ]}
-      >
-        {icon}
-      </Animated.View>
-    </Pressable>
-  );
-  const symbol = (name: SymbolViewProps['name']) => <ThemedSymbol name={name} size={BAR_ICON_SIZE} token="headerIconColor" />;
-
   return (
     <Animated.View testID="menu" style={[styles.screen, { backgroundColor: color('background') }]}>
     {/* Behind everything, across the whole screen (outside the safe area). */}
     <MenuBackground paused={backgroundPaused} />
-    <AnimatedSafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
+    <AnimatedSafeAreaView style={styles.screen} edges={EDGES}>
       <View style={styles.topBar}>
         <Pressable
           onPress={onOpenProfile}
@@ -120,13 +82,16 @@ function MenuScreen({
             </Animated.Text>
           </View>
         </Pressable>
-        <Pressable onPress={onOpenShop} accessibilityRole="button" accessibilityLabel="Խանութ" hitSlop={6}>
-          {({ pressed }) => (
-            <Animated.View style={[coinPillStyles.pill, { backgroundColor: color('pill') }, pressed && styles.pressed]}>
-              <CoinPillContent value={coins} textColor={textColor('pillText')} plusColor={color('correct')} />
-            </Animated.View>
-          )}
-        </Pressable>
+        <View style={styles.topRight}>
+          <ThemedIconButton icon={GEAR_ICON} label="ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ" token="headerIconColor" onPress={onOpenSettings} />
+          <Pressable onPress={onOpenShop} accessibilityRole="button" accessibilityLabel="Խանութ" hitSlop={6}>
+            {({ pressed }) => (
+              <Animated.View style={[coinPillStyles.pill, { backgroundColor: color('pill') }, pressed && styles.pressed]}>
+                <CoinPillContent value={coins} textColor={textColor('pillText')} plusColor={color('correct')} />
+              </Animated.View>
+            )}
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.center}>
@@ -175,13 +140,6 @@ function MenuScreen({
         {toast && <Toast key={toast.id} message={toast.message} onHidden={() => setToast(null)} />}
       </View>
 
-      <View testID="menu-bottom-bar" style={styles.bottomBar}>
-        {barButton('ԽԱՆՈՒԹ', symbol(ICONS.shop), onOpenShop)}
-        {barButton(MENU_PAGE_TITLES.wheel, <FortuneWheelIcon size={BAR_ICON_SIZE + 6} />, () => onOpenPage('wheel'))}
-        {barButton(MENU_PAGE_TITLES.tasks, symbol(ICONS.tasks), () => onOpenPage('tasks'))}
-        {barButton(MENU_PAGE_TITLES.leaders, symbol(ICONS.leaders), () => onOpenPage('leaders'))}
-        {barButton(MENU_PAGE_TITLES.settings, symbol(ICONS.settings), () => onOpenPage('settings'))}
-      </View>
     </AnimatedSafeAreaView>
     </Animated.View>
   );
@@ -269,20 +227,9 @@ const styles = StyleSheet.create({
   dimmed: {
     opacity: 0.55,
   },
-  bottomBar: {
+  topRight: {
     flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    paddingTop: 8,
-  },
-  barButton: {
-    width: BAR_BUTTON_SIZE,
-    height: BAR_BUTTON_SIZE,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderBottomWidth: 4,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
   },
 });

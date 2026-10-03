@@ -8,20 +8,24 @@ import { useTheme } from '../lib/ThemeContext';
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 const BACK_ICON = { ios: 'chevron.left', android: 'arrow_back_ios_new', web: 'arrow_back_ios_new' } as const;
 
-// A page the menu's bottom bar opens that has nothing in it yet (the fortune
-// wheel, tasks, leaderboard, settings): the shop's top bar — back arrow and
-// title — and nothing else.
-function EmptyPage({ title, onBack, visible }: { title: string; onBack: () => void; visible: boolean }) {
+const PAGE_EDGES = ['top', 'bottom', 'left', 'right'] as const;
+const TAB_EDGES = ['top', 'left', 'right'] as const;
+
+// A screen with nothing in it yet: the shop's top bar — title, and a back
+// arrow when it's a push page (Settings) — and nothing else. As a tab (the
+// wheel, tasks, leaderboard) it has no back arrow, and the tab bar below owns
+// the bottom safe area.
+function EmptyPage({ title, onBack, visible }: { title: string; onBack?: () => void; visible: boolean }) {
   const { color, textColor } = useTheme();
   return (
     <AnimatedSafeAreaView
       style={[styles.screen, { backgroundColor: color('background') }]}
-      edges={['top', 'bottom', 'left', 'right']}
+      edges={onBack ? PAGE_EDGES : TAB_EDGES}
       accessibilityElementsHidden={!visible}
     >
       <View style={styles.header}>
         <View style={styles.side}>
-          <ThemedIconButton icon={BACK_ICON} label="Հետ" token="headerIconColor" onPress={onBack} />
+          {onBack && <ThemedIconButton icon={BACK_ICON} label="Հետ" token="headerIconColor" onPress={onBack} />}
         </View>
         <Animated.Text style={[styles.title, { color: textColor('headerValueColor') }]} numberOfLines={1} adjustsFontSizeToFit>
           {title}

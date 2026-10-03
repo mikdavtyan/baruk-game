@@ -4,8 +4,12 @@ Baruk is an offline Armenian word-guessing game: the player has six guesses to f
 
 ## Screens
 
-**Menu** (home):
-The screen the app opens on: the profile and coins at the top, the game title and the game cards (ԴԱՍԱԿԱՆ, and ՕՐՎԱ ԲԱՌ coming soon) in the middle, and five icon buttons at the bottom (shop, fortune wheel, tasks, leaderboard, settings). Leaving a game for the menu changes nothing in it.
+**Tab bar**:
+The bar always at the bottom of the main screen, with five tabs: ԽԱՆՈՒԹ (shop), ԱՆԻՎ (fortune wheel), ՄԵՆՅՈՒ (the menu — the center tab, where the app opens), ԱՌԱՋԱԴՐԱՆՔՆԵՐ (tasks), ԱՌԱՋԱՏԱՐՆԵՐ (leaderboard). The active tab rises and shows its name. Pages (the Classic game, Settings, the shop over the game) cover it.
+_Avoid_: bottom bar, navigation bar
+
+**Menu** (ՄԵՆՅՈՒ, home):
+The Home tab, where the app opens: the profile, the Settings gear and coins at the top, the game title and the game cards (ԴԱՍԱԿԱՆ, and ՕՐՎԱ ԲԱՌ coming soon) in the middle. Leaving a game for the menu changes nothing in it.
 _Avoid_: home page, lobby, main screen
 
 **Profile** (ՊՐՈՖԻԼ):
@@ -16,7 +20,7 @@ _Avoid_: account, user (there's no login)
 The game itself, as a page pushed over the menu. The only game mode; **Word of the day** (ՕՐՎԱ ԲԱՌ) is announced as coming soon and does nothing yet.
 
 **Page**:
-A full screen pushed over another from the right (the Classic game, the shop, the bottom bar's pages); back arrow, Android back or an iOS left-edge swipe return.
+A full screen pushed over the tabs from the right (the Classic game, Settings, the shop over the game); back arrow, Android back or an iOS left-edge swipe return. A tab is not a page.
 _Avoid_: modal, popup (those are the centered panels)
 
 ## Words and guesses
