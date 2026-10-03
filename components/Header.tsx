@@ -27,9 +27,9 @@ const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRul
   const { theme, isDark, color, textColor, toggleTheme } = useTheme();
   const displayedCoins = useCountUp(coins);
 
-  // The side groups take their content's width and the score block the
-  // rest: the coin pill is too wide for an equal three-way split on small
-  // phones, so the score sits centered in what's left rather than overlap.
+  // Left and right side groups share the center's flex weight, so the score
+  // block always lands in the true middle third of the header no matter how
+  // wide either side's content (icon buttons, coin pill) ends up being.
   return (
     <View style={styles.header}>
       <View style={styles.sideGroupLeft}>
@@ -71,7 +71,6 @@ const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRul
                 value={displayedCoins}
                 textColor={textColor('pillText')}
                 plusColor={color('correct')}
-                plusEdgeColor={color('correctEdge')}
               />
             </Animated.View>
           )}
@@ -89,14 +88,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    gap: 8,
   },
   sideGroupLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   sideGroupRight: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
@@ -104,7 +104,6 @@ const styles = StyleSheet.create({
   },
   scoreBlock: {
     flex: 1,
-    minWidth: 0,
     alignItems: 'center',
   },
   scoreLabel: {

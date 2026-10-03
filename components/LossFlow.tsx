@@ -564,7 +564,6 @@ export default function LossFlow({
                 value={pillValue}
                 textColor={theme.pillText}
                 plusColor={theme.correct}
-                plusEdgeColor={theme.correctEdge}
               />
             </Animated.View>
           )}

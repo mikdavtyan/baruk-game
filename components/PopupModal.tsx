@@ -23,8 +23,8 @@ type Props = {
   children?: ReactNode;
 };
 
-// The shell shared by the app's popups ("How to play", the shop): a centered
-// panel over the shared modal backdrop, with a title and an X. Only the X or
+// The popup shell ("How to play" — RulesModal): a centered panel over the
+// shared modal backdrop, with a title and an X. Only the X or
 // Android's back button close it — tapping the backdrop doesn't. It fades in
 // while scaling up, and back out, on the native driver; reduced motion is a
 // plain short fade. It stays mounted until its close animation ends, then

@@ -70,8 +70,8 @@ export type ThemeTokens = {
   cardTextMuted: string;
   cardTileFill: string;
   cardTileBorder: string;
-  // The popups (PopupModal.tsx — "How to play", the shop): their own light
-  // panel in the light theme and dark panel in the dark theme, with a 3D
+  // The popup (PopupModal.tsx — "How to play"): its own light panel in the
+  // light theme and dark panel in the dark theme, with a 3D
   // bottom edge like the game's keys/buttons. The rules' example rows'
   // neutral tiles (RulesCard.tsx) are solid fills in the panel's palette —
   // deliberately NOT the real board's (transparent) unsubmitted tiles.
@@ -336,9 +336,29 @@ export const KEY_PRESS_DURATION_MS = 80;
 // exactly the same height as the real header's buttons.
 export const HEADER_HEIGHT = 60;
 
-// The popups (PopupModal.tsx: "How to play", the shop): fade in while scaling
-// up from POPUP_START_SCALE, and back out on close. Reduced motion: a plain
-// short fade, no scale.
+// Full pages pushed in over the game (PushPage.tsx — the shop): an iOS-style
+// push from the right, the game sliding a little left under a dim. Reduced
+// motion: no movement, the page just fades in.
+export const PAGE_OPEN_MS = 280;
+export const PAGE_CLOSE_MS = 240;
+// The game screen's own subtle parallax slide while a page is open.
+export const PAGE_GAME_PARALLAX_FRACTION = 0.25;
+export const PAGE_REDUCED_MOTION_MS = 150;
+// The page's iOS-only edge-swipe-to-go-back (Android has its back button).
+export const PAGE_SWIPE_EDGE_ZONE = 24; // px from the left edge a drag must start within
+export const PAGE_SWIPE_DIRECTION_LOCK_PX = 10; // movement needed before committing to a direction
+export const PAGE_SWIPE_DIRECTION_RATIO = 1.2; // |dx| must exceed |dy| * this to count as horizontal
+export const PAGE_SWIPE_COMPLETE_PROGRESS = 0.35;
+export const PAGE_SWIPE_COMPLETE_VELOCITY = 0.5; // px/ms
+export const PAGE_SWIPE_CANCEL_VELOCITY = -0.3; // px/ms, moving back left
+export const PAGE_SWIPE_MIN_VELOCITY = 1.2; // px/ms, floor used only for the completion duration formula
+export const PAGE_SWIPE_COMPLETE_MIN_MS = 120;
+export const PAGE_SWIPE_COMPLETE_MAX_MS = 240;
+export const PAGE_SWIPE_CANCEL_DURATION_MS = 200;
+
+// The popup (PopupModal.tsx — "How to play"): fades in while scaling up from
+// POPUP_START_SCALE, and back out on close. Reduced motion: a plain short
+// fade, no scale.
 export const POPUP_OPEN_MS = 260;
 export const POPUP_CLOSE_MS = 200;
 export const POPUP_START_SCALE = 0.94;

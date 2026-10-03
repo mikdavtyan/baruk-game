@@ -18,7 +18,8 @@ import Keyboard, { ALL_LETTER_TOKENS, computeKeyGeometry } from './components/Ke
 import LossFlow from './components/LossFlow';
 import { GhostHint, RowData } from './components/Row';
 import RulesModal from './components/RulesModal';
-import ShopModal from './components/ShopModal';
+import { PushPageLayer, usePushPage } from './components/PushPage';
+import ShopScreen from './components/ShopScreen';
 import Toast from './components/Toast';
 import WinFlow from './components/WinFlow';
 import {
@@ -279,10 +280,10 @@ function AppInner() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const handleOpenRules = () => setRulesOpen(true);
   const handleCloseRules = useCallback(() => setRulesOpen(false), []);
-  // The shop window (ShopModal), opened by tapping the header's coin pill.
-  const [shopOpen, setShopOpen] = useState(false);
-  const handleOpenShop = () => setShopOpen(true);
-  const handleCloseShop = useCallback(() => setShopOpen(false), []);
+  // The shop page (ShopScreen), pushed in over the game (PushPage.tsx) —
+  // opened by the header's coin pill, or by a power-up tap with no items and
+  // too few coins.
+  const shopPage = usePushPage();
 
   const handleBoardAreaLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -655,7 +656,7 @@ function AppInner() {
       return;
     }
     if (!canPayHint) {
-      setShopOpen(true);
+      shopPage.open();
       return;
     }
     powerUpBusyRef.current = true;
@@ -693,7 +694,7 @@ function AppInner() {
       return;
     }
     if (!canPayDarts) {
-      setShopOpen(true);
+      shopPage.open();
       return;
     }
     // Up to 3 letters that aren't gray yet (fewer if fewer are left) —
@@ -783,18 +784,20 @@ function AppInner() {
 
   return (
     <SafeAreaProvider>
-      {/* The game screen itself — never unmounted. Hidden from screen
-          readers while a popup (rules, shop) covers it. */}
-      <View
-        style={styles.container}
-        importantForAccessibility={rulesOpen || shopOpen ? 'no-hide-descendants' : 'auto'}
-        accessibilityElementsHidden={rulesOpen || shopOpen}
+      {/* The game screen itself — never unmounted. It slides a little left
+          under a pushed page (the shop), and is inert and hidden from screen
+          readers while that page or the rules popup covers it. */}
+      <Animated.View
+        style={[styles.container, { transform: [{ translateX: shopPage.gameTranslateX }] }]}
+        pointerEvents={shopPage.onTop ? 'none' : 'auto'}
+        importantForAccessibility={rulesOpen || shopPage.onTop ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={rulesOpen || shopPage.onTop}
       >
       <AnimatedSafeAreaView
         style={[styles.container, { backgroundColor: color('background') }]}
         edges={['top', 'bottom', 'left', 'right']}
       >
-        <Header ref={headerCoinRef} score={points} coins={coins} onOpenRules={handleOpenRules} onOpenShop={handleOpenShop} />
+        <Header ref={headerCoinRef} score={points} coins={coins} onOpenRules={handleOpenRules} onOpenShop={shopPage.open} />
         <View style={styles.boardArea} onLayout={handleBoardAreaLayout} ref={boardAreaMeasureRef}>
           {tileSize !== null && (
             <Board
@@ -841,7 +844,7 @@ function AppInner() {
             which app.json pins to light. */}
         <StatusBar style={isDark ? 'light' : 'dark'} />
       </AnimatedSafeAreaView>
-      </View>
+      </Animated.View>
       <WinFlow
         active={phase === 'won'}
         resume={resumed?.win ?? null}
@@ -891,7 +894,9 @@ function AppInner() {
           window-relative one exactly, with no safe-area offset to account for. */}
       <ArrowOverlay volleyId={dartsVolley.id} origin={dartsVolley.origin} targets={dartsVolley.targets} />
       {/* Above everything, end-of-round modals included. */}
-      <ShopModal open={shopOpen} onClose={handleCloseShop} />
+      <PushPageLayer page={shopPage}>
+        <ShopScreen onBack={shopPage.close} visible={shopPage.onTop} />
+      </PushPageLayer>
       <RulesModal open={rulesOpen} onClose={handleCloseRules} />
     </SafeAreaProvider>
   );
