@@ -2,6 +2,19 @@
 
 Baruk is an offline Armenian word-guessing game: the player has six guesses to find a five-letter secret word, with coins, points and streaks around each round.
 
+## Screens
+
+**Menu** (home):
+The screen the app opens on: the profile and coins at the top, the game title and the game cards (ԴԱՍԱԿԱՆ, and ՕՐՎԱ ԲԱՌ coming soon) in the middle, and five icon buttons at the bottom (shop, fortune wheel, tasks, leaderboard, settings). Leaving a game for the menu changes nothing in it.
+_Avoid_: home page, lobby, main screen
+
+**Classic** (ԴԱՍԱԿԱՆ):
+The game itself, as a page pushed over the menu. The only game mode; **Word of the day** (ՕՐՎԱ ԲԱՌ) is announced as coming soon and does nothing yet.
+
+**Page**:
+A full screen pushed over another from the right (the Classic game, the shop, the bottom bar's pages); back arrow, Android back or an iOS left-edge swipe return.
+_Avoid_: modal, popup (those are the centered panels)
+
 ## Words and guesses
 
 **Token**:

@@ -22,6 +22,7 @@ import Tile from './components/Tile';
 import { letterLabel } from './lib/letterDisplay';
 import { unmemo } from './test-utils/unmemo';
 import { tapKey } from './test-utils/keyboardTouch';
+import { openClassic } from './test-utils/navigation';
 
 // react-test-renderer has no bundled type declarations in this project;
 // `require`'d as `any` here rather than adding a new type-only dependency.
@@ -69,6 +70,7 @@ async function renderApp() {
   // tileSize is set and Board actually renders (see App.tsx's
   // `{tileSize !== null && <Board .../>}`).
   // (Fires every onLayout — the board area's among them.)
+  await openClassic(root); // the app opens on the menu
   const layoutViews = root.root.findAll((n: any) => typeof n.props.onLayout === 'function');
   act(() => {
     layoutViews.forEach((v: any) => v.props.onLayout({ nativeEvent: { layout: { width: 350, height: 400 } } }));

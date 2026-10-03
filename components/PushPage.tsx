@@ -44,7 +44,9 @@ export type PushPageController = {
   pageOpacity: number | Animated.Value;
 };
 
-export function usePushPage(): PushPageController {
+// `isCovered` (read at back-press time): something above the page (a popup,
+// another page) handles Android back first, so this page lets it.
+export function usePushPage({ isCovered }: { isCovered?: () => boolean } = {}): PushPageController {
   const { reduceMotion } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   const [push] = useState(() => new Animated.Value(0));
@@ -91,11 +93,15 @@ export function usePushPage(): PushPageController {
     });
   });
 
+  const isCoveredRef = useRef(isCovered);
+  useLayoutEffect(() => {
+    isCoveredRef.current = isCovered;
+  });
   // Android's hardware/gesture back button closes the page (with the same
   // animation) instead of exiting the app, whenever it's the one on top.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!onTop) return false;
+      if (!onTop || isCoveredRef.current?.()) return false;
       close();
       return true;
     });
@@ -221,18 +227,26 @@ export function usePushPage(): PushPageController {
 
 // The dim over the game and the sliding page itself. Render it above the
 // game screen (whose transform comes from `page.gameTranslateX`).
+// `preMount` mounts the page right away (offscreen and inert) instead of on
+// its first open — for a heavy page (the game) whose first push must not
+// also pay for mounting it.
 export const PushPageLayer = memo(function PushPageLayer({
   page,
   children,
+  preMount = false,
+  testID,
 }: {
   page: PushPageController;
   children: ReactNode;
+  preMount?: boolean;
+  testID?: string;
 }) {
   return (
     <>
       <Animated.View style={[styles.dim, { opacity: page.dimOpacity }]} pointerEvents="none" />
-      {page.everOpened && (
+      {(page.everOpened || preMount) && (
         <Animated.View
+          testID={testID}
           style={[
             styles.page,
             { transform: [{ translateX: page.pageTranslateX }], opacity: page.pageOpacity },

@@ -9,6 +9,7 @@ import App from './App';
 import { THEME_FADE_MS } from './constants/theme';
 import { letterLabel } from './lib/letterDisplay';
 import { tapKey } from './test-utils/keyboardTouch';
+import { openClassic } from './test-utils/navigation';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -53,6 +54,7 @@ async function renderApp() {
     root = TestRenderer.create(<App />);
   });
   await advance(50);
+  await openClassic(root); // the app opens on the menu
   const layoutViews = root.root.findAll((n: any) => typeof n.props.onLayout === 'function');
   await act(async () => {
     layoutViews.forEach((v: any) => v.props.onLayout({ nativeEvent: { layout: { width: 350, height: 400 } } }));
@@ -85,7 +87,20 @@ async function measure(action: () => Promise<void>) {
 const KEYSTROKE_MAX_RENDERS = 60;
 const TOGGLE_MAX_RENDERS = 80;
 // Never re-rendered by a keystroke or a theme toggle.
-const UNTOUCHED = ['Keyboard', 'KeyboardKey', 'Header', 'BottomControls', 'WinFlow', 'LossFlow', 'ShopScreen'];
+const UNTOUCHED = [
+  'Keyboard',
+  'KeyboardKey',
+  'Header',
+  'BottomControls',
+  'WinFlow',
+  'LossFlow',
+  'ShopScreen',
+  // The menu under the game page, and its pages.
+  'MenuScreen',
+  'Avatar',
+  'FortuneWheelIcon',
+  'EmptyPage',
+];
 
 it('one keystroke re-renders only the typed row (at most 2 tiles), and a theme toggle only the snapshot leaves', async () => {
   await renderApp();

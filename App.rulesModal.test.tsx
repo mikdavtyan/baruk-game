@@ -1,5 +1,6 @@
-// The "How to play" popup through the real App: it opens by itself on the
-// very first launch only (a flag persisted in AsyncStorage), the X and
+// The "How to play" popup through the real App: it opens by itself the first
+// time the player opens the Classic game (renderApp opens it, as a player
+// does) and never again (a flag persisted in AsyncStorage), the X and
 // Android's back button close it, and the header's rules button still opens
 // it any time. Harness copied from App.roundFlow.test.tsx.
 import React from 'react';
@@ -7,6 +8,7 @@ import { BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import App from './App';
 import RulesCard from './components/RulesCard';
+import { openClassic, PAGE, pageShown } from './test-utils/navigation';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -56,6 +58,7 @@ async function renderApp() {
     root = TestRenderer.create(<App />);
   });
   await advance(50); // storage loads
+  await openClassic(root); // the app opens on the menu
   const layoutViews = root.root.findAll((n: any) => typeof n.props.onLayout === 'function');
   await act(async () => {
     layoutViews.forEach((v: any) => v.props.onLayout({ nativeEvent: { layout: { width: 350, height: 400 } } }));
@@ -83,7 +86,7 @@ const pressBack = async () => {
   return handled;
 };
 
-it('opens by itself on the very first launch', async () => {
+it('opens by itself on the first Classic open', async () => {
   await renderApp();
   expect(rulesShown()).toBe(true);
 });
@@ -98,10 +101,12 @@ it("Android's back button closes it (and is used up doing so)", async () => {
   await renderApp();
   expect(await pressBack()).toBe(true);
   expect(rulesShown()).toBe(false);
+  expect(pageShown(root, PAGE.game)).toBe(true); // the popup closed, not the game under it
+  expect(await pressBack()).toBe(true); // then the game, back to the menu
   expect(await pressBack()).toBeFalsy(); // nothing left to close: back goes to the system
 });
 
-it('never opens by itself again after the first launch, even if the app was closed with it open', async () => {
+it('never opens by itself again after the first Classic open, even if the app was closed with it open', async () => {
   await renderApp();
   expect(rulesShown()).toBe(true);
   await relaunch(); // closed while it was still open

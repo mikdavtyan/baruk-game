@@ -17,6 +17,8 @@ import HintFlightOverlay, { HintFlight } from './components/HintFlightOverlay';
 import Keyboard, { ALL_LETTER_TOKENS, computeKeyGeometry } from './components/Keyboard';
 import LossFlow from './components/LossFlow';
 import { GhostHint, HintLanding, RowData } from './components/Row';
+import EmptyPage from './components/EmptyPage';
+import MenuScreen, { MENU_PAGE_TITLES, MenuPage } from './components/MenuScreen';
 import RulesModal from './components/RulesModal';
 import { PushPageLayer, usePushPage } from './components/PushPage';
 import ShopScreen from './components/ShopScreen';
@@ -66,6 +68,7 @@ import {
   WordBag,
 } from './lib/gameStorage';
 import { GamePhase, phaseFromPending } from './lib/gamePhase';
+import { DEFAULT_PROFILE } from './constants/profile';
 import { computeKeyStates } from './lib/keyboardStates';
 import { useStableCallback } from './lib/useStableCallback';
 import { triggerHintLandingHaptic } from './lib/haptics';
@@ -320,15 +323,47 @@ function AppInner() {
   const keyboardAreaRef = useRef<View>(null);
 
   // The "How to play" popup (RulesModal): opened by the header's rules
-  // button, and by itself on the very first launch only (see the first load).
+  // button, and by itself the first time the Classic page opens (handleOpenClassic).
   // It closes itself on Android's back button.
   const [rulesOpen, setRulesOpen] = useState(false);
+  const rulesOpenRef = useRef(rulesOpen);
   const handleOpenRules = () => setRulesOpen(true);
   const handleCloseRules = useCallback(() => setRulesOpen(false), []);
   // The shop page (ShopScreen), pushed in over the game (PushPage.tsx) —
   // opened by the header's coin pill, or by a power-up tap with no items and
   // too few coins.
   const shopPage = usePushPage();
+  const shopOnTopRef = useRef(shopPage.onTop);
+  useLayoutEffect(() => {
+    rulesOpenRef.current = rulesOpen;
+    shopOnTopRef.current = shopPage.onTop;
+  });
+  // Navigation: the app opens on the menu (MenuScreen); the game is the
+  // Classic page pushed over it (`gamePage`), and the bottom bar's empty pages
+  // share one more (`infoPage`, showing `infoPageKind`). The shop is pushed
+  // over either. All game state lives here, so leaving the game changes nothing.
+  // Android back goes to whatever covers the game first (the rules popup, the
+  // shop): their handlers can register before the page's in the same commit.
+  const gamePage = usePushPage({ isCovered: () => rulesOpenRef.current || shopOnTopRef.current });
+  const infoPage = usePushPage();
+  const [infoPageKind, setInfoPageKind] = useState<MenuPage>('wheel');
+  const [profile] = useState(DEFAULT_PROFILE);
+  // The rules popup opens by itself the first time the player opens the
+  // Classic page; the flag is saved as it opens, so closing the app with it
+  // still open doesn't bring it back.
+  const [rulesSeen, setRulesSeenState] = useState(true);
+  const handleOpenClassic = () => {
+    gamePage.open();
+    if (!rulesSeen) {
+      setRulesSeenState(true);
+      setRulesOpen(true);
+      setRulesSeen();
+    }
+  };
+  const handleOpenMenuPage = (kind: MenuPage) => {
+    setInfoPageKind(kind);
+    infoPage.open();
+  };
 
   // Buys an item pack in the shop: the coins and the inventory change in ONE
   // atomic write (docs/adr/0003), then the UI follows. ShopScreen only calls
@@ -507,13 +542,7 @@ function AppInner() {
       ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory, savedAdRewards]) => {
         setInventory(savedInventory);
         setAdRewards(savedAdRewards);
-        // The rules popup opens by itself on the very first launch only; the
-        // flag is saved as it opens, so closing the app with it still open
-        // doesn't bring it back.
-        if (!rulesSeen) {
-          setRulesOpen(true);
-          setRulesSeen();
-        }
+        setRulesSeenState(rulesSeen);
         setCoinsState(savedCoins);
         setPointsState(savedPoints);
         setStreakState(savedStreak.current);
@@ -944,6 +973,18 @@ function AppInner() {
   const onHint = useStableCallback(handleHint);
   const onDarts = useStableCallback(handleDarts);
   const onOpenRules = useStableCallback(handleOpenRules);
+  const onOpenClassic = useStableCallback(handleOpenClassic);
+  const onOpenMenuPage = useStableCallback(handleOpenMenuPage);
+  const onOpenProfile = useStableCallback(() => {});
+  // The Classic card's subtitle: a result waiting (a pending reward, second
+  // chance or loss result — the end-of-round phases mirror those records),
+  // else guesses submitted in this attempt, else nothing in progress.
+  const classicSubtitle =
+    phase === 'won' || phase === 'lost-awaiting-decision' || phase === 'finished'
+      ? 'ՇԱՐՈՒՆԱԿԵԼ'
+      : submittedGuesses.length > 0
+        ? `ՇԱՐՈՒՆԱԿԵԼ · ${submittedGuesses.length}/${MAX_GUESSES}`
+        : 'ԽԱՂԱԼ';
   const onBoardAreaLayout = useStableCallback(handleBoardAreaLayout);
   const onNewGame = useStableCallback(handleNewGame);
   const onLossRetry = useStableCallback(handleLossRetry);
@@ -973,17 +1014,49 @@ function AppInner() {
     [shopPage.close, shopPage.onTop, coins, inventory, adsLeft, onBuyPack, onWatchShopAd],
   );
 
+  const infoPageContent = useMemo(
+    () => <EmptyPage title={MENU_PAGE_TITLES[infoPageKind]} onBack={infoPage.close} visible={infoPage.onTop} />,
+    [infoPageKind, infoPage.close, infoPage.onTop],
+  );
+
   // Wait for the fonts so text never flashes in the system font (if loading
   // fails, render anyway with system fonts), and for the word bag.
   if ((!fontsLoaded && !fontError) || !wordBag || !resumed) return null;
 
   return (
     <SafeAreaProvider>
-      {/* The game screen itself — never unmounted. It slides a little left
-          under a pushed page (the shop), and is inert and hidden from screen
-          readers while that page or the rules popup covers it. */}
+      {/* Everything the shop can be pushed over (the menu and its pages): it
+          slides a little left under the shop. */}
+      <Animated.View style={[styles.container, { transform: [{ translateX: shopPage.gameTranslateX }] }]}>
+      {/* The menu, under every page: it slides a little left under the game
+          or an empty page, and is inert while one covers it. */}
       <Animated.View
-        style={[styles.container, { transform: [{ translateX: shopPage.gameTranslateX }] }]}
+        style={[styles.container, { transform: [{ translateX: gamePage.gameTranslateX }] }]}
+        pointerEvents={gamePage.onTop || infoPage.onTop || shopPage.onTop ? 'none' : 'auto'}
+        importantForAccessibility={gamePage.onTop || infoPage.onTop || shopPage.onTop || rulesOpen ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={gamePage.onTop || infoPage.onTop || shopPage.onTop || rulesOpen}
+      >
+        <Animated.View style={[styles.container, { transform: [{ translateX: infoPage.gameTranslateX }] }]}>
+          <MenuScreen
+            profile={profile}
+            points={points}
+            coins={coins}
+            classicSubtitle={classicSubtitle}
+            onOpenClassic={onOpenClassic}
+            onOpenShop={shopPage.open}
+            onOpenPage={onOpenMenuPage}
+            onOpenProfile={onOpenProfile}
+          />
+        </Animated.View>
+      </Animated.View>
+      {/* The Classic game page — pre-mounted (offscreen and inert until
+          opened, never unmounted), so opening it never pays for mounting the
+          game, and its state and flows stay alive behind the menu. */}
+      <PushPageLayer page={gamePage} preMount testID="page-game">
+      {/* The game screen itself. It's inert and hidden from screen readers
+          while the shop or the rules popup covers it. */}
+      <View
+        style={styles.container}
         pointerEvents={shopPage.onTop ? 'none' : 'auto'}
         importantForAccessibility={rulesOpen || shopPage.onTop ? 'no-hide-descendants' : 'auto'}
         accessibilityElementsHidden={rulesOpen || shopPage.onTop}
@@ -992,7 +1065,14 @@ function AppInner() {
         style={[styles.container, { backgroundColor: color('background') }]}
         edges={['top', 'bottom', 'left', 'right']}
       >
-        <Header ref={headerCoinRef} score={points} coins={coins} onOpenRules={onOpenRules} onOpenShop={shopPage.open} />
+        <Header
+          ref={headerCoinRef}
+          score={points}
+          coins={coins}
+          onOpenRules={onOpenRules}
+          onOpenShop={shopPage.open}
+          onBack={gamePage.close}
+        />
         <View style={styles.boardArea} onLayout={onBoardAreaLayout} ref={boardAreaMeasureRef}>
           {tileSize !== null && (
             <Board
@@ -1038,11 +1118,8 @@ function AppInner() {
             hintButtonRef={hintButtonRef}
           />
         </View>
-        {/* Follows the in-app theme: 'auto' would follow the system scheme,
-            which app.json pins to light. */}
-        <ThemedStatusBar />
       </AnimatedSafeAreaView>
-      </Animated.View>
+      </View>
       <WinFlow
         active={phase === 'won'}
         resume={resumed?.win ?? null}
@@ -1087,11 +1164,19 @@ function AppInner() {
       <ArrowOverlay volleyId={dartsVolley.id} origin={dartsVolley.origin} targets={dartsVolley.targets} />
       {/* The Hint light and its sparks — the same window-coordinate overlay idea. */}
       <HintFlightOverlay flight={hintFlight} />
-      {/* Above everything, end-of-round modals included. */}
-      <PushPageLayer page={shopPage}>
+      </PushPageLayer>
+      <PushPageLayer page={infoPage} testID="page-info">
+        {infoPageContent}
+      </PushPageLayer>
+      </Animated.View>
+      {/* Above everything, the game page and its end-of-round modals included. */}
+      <PushPageLayer page={shopPage} testID="page-shop">
         {shopScreen}
       </PushPageLayer>
       <RulesModal open={rulesOpen} onClose={handleCloseRules} />
+      {/* Follows the in-app theme: 'auto' would follow the system scheme,
+          which app.json pins to light. */}
+      <ThemedStatusBar />
     </SafeAreaProvider>
   );
 }

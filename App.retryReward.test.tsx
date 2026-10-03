@@ -16,6 +16,7 @@ import { letterLabel } from './lib/letterDisplay';
 import { tokenizeArmenianWord } from './lib/tokenizeArmenian';
 import { unmemo } from './test-utils/unmemo';
 import { tapKey } from './test-utils/keyboardTouch';
+import { openClassic } from './test-utils/navigation';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -75,6 +76,7 @@ async function renderApp() {
   await advance(50); // the word bag loads from AsyncStorage
   // react-test-renderer never fires onLayout; Board needs it to render.
   // (Fires every onLayout — the board area's among them.)
+  await openClassic(root); // the app opens on the menu
   const layoutViews = root.root.findAll((n: any) => typeof n.props.onLayout === 'function');
   await act(async () => {
     layoutViews.forEach((v: any) => v.props.onLayout({ nativeEvent: { layout: { width: 350, height: 400 } } }));

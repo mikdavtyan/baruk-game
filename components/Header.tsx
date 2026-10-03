@@ -6,11 +6,14 @@ import { FONTS } from '../constants/theme';
 import { useTheme } from '../lib/ThemeContext';
 import { useCountUp } from '../lib/useCountUp';
 
+const BACK_ICON = { ios: 'chevron.left', android: 'arrow_back_ios_new', web: 'arrow_back_ios_new' } as const;
+
 type Props = {
   score: number;
   coins: number;
   onOpenRules: () => void;
   onOpenShop: () => void; // the coin pill is the shop's entry point
+  onBack: () => void; // back to the menu (the game is a page pushed over it)
 };
 
 // Forwards its ref to the coin pill specifically (not the whole header) —
@@ -18,7 +21,7 @@ type Props = {
 // coins should land, and to place their own "stays visible above the overlay"
 // duplicate at the same spot. Tapping the pill opens the shop.
 // Memoized (with stable props from App), so a keystroke never re-renders it.
-const Header = memo(forwardRef<View, Props>(function Header({ score, coins, onOpenRules, onOpenShop }, coinPillRef) {
+const Header = memo(forwardRef<View, Props>(function Header({ score, coins, onOpenRules, onOpenShop, onBack }, coinPillRef) {
   // The flat icons' tint (a native prop, not a style) can't fade, so they read
   // the snapshot inside their own tiny components (ThemedSnapshot.tsx) — a
   // theme toggle re-renders those, never this header. Everything else here
@@ -32,12 +35,7 @@ const Header = memo(forwardRef<View, Props>(function Header({ score, coins, onOp
   return (
     <View style={styles.header}>
       <View style={styles.sideGroupLeft}>
-        {/* Non-functional for now — no navigation logic yet. */}
-        <ThemedIconButton
-          icon={{ ios: 'chevron.left', android: 'arrow_back_ios_new', web: 'arrow_back_ios_new' }}
-          label="Back"
-          token="headerIconColor"
-        />
+        <ThemedIconButton icon={BACK_ICON} label="Հետ" token="headerIconColor" onPress={onBack} />
         <ThemeToggleButton />
       </View>
       <View style={styles.scoreBlock}>

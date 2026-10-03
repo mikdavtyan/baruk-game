@@ -10,6 +10,7 @@ import Coin from './components/Coin';
 import PopupModal from './components/PopupModal';
 import ShopScreen from './components/ShopScreen';
 import { unmemo } from './test-utils/unmemo';
+import { openClassic, page, PAGE, pageShown } from './test-utils/navigation';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -60,6 +61,7 @@ async function renderApp() {
     root = TestRenderer.create(<App />);
   });
   await advance(50); // storage loads
+  await openClassic(root); // the app opens on the menu
   const layoutViews = root.root.findAll((n: any) => typeof n.props.onLayout === 'function');
   await act(async () => {
     layoutViews.forEach((v: any) => v.props.onLayout({ nativeEvent: { layout: { width: 350, height: 400 } } }));
@@ -67,9 +69,11 @@ async function renderApp() {
   await advance(1000); // the popup's open animation, if it opens
 }
 
-const press = async (label: string) => {
+// Pressed inside the game page by default (the menu under it has a coin pill
+// too); the shop's own controls are pressed inside the shop page.
+const press = async (label: string, where: string = PAGE.game) => {
   await act(async () => {
-    root.root.findAll((n: any) => n.props.accessibilityLabel === label && n.props.onPress)[0].props.onPress();
+    page(root, where).findAll((n: any) => n.props.accessibilityLabel === label && n.props.onPress)[0].props.onPress();
   });
   await advance(1000); // the close/open animation
 };
@@ -93,8 +97,9 @@ it('tapping the coin pill opens the shop page, and its back button closes it', a
   expect(shopPageShown()).toBe(false);
   await press('Խանութ');
   expect(shopPageShown()).toBe(true);
-  await press('Հետ');
+  await press('Հետ', PAGE.shop);
   expect(shopPageShown()).toBe(false);
+  expect(pageShown(root, PAGE.game)).toBe(true); // back on the game
 });
 
 it("Android's back button closes the shop page (and is used up doing so)", async () => {
@@ -103,7 +108,10 @@ it("Android's back button closes the shop page (and is used up doing so)", async
   expect(shopPageShown()).toBe(true);
   expect(await pressBack()).toBe(true);
   expect(shopPageShown()).toBe(false);
-  expect(await pressBack()).toBeFalsy();
+  expect(pageShown(root, PAGE.game)).toBe(true); // the shop closed, not the game
+  expect(await pressBack()).toBe(true); // the game, back to the menu
+  expect(pageShown(root, PAGE.game)).toBe(false);
+  expect(await pressBack()).toBeFalsy(); // the menu: left to the system
 });
 
 it('the shop is a page now, not a popup', async () => {

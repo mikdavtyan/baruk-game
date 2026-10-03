@@ -10,6 +10,7 @@ import { ROW_REVEAL_DURATION_MS } from './constants/theme';
 import { letterLabel } from './lib/letterDisplay';
 import { fingerOn, tapKey, touchEnd, touchStart } from './test-utils/keyboardTouch';
 import { unmemo } from './test-utils/unmemo';
+import { openClassic } from './test-utils/navigation';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -52,6 +53,7 @@ async function renderApp() {
     root = TestRenderer.create(<App />);
   });
   await advance(50);
+  await openClassic(root); // the app opens on the menu
   const layoutViews = root.root.findAll((n: any) => typeof n.props.onLayout === 'function');
   await act(async () => {
     layoutViews.forEach((v: any) => v.props.onLayout({ nativeEvent: { layout: { width: 350, height: 400 } } }));
