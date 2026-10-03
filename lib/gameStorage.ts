@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LetterState } from '../constants/theme';
+import { WIN_FLOW_CONFIG } from '../constants/winFlow';
 import { tokenizeArmenianWord } from './tokenizeArmenian';
 
 // All the win-flow's own persisted state (coins, streak, the "pending win"
@@ -19,9 +20,14 @@ const KEYS = {
   wordBag: 'wordle:wordBag',
   round: 'wordle:round',
   rulesSeen: 'wordle:rulesSeen',
+  inventory: 'wordle:inventory',
 } as const;
 
 export type Streak = { current: number; best: number };
+
+// Hint and Darts items the player holds — used before coins while any are
+// left. A missing key reads as WIN_FLOW_CONFIG.startingInventory.
+export type Inventory = { hint: number; darts: number };
 
 // The shuffled secret-word bag (see lib/wordBag.ts): `order` is a shuffle of
 // the playable words, `pos` the index of the current secret word in it.
@@ -119,6 +125,7 @@ type AtomicChanges = {
   pendingWin?: PendingWin | null;
   pendingLoss?: PendingLoss | null;
   round?: SavedRound | null;
+  inventory?: Inventory;
 };
 export async function saveAtomically(changes: AtomicChanges): Promise<void> {
   const entries = (Object.keys(changes) as (keyof AtomicChanges)[]).map((key): [string, string] => [
@@ -133,6 +140,8 @@ export async function saveAtomically(changes: AtomicChanges): Promise<void> {
 }
 
 export const getCoins = () => getJSON<number>(KEYS.coins, 0);
+
+export const getInventory = () => getJSON<Inventory>(KEYS.inventory, { ...WIN_FLOW_CONFIG.startingInventory });
 export const setCoins = (coins: number) => setJSON(KEYS.coins, coins);
 
 // ՄԻԱՎՈՐՆԵՐ — the running points total, credited on each win (see

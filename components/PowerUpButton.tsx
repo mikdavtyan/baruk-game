@@ -1,13 +1,16 @@
 import { forwardRef, ReactNode, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import Coin from './Coin';
-import { FONTS, KEY_EDGE_HEIGHT } from '../constants/theme';
+import { FONTS, INVALID_COLOR, KEY_EDGE_HEIGHT } from '../constants/theme';
 import { useTheme } from '../lib/ThemeContext';
 
 type Props = {
   icon: ReactNode;
   label: string; // accessibility only — the button has no visible text label
   price: number;
+  // Items of this power-up held (inventory). While > 0, a red badge shows the
+  // count and the coin price is hidden — a use costs an item, not coins.
+  count: number;
   disabled: boolean;
   // Looks unavailable. May be set while still pressable — e.g. an exhausted
   // power-up whose tap only explains why, for free.
@@ -16,6 +19,7 @@ type Props = {
 };
 
 const SIZE = 48;
+const BADGE_SIZE = 18;
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -29,7 +33,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 // so the Darts instance in BottomControls.tsx can be measured (measureInWindow)
 // by App.tsx to know exactly where its arrows should fly from.
 const PowerUpButton = forwardRef<View, Props>(function PowerUpButton(
-  { icon, label, price, disabled, dimmed = disabled, onPress },
+  { icon, label, price, count, disabled, dimmed = disabled, onPress },
   ref,
 ) {
   const { color, textColor } = useTheme();
@@ -68,7 +72,14 @@ const PowerUpButton = forwardRef<View, Props>(function PowerUpButton(
         />
         {icon}
       </AnimatedPressable>
-      <View style={styles.priceRow}>
+      {count > 0 && (
+        <View testID="inventory-badge" pointerEvents="none" style={[styles.badge, dimmed && styles.circleDisabled]}>
+          <Text style={styles.badgeText}>{count}</Text>
+        </View>
+      )}
+      {/* Kept in the layout either way (hidden while items are held), so the
+          buttons never shift when the last item is used. */}
+      <View testID={count > 0 ? undefined : 'power-up-price'} style={[styles.priceRow, count > 0 && styles.hidden]}>
         <Coin size={18} />
         <Animated.Text style={[styles.priceText, { color: textColor('textMuted') }]}>{price}</Animated.Text>
       </View>
@@ -114,5 +125,28 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 11,
     fontFamily: FONTS.body,
+  },
+  hidden: {
+    opacity: 0,
+  },
+  // The red count badge at the icon's top-right — a fixed red (the same as the
+  // invalid-word button) with white digits, the same in both themes.
+  badge: {
+    position: 'absolute',
+    top: -BADGE_SIZE / 3,
+    right: -BADGE_SIZE / 3,
+    minWidth: BADGE_SIZE,
+    height: BADGE_SIZE,
+    borderRadius: BADGE_SIZE / 2,
+    paddingHorizontal: 4,
+    backgroundColor: INVALID_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontSize: 11,
+    lineHeight: 13,
+    fontFamily: FONTS.title,
   },
 });

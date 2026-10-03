@@ -41,12 +41,14 @@ import { evaluateGuess } from './lib/evaluateGuess';
 import { guessValidity } from './lib/guessValidity';
 import {
   getCoins,
+  getInventory,
   getPendingLoss,
   getPendingWin,
   getPoints,
   getRound,
   getRulesSeen,
   getStreak,
+  Inventory,
   PendingLoss,
   PendingWin,
   SavedRound,
@@ -171,6 +173,8 @@ function AppInner() {
   // The persisted coin balance (see lib/gameStorage.ts) — the single source
   // of truth Header displays and the flows read and credit.
   const [coins, setCoinsState] = useState(0);
+  // Hint/Darts items held (wordle:inventory), used before coins.
+  const [inventory, setInventory] = useState<Inventory>(WIN_FLOW_CONFIG.startingInventory);
   // ՄԻԱՎՈՐՆԵՐ — the running points total (see constants/winFlow.ts's
   // WIN_FLOW_CONFIG.pointsByGuessCount); WinFlow credits it on each win.
   const [points, setPointsState] = useState(0);
@@ -418,8 +422,10 @@ function AppInner() {
       getPoints(),
       getStreak(),
       getRulesSeen(),
+      getInventory(),
     ]).then(
-      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen]) => {
+      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory]) => {
+        setInventory(savedInventory);
         // The rules popup opens by itself on the very first launch only; the
         // flag is saved as it opens, so closing the app with it still open
         // doesn't bring it back.
@@ -606,20 +612,31 @@ function AppInner() {
     (token) => !secretWord.includes(token) && keyStates[token] !== 'absent',
   );
   const dartsExhausted = dartsCandidates.length === 0;
-  // A power-up is pressable while the game is live and either it has
-  // something left (and the player can pay) or it's exhausted — then a tap
-  // just explains why, free. Exhausted or unaffordable buttons are dimmed.
+  // A power-up is pressable whenever the game is live. A use costs one item
+  // from the inventory while any are left, else its coin price; with neither,
+  // a tap opens the shop. Exhausted (nothing left to reveal) or unaffordable
+  // buttons are dimmed, and a tap on an exhausted one just explains why, free.
   const { hintPrice, dartsPrice } = WIN_FLOW_CONFIG;
-  const hintDisabled = isGameLocked || (!hintExhausted && !hintNoRoom && coins < hintPrice);
-  const dartsDisabled = isGameLocked || isDartsFiring || (!dartsExhausted && coins < dartsPrice);
+  const canPayHint = inventory.hint > 0 || coins >= hintPrice;
+  const canPayDarts = inventory.darts > 0 || coins >= dartsPrice;
+  const hintDisabled = isGameLocked;
+  const dartsDisabled = isGameLocked || isDartsFiring;
 
-  // Charges the power-up and saves what it bought (into the saved round) in
-  // one atomic write — a kill can never take the coins without keeping the
-  // purchase. Saved first, as everywhere else; the UI state follows.
-  const chargeCoins = async (price: number, purchase: Partial<SavedRound>) => {
-    const next = coins - price;
-    await saveAtomically({ coins: next, round: { ...currentRound, ...purchase } });
-    setCoinsState(next);
+  // Pays for a power-up use — one item if any are held, else its coin price —
+  // and saves what it bought (into the saved round) in the same atomic write:
+  // a kill can never take the item or coins without keeping the purchase, or
+  // keep the purchase without paying. Saved first; the UI state follows.
+  const payFor = async (item: keyof Inventory, price: number, purchase: Partial<SavedRound>) => {
+    const round = { ...currentRound, ...purchase };
+    if (inventory[item] > 0) {
+      const next = { ...inventory, [item]: inventory[item] - 1 };
+      await saveAtomically({ inventory: next, round });
+      setInventory(next);
+    } else {
+      const next = coins - price;
+      await saveAtomically({ coins: next, round });
+      setCoinsState(next);
+    }
   };
 
   // Adds a low-opacity green "ghost" of the secret word's real letter at a
@@ -637,10 +654,14 @@ function AppInner() {
       showToast(HINT_NO_ROOM_TOAST);
       return;
     }
+    if (!canPayHint) {
+      setShopOpen(true);
+      return;
+    }
     powerUpBusyRef.current = true;
     const index = hintTargets[Math.floor(Math.random() * hintTargets.length)];
     const nextGhosts = [...hintGhosts, { index, letter: secretWord[index] }];
-    await chargeCoins(hintPrice, { hintGhosts: nextGhosts });
+    await payFor('hint', hintPrice, { hintGhosts: nextGhosts });
     setHintGhosts(nextGhosts);
     powerUpBusyRef.current = false;
   };
@@ -671,6 +692,10 @@ function AppInner() {
       showToast(DARTS_EXHAUSTED_TOAST);
       return;
     }
+    if (!canPayDarts) {
+      setShopOpen(true);
+      return;
+    }
     // Up to 3 letters that aren't gray yet (fewer if fewer are left) —
     // decided now; only how it's shown (measured real positions + a flight,
     // vs. an instant reduced-motion fade) differs below.
@@ -679,7 +704,7 @@ function AppInner() {
     powerUpBusyRef.current = true;
     // Every target is saved as paid now, before any arrow lands.
     const nextPaidDarts = [...new Set([...paidDarts, ...targets])];
-    await chargeCoins(dartsPrice, { paidDarts: nextPaidDarts });
+    await payFor('darts', dartsPrice, { paidDarts: nextPaidDarts });
     setPaidDarts(nextPaidDarts);
     powerUpBusyRef.current = false;
 
@@ -800,10 +825,12 @@ function AppInner() {
             onSubmit={handleEnter}
             onClearInvalid={handleClearInvalidGuess}
             hintDisabled={hintDisabled}
-            hintDimmed={hintDisabled || hintExhausted || hintNoRoom}
+            hintCount={inventory.hint}
+            dartsCount={inventory.darts}
+            hintDimmed={hintDisabled || hintExhausted || hintNoRoom || !canPayHint}
             onHint={handleHint}
             dartsDisabled={dartsDisabled}
-            dartsDimmed={dartsDisabled || dartsExhausted}
+            dartsDimmed={dartsDisabled || dartsExhausted || !canPayDarts}
             onDarts={handleDarts}
             dartsVolleyId={dartsVolley.id}
             dartsShotCount={dartsVolley.targets.length}

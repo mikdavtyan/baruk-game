@@ -18,6 +18,9 @@ export const WIN_FLOW_CONFIG = {
   // Power-ups — charged only when something is actually revealed.
   hintPrice: 100,
   dartsPrice: 50,
+  // Hint/Darts items a player starts with (also existing players, the first
+  // time the inventory is read). Used before coins while any are left.
+  startingInventory: { hint: 3, darts: 3 },
 };
 
 // Loss-modal titles, by how close the last guess was. The ՜ here is the same

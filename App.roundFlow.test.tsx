@@ -340,6 +340,8 @@ describe('board reset (retry, ՆՈՐ ԽԱՂ)', () => {
 describe('power-ups', () => {
   beforeEach(async () => {
     await AsyncStorage.setItem('wordle:coins', JSON.stringify(1000));
+    // No items held: these are about paying with coins (items: App.inventory.test.tsx).
+    await AsyncStorage.setItem('wordle:inventory', JSON.stringify({ hint: 0, darts: 0 }));
   });
   const press = async (label: string) => {
     await act(async () => {
@@ -432,11 +434,11 @@ describe('power-ups', () => {
     expect(await stored('wordle:coins')).toBe(1000 - volleys * WIN_FLOW_CONFIG.dartsPrice);
   });
 
-  it('a power-up the player cannot afford is disabled', async () => {
+  it('with no items and too few coins, a power-up is dimmed but still tappable (it opens the shop)', async () => {
     await AsyncStorage.setItem('wordle:coins', JSON.stringify(WIN_FLOW_CONFIG.dartsPrice - 1));
     await renderApp();
-    expect(controls().hintDisabled).toBe(true);
-    expect(controls().dartsDisabled).toBe(true);
+    expect([controls().hintDisabled, controls().dartsDisabled]).toEqual([false, false]);
+    expect([controls().hintDimmed, controls().dartsDimmed]).toEqual([true, true]);
   });
 });
 

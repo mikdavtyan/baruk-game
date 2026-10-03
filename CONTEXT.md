@@ -68,6 +68,14 @@ A pale letter shown in an empty cell of the row being typed — from a Hint, or 
 **Coins**:
 The spendable currency: earned by winning and sharing, spent on Hint, Darts and coin retries.
 
+**Inventory**:
+The Hint and Darts items the player holds; using a power-up spends one item while any are left, and coins only once none are.
+_Avoid_: stock, charges, uses
+
+**Shop**:
+The window opened from the coin pill (ԽԱՆՈՒԹ), where coins and items will be bought.
+_Avoid_: store, market
+
 **Points** (ՄԻԱՎՈՐՆԵՐ):
 The running score earned by wins; it falls to zero when a round is finally lost.
 _Avoid_: score (in code the header calls it score), XP

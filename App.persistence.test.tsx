@@ -413,6 +413,8 @@ describe('a retry survives a relaunch and is paid for once', () => {
 describe('paid power-ups survive a relaunch', () => {
   beforeEach(async () => {
     await AsyncStorage.setItem('wordle:coins', JSON.stringify(1000));
+    // No items held: these are about paying with coins (items: App.inventory.test.tsx).
+    await AsyncStorage.setItem('wordle:inventory', JSON.stringify({ hint: 0, darts: 0 }));
   });
   const tapPowerUp = async (label: string) => {
     await act(async () => {

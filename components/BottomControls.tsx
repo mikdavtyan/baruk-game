@@ -8,13 +8,14 @@ import { WIN_FLOW_CONFIG } from '../constants/winFlow';
 import { GuessValidity } from '../lib/guessValidity';
 import { useTheme } from '../lib/ThemeContext';
 
-// Temporary display prices — no real coin economy/persistence yet (see
-// App.tsx's handleHint/handleDarts).Once an inventory system exists, these
-// badges become quantity indicators instead of prices.
+// Each power-up shows its item count (a red badge) while any are held, and
+// its coin price (WIN_FLOW_CONFIG) once none are left — see PowerUpButton.
 type Props = {
   validity: GuessValidity;
   onSubmit: () => void;
   onClearInvalid: () => void;
+  hintCount: number; // Hint items held (inventory)
+  dartsCount: number; // Darts items held
   hintDisabled: boolean;
   hintDimmed: boolean;
   onHint: () => void;
@@ -34,6 +35,8 @@ export default function BottomControls({
   validity,
   onSubmit,
   onClearInvalid,
+  hintCount,
+  dartsCount,
   hintDisabled,
   hintDimmed,
   onHint,
@@ -59,6 +62,7 @@ export default function BottomControls({
         }
         label="Hint"
         price={WIN_FLOW_CONFIG.hintPrice}
+        count={hintCount}
         disabled={hintDisabled}
         dimmed={hintDimmed}
         onPress={onHint}
@@ -71,6 +75,7 @@ export default function BottomControls({
         icon={<BowIcon size={24} volleyId={dartsVolleyId} shotCount={dartsShotCount} />}
         label="Darts"
         price={WIN_FLOW_CONFIG.dartsPrice}
+        count={dartsCount}
         disabled={dartsDisabled}
         dimmed={dartsDimmed}
         onPress={onDarts}
