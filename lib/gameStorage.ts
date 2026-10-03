@@ -21,6 +21,7 @@ const KEYS = {
   round: 'wordle:round',
   rulesSeen: 'wordle:rulesSeen',
   inventory: 'wordle:inventory',
+  adRewards: 'wordle:adRewards',
 } as const;
 
 export type Streak = { current: number; best: number };
@@ -28,6 +29,10 @@ export type Streak = { current: number; best: number };
 // Hint and Darts items the player holds — used before coins while any are
 // left. A missing key reads as WIN_FLOW_CONFIG.startingInventory.
 export type Inventory = { hint: number; darts: number };
+
+// The shop's rewarded-ad coins taken on a local calendar day ('YYYY-MM-DD').
+// A record from an earlier day means none taken today (see lib/shop.ts).
+export type AdRewards = { day: string; count: number };
 
 // The shuffled secret-word bag (see lib/wordBag.ts): `order` is a shuffle of
 // the playable words, `pos` the index of the current secret word in it.
@@ -126,6 +131,7 @@ type AtomicChanges = {
   pendingLoss?: PendingLoss | null;
   round?: SavedRound | null;
   inventory?: Inventory;
+  adRewards?: AdRewards;
 };
 export async function saveAtomically(changes: AtomicChanges): Promise<void> {
   const entries = (Object.keys(changes) as (keyof AtomicChanges)[]).map((key): [string, string] => [
@@ -140,9 +146,11 @@ export async function saveAtomically(changes: AtomicChanges): Promise<void> {
 }
 
 export const getCoins = () => getJSON<number>(KEYS.coins, 0);
+export const setCoins = (coins: number) => setJSON(KEYS.coins, coins);
 
 export const getInventory = () => getJSON<Inventory>(KEYS.inventory, { ...WIN_FLOW_CONFIG.startingInventory });
-export const setCoins = (coins: number) => setJSON(KEYS.coins, coins);
+
+export const getAdRewards = () => getJSON<AdRewards>(KEYS.adRewards, { day: '', count: 0 });
 
 // ՄԻԱՎՈՐՆԵՐ — the running points total, credited on each win (see
 // constants/winFlow.ts's WIN_FLOW_CONFIG.pointsByGuessCount).

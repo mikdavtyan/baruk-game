@@ -64,10 +64,11 @@ beforeAll(async () => {
     pendingLoss: worstPendingLoss,
     round: worstRound,
     inventory: { hint: BIG, darts: BIG },
+    adRewards: { day: '2026-10-03', count: BIG },
   });
 });
 
-it.each(['coins', 'points', 'streak', 'pendingWin', 'pendingLoss', 'round', 'inventory'])(
+it.each(['coins', 'points', 'streak', 'pendingWin', 'pendingLoss', 'round', 'inventory', 'adRewards'])(
   'the worst-case %s record is small enough for iOS to write atomically',
   async (key) => {
     const stored = await AsyncStorage.getItem(`wordle:${key}`);

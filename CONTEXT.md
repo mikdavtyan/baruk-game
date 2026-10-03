@@ -73,8 +73,16 @@ The Hint and Darts items the player holds; using a power-up spends one item whil
 _Avoid_: stock, charges, uses
 
 **Shop**:
-The window opened from the coin pill (ԽԱՆՈՒԹ), where coins and items will be bought.
+The page opened from the coin pill (ԽԱՆՈՒԹ): it shows what the player holds, sells item packs for coins, and gives the ad reward.
 _Avoid_: store, market
+
+**Item pack**:
+A number of Hint or Darts items bought together in the shop for coins; the 5-packs are cheaper per item.
+_Avoid_: bundle, offer
+
+**Ad reward**:
+Coins for watching an ad in the shop, a few times per local calendar day.
+_Avoid_: free coins, bonus (the share bonus is a different thing)
 
 **Points** (ՄԻԱՎՈՐՆԵՐ):
 The running score earned by wins; it falls to zero when a round is finally lost.

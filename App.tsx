@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import {
@@ -37,10 +37,13 @@ import {
   LetterState,
   FONT_FAMILY,
 } from './constants/theme';
+import { AD_REWARD_COINS, ItemPack } from './constants/shop';
 import { LOSS_SHAKE_DURATION_MS, WIN_FLOW_CONFIG } from './constants/winFlow';
 import { evaluateGuess } from './lib/evaluateGuess';
 import { guessValidity } from './lib/guessValidity';
 import {
+  AdRewards,
+  getAdRewards,
   getCoins,
   getInventory,
   getPendingLoss,
@@ -62,6 +65,8 @@ import { GamePhase, phaseFromPending } from './lib/gamePhase';
 import { computeKeyStates } from './lib/keyboardStates';
 import { measureWindow } from './lib/measureWindow';
 import { ThemeProvider, useTheme } from './lib/ThemeContext';
+import { adsLeftToday, localDayKey, nextAdRewards as nextAdRewardsFor } from './lib/shop';
+import { showRewardedAd } from './lib/rewardedAd';
 import { advanceBag, currentWordTokens, loadWordBag, PLAYABLE_WORDS } from './lib/wordBag';
 
 type SubmittedGuess = {
@@ -176,6 +181,14 @@ function AppInner() {
   const [coins, setCoinsState] = useState(0);
   // Hint/Darts items held (wordle:inventory), used before coins.
   const [inventory, setInventory] = useState<Inventory>(WIN_FLOW_CONFIG.startingInventory);
+  // The shop's rewarded ads taken today (wordle:adRewards).
+  const [adRewards, setAdRewards] = useState<AdRewards>({ day: '', count: 0 });
+  // The latest balances, for the shop's ad: a pack bought while the ad loads
+  // must not be overwritten by the ad's credit, computed from older values.
+  const latestRef = useRef({ coins, inventory, adRewards });
+  useLayoutEffect(() => {
+    latestRef.current = { coins, inventory, adRewards };
+  });
   // ՄԻԱՎՈՐՆԵՐ — the running points total (see constants/winFlow.ts's
   // WIN_FLOW_CONFIG.pointsByGuessCount); WinFlow credits it on each win.
   const [points, setPointsState] = useState(0);
@@ -284,6 +297,35 @@ function AppInner() {
   // opened by the header's coin pill, or by a power-up tap with no items and
   // too few coins.
   const shopPage = usePushPage();
+
+  // Buys an item pack in the shop: the coins and the inventory change in ONE
+  // atomic write (docs/adr/0003), then the UI follows. ShopScreen only calls
+  // it for a pack the player can afford.
+  const handleBuyPack = async (pack: ItemPack) => {
+    const { coins: balance, inventory: held } = latestRef.current;
+    if (balance < pack.price) return;
+    const nextCoins = balance - pack.price;
+    const nextInventory = { ...held, [pack.item]: held[pack.item] + pack.quantity };
+    latestRef.current = { ...latestRef.current, coins: nextCoins, inventory: nextInventory };
+    await saveAtomically({ coins: nextCoins, inventory: nextInventory });
+    setCoinsState(nextCoins);
+    setInventory(nextInventory);
+  };
+
+  // The shop's rewarded ad: once watched, the coins and today's counter are
+  // saved in ONE atomic write. At most AD_REWARDS_PER_DAY per local day.
+  const handleWatchShopAd = async () => {
+    if (adsLeftToday(latestRef.current.adRewards, localDayKey(new Date())) <= 0) return;
+    const watched = await showRewardedAd();
+    if (!watched) return;
+    const { coins: balance, adRewards: taken } = latestRef.current; // read after the ad's wait
+    const nextCoins = balance + AD_REWARD_COINS;
+    const nextAdRewards = nextAdRewardsFor(taken, localDayKey(new Date()));
+    latestRef.current = { ...latestRef.current, coins: nextCoins, adRewards: nextAdRewards };
+    await saveAtomically({ coins: nextCoins, adRewards: nextAdRewards });
+    setCoinsState(nextCoins);
+    setAdRewards(nextAdRewards);
+  };
 
   const handleBoardAreaLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -424,9 +466,11 @@ function AppInner() {
       getStreak(),
       getRulesSeen(),
       getInventory(),
+      getAdRewards(),
     ]).then(
-      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory]) => {
+      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory, savedAdRewards]) => {
         setInventory(savedInventory);
+        setAdRewards(savedAdRewards);
         // The rules popup opens by itself on the very first launch only; the
         // flag is saved as it opens, so closing the app with it still open
         // doesn't bring it back.
@@ -895,7 +939,15 @@ function AppInner() {
       <ArrowOverlay volleyId={dartsVolley.id} origin={dartsVolley.origin} targets={dartsVolley.targets} />
       {/* Above everything, end-of-round modals included. */}
       <PushPageLayer page={shopPage}>
-        <ShopScreen onBack={shopPage.close} visible={shopPage.onTop} />
+        <ShopScreen
+          onBack={shopPage.close}
+          visible={shopPage.onTop}
+          coins={coins}
+          inventory={inventory}
+          adsLeft={adsLeftToday(adRewards, localDayKey(new Date()))}
+          onBuyPack={handleBuyPack}
+          onWatchAd={handleWatchShopAd}
+        />
       </PushPageLayer>
       <RulesModal open={rulesOpen} onClose={handleCloseRules} />
     </SafeAreaProvider>
