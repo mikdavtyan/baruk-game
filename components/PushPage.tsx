@@ -1,5 +1,5 @@
 import { memo, ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, PanResponder, PanResponderInstance, Platform, StyleSheet, useWindowDimensions } from 'react-native';
+import { Animated, BackHandler, Easing, PanResponder, PanResponderInstance, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import {
   PAGE_CLOSE_MS,
   PAGE_GAME_PARALLAX_FRACTION,
@@ -35,13 +35,18 @@ const PUSH_EASING = Easing.bezier(0.32, 0.72, 0, 1);
 export type PushPageController = {
   everOpened: boolean; // mounts the page the first time it opens, then keeps it
   onTop: boolean; // the page is the screen in front (drives inertness, not animation)
+  // The page can be seen: from the moment open() starts until a close has
+  // fully finished (a swipe's drag included). While false, PushPageLayer hides
+  // the page with a plain opacity 0 + pointerEvents none, whatever its
+  // transform says.
+  shown: boolean;
   open: () => void;
   close: () => void;
   panHandlers: PanResponderInstance['panHandlers'];
-  gameTranslateX: number | Animated.AnimatedInterpolation<number>;
-  dimOpacity: number | Animated.AnimatedInterpolation<number>;
-  pageTranslateX: number | Animated.AnimatedInterpolation<number>;
-  pageOpacity: number | Animated.Value;
+  gameTranslateX: Animated.WithAnimatedValue<number>;
+  dimOpacity: Animated.WithAnimatedValue<number>;
+  pageTranslateX: Animated.WithAnimatedValue<number>;
+  pageOpacity: Animated.WithAnimatedValue<number>;
 };
 
 // `isCovered` (read at back-press time): something above the page (a popup,
@@ -52,6 +57,7 @@ export function usePushPage({ isCovered }: { isCovered?: () => boolean } = {}): 
   const [push] = useState(() => new Animated.Value(0));
   const [everOpened, setEverOpened] = useState(false);
   const [onTop, setOnTop] = useState(false);
+  const [shown, setShown] = useState(false);
   // Guards against a second open/close firing mid-animation (the buttons,
   // the hardware back button and a swipe all check it).
   const animatingRef = useRef(false);
@@ -63,6 +69,7 @@ export function usePushPage({ isCovered }: { isCovered?: () => boolean } = {}): 
     animatingRef.current = true;
     setEverOpened(true);
     setOnTop(true);
+    setShown(true); // visible before the two frames the slide waits for
     // Mount before animating, and wait two frames so the page is laid out
     // and styled first — it must never flash unstyled or empty.
     requestAnimationFrame(() => {
@@ -89,7 +96,10 @@ export function usePushPage({ isCovered }: { isCovered?: () => boolean } = {}): 
       useNativeDriver: true,
     }).start(({ finished }) => {
       animatingRef.current = false;
-      if (finished) setOnTop(false);
+      if (finished) {
+        setOnTop(false);
+        setShown(false);
+      }
     });
   });
 
@@ -114,6 +124,7 @@ export function usePushPage({ isCovered }: { isCovered?: () => boolean } = {}): 
   const finishCloseNoAnimation = () => {
     animatingRef.current = false;
     setOnTop(false);
+    setShown(false);
   };
 
   // iOS-only edge-swipe-to-go-back (Android has its back button). The
@@ -208,20 +219,36 @@ export function usePushPage({ isCovered }: { isCovered?: () => boolean } = {}): 
     }),
   );
 
-  const nodes = useMemo(
-    () => ({
-      gameTranslateX: reduceMotion
-        ? 0
-        : push.interpolate({ inputRange: [0, 1], outputRange: [0, -windowWidth * PAGE_GAME_PARALLAX_FRACTION] }),
-      dimOpacity: reduceMotion ? 0 : push.interpolate({ inputRange: [0, 1], outputRange: [0, 0.3] }),
-      pageTranslateX: reduceMotion ? 0 : push.interpolate({ inputRange: [0, 1], outputRange: [windowWidth, 0] }),
-      pageOpacity: reduceMotion ? push : 1,
-    }),
-    [reduceMotion, push, windowWidth],
-  );
+  // The animated nodes are built ONCE. The window width and reduced motion
+  // are Animated.Values fed into them (setValue), never new nodes: swapping a
+  // native-driven node makes RN restore the view's default props (translateX
+  // 0) without re-applying the new node — a page could then sit on screen.
+  const [widthValue] = useState(() => new Animated.Value(windowWidth));
+  const [motion] = useState(() => new Animated.Value(reduceMotion ? 0 : 1)); // 0 = reduced motion
+  useLayoutEffect(() => {
+    widthValue.setValue(windowWidth);
+  }, [windowWidth, widthValue]);
+  useLayoutEffect(() => {
+    motion.setValue(reduceMotion ? 0 : 1);
+  }, [reduceMotion, motion]);
+  const [nodes] = useState(() => {
+    const remaining = push.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }); // 1 = fully out
+    return {
+      // Slides in from the right (no movement under reduced motion).
+      pageTranslateX: Animated.multiply(Animated.multiply(remaining, widthValue), motion),
+      // The screen under it drifts slightly left.
+      gameTranslateX: Animated.multiply(
+        Animated.multiply(push, widthValue),
+        motion.interpolate({ inputRange: [0, 1], outputRange: [0, -PAGE_GAME_PARALLAX_FRACTION] }),
+      ),
+      dimOpacity: Animated.multiply(push.interpolate({ inputRange: [0, 1], outputRange: [0, 0.3] }), motion),
+      // Opaque normally; under reduced motion the page fades in instead.
+      pageOpacity: Animated.add(push, motion).interpolate({ inputRange: [0, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
+    };
+  });
   return useMemo(
-    () => ({ everOpened, onTop, open, close, panHandlers: swipeResponder.panHandlers, ...nodes }),
-    [everOpened, onTop, open, close, swipeResponder, nodes],
+    () => ({ everOpened, onTop, shown, open, close, panHandlers: swipeResponder.panHandlers, ...nodes }),
+    [everOpened, onTop, shown, open, close, swipeResponder, nodes],
   );
 }
 
@@ -241,9 +268,16 @@ export const PushPageLayer = memo(function PushPageLayer({
   preMount?: boolean;
   testID?: string;
 }) {
+  // The frame hides a page that isn't shown with a plain (non-animated)
+  // opacity 0 + pointerEvents none — so a closed page can never cover what's
+  // under it, even if its native transform were wrong. It stays mounted.
   return (
-    <>
-      <Animated.View style={[styles.dim, { opacity: page.dimOpacity }]} pointerEvents="none" />
+    <View
+      testID={testID ? `${testID}-frame` : undefined}
+      style={[StyleSheet.absoluteFill, !page.shown && styles.closed]}
+      pointerEvents={page.shown ? 'box-none' : 'none'}
+    >
+      {page.shown && <Animated.View style={[styles.dim, { opacity: page.dimOpacity }]} pointerEvents="none" />}
       {(page.everOpened || preMount) && (
         <Animated.View
           testID={testID}
@@ -260,11 +294,14 @@ export const PushPageLayer = memo(function PushPageLayer({
           {children}
         </Animated.View>
       )}
-    </>
+    </View>
   );
 });
 
 const styles = StyleSheet.create({
+  closed: {
+    opacity: 0,
+  },
   dim: {
     position: 'absolute',
     top: 0,
