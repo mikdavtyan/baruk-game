@@ -18,6 +18,7 @@ import Keyboard, { ALL_LETTER_TOKENS, computeKeyGeometry } from './components/Ke
 import LossFlow from './components/LossFlow';
 import { GhostHint, RowData } from './components/Row';
 import RulesModal from './components/RulesModal';
+import ShopModal from './components/ShopModal';
 import Toast from './components/Toast';
 import WinFlow from './components/WinFlow';
 import {
@@ -274,6 +275,10 @@ function AppInner() {
   const [rulesOpen, setRulesOpen] = useState(false);
   const handleOpenRules = () => setRulesOpen(true);
   const handleCloseRules = useCallback(() => setRulesOpen(false), []);
+  // The shop window (ShopModal), opened by tapping the header's coin pill.
+  const [shopOpen, setShopOpen] = useState(false);
+  const handleOpenShop = () => setShopOpen(true);
+  const handleCloseShop = useCallback(() => setShopOpen(false), []);
 
   const handleBoardAreaLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -754,17 +759,17 @@ function AppInner() {
   return (
     <SafeAreaProvider>
       {/* The game screen itself — never unmounted. Hidden from screen
-          readers while the rules popup covers it. */}
+          readers while a popup (rules, shop) covers it. */}
       <View
         style={styles.container}
-        importantForAccessibility={rulesOpen ? 'no-hide-descendants' : 'auto'}
-        accessibilityElementsHidden={rulesOpen}
+        importantForAccessibility={rulesOpen || shopOpen ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={rulesOpen || shopOpen}
       >
       <AnimatedSafeAreaView
         style={[styles.container, { backgroundColor: color('background') }]}
         edges={['top', 'bottom', 'left', 'right']}
       >
-        <Header ref={headerCoinRef} score={points} coins={coins} onOpenRules={handleOpenRules} />
+        <Header ref={headerCoinRef} score={points} coins={coins} onOpenRules={handleOpenRules} onOpenShop={handleOpenShop} />
         <View style={styles.boardArea} onLayout={handleBoardAreaLayout} ref={boardAreaMeasureRef}>
           {tileSize !== null && (
             <Board
@@ -859,6 +864,7 @@ function AppInner() {
           window-relative one exactly, with no safe-area offset to account for. */}
       <ArrowOverlay volleyId={dartsVolley.id} origin={dartsVolley.origin} targets={dartsVolley.targets} />
       {/* Above everything, end-of-round modals included. */}
+      <ShopModal open={shopOpen} onClose={handleCloseShop} />
       <RulesModal open={rulesOpen} onClose={handleCloseRules} />
     </SafeAreaProvider>
   );

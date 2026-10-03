@@ -70,22 +70,22 @@ export type ThemeTokens = {
   cardTextMuted: string;
   cardTileFill: string;
   cardTileBorder: string;
-  // The "How to play" popup (see RulesModal.tsx / RulesCard.tsx): its own
-  // light panel in the light theme and dark panel in the dark theme, with a
-  // 3D bottom edge like the game's keys/buttons. Its example rows' neutral
-  // tiles are solid fills in the panel's palette — deliberately NOT the
-  // real board's (transparent) unsubmitted tiles.
-  rulesSurface: string;
-  rulesBorder: string;
-  rulesEdge: string;
-  rulesText: string;
-  rulesTextMuted: string;
-  rulesDivider: string;
-  rulesBadgeBg: string;
-  rulesBadgeText: string;
-  rulesTileFill: string;
-  rulesTileBorder: string;
-  rulesTileText: string;
+  // The popups (PopupModal.tsx — "How to play", the shop): their own light
+  // panel in the light theme and dark panel in the dark theme, with a 3D
+  // bottom edge like the game's keys/buttons. The rules' example rows'
+  // neutral tiles (RulesCard.tsx) are solid fills in the panel's palette —
+  // deliberately NOT the real board's (transparent) unsubmitted tiles.
+  popupSurface: string;
+  popupBorder: string;
+  popupEdge: string;
+  popupText: string;
+  popupTextMuted: string;
+  popupDivider: string;
+  popupBadgeBg: string;
+  popupBadgeText: string;
+  popupTileFill: string;
+  popupTileBorder: string;
+  popupTileText: string;
   // The gold coin's own drop shadow (see Coin.tsx) — a fixed warm shadow in
   // both themes since the coin's own colors never change.
   coinShadow: string;
@@ -143,17 +143,17 @@ export const lightTheme: ThemeTokens = {
   cardTextMuted: '#BDB6AA',
   cardTileFill: '#3A3631',
   cardTileBorder: '#4A4640',
-  rulesSurface: '#FFFFFF', // = surface
-  rulesBorder: '#DDD9D0', // = border
-  rulesEdge: '#DDD9D0', // = keyEdge
-  rulesText: '#1F2328', // = text
-  rulesTextMuted: '#6B6963', // = textMuted
-  rulesDivider: '#E6E3DC', // = keyBackground
-  rulesBadgeBg: '#1F2328', // = text
-  rulesBadgeText: '#FFFFFF',
-  rulesTileFill: '#F7F5F0', // = background
-  rulesTileBorder: '#DDD9D0', // = border
-  rulesTileText: '#1F2328', // = typedLetter
+  popupSurface: '#FFFFFF', // = surface
+  popupBorder: '#DDD9D0', // = border
+  popupEdge: '#DDD9D0', // = keyEdge
+  popupText: '#1F2328', // = text
+  popupTextMuted: '#6B6963', // = textMuted
+  popupDivider: '#E6E3DC', // = keyBackground
+  popupBadgeBg: '#1F2328', // = text
+  popupBadgeText: '#FFFFFF',
+  popupTileFill: '#F7F5F0', // = background
+  popupTileBorder: '#DDD9D0', // = border
+  popupTileText: '#1F2328', // = typedLetter
   coinShadow: 'rgba(110,60,0,0.35)',
 };
 
@@ -201,17 +201,17 @@ export const darkTheme: ThemeTokens = {
   cardTextMuted: '#807F87', // = textMuted, unchanged
   cardTileFill: '#16191C',
   cardTileBorder: '#33383D',
-  rulesSurface: '#1C1F22', // = surface
-  rulesBorder: '#33373B', // = border
-  rulesEdge: '#0A0B0C', // = cardEdge
-  rulesText: '#EDEDED', // = text
-  rulesTextMuted: '#9A99A1', // a step lighter than textMuted, for body text on the panel
-  rulesDivider: '#2A2E33',
-  rulesBadgeBg: '#EDEDED', // = primaryBackground
-  rulesBadgeText: '#121416', // = primaryText
-  rulesTileFill: '#16191C', // = cardTileFill
-  rulesTileBorder: '#33383D', // = cardTileBorder
-  rulesTileText: '#FFFFFF', // = typedLetter
+  popupSurface: '#1C1F22', // = surface
+  popupBorder: '#33373B', // = border
+  popupEdge: '#0A0B0C', // = cardEdge
+  popupText: '#EDEDED', // = text
+  popupTextMuted: '#9A99A1', // a step lighter than textMuted, for body text on the panel
+  popupDivider: '#2A2E33',
+  popupBadgeBg: '#EDEDED', // = primaryBackground
+  popupBadgeText: '#121416', // = primaryText
+  popupTileFill: '#16191C', // = cardTileFill
+  popupTileBorder: '#33383D', // = cardTileBorder
+  popupTileText: '#FFFFFF', // = typedLetter
   coinShadow: 'rgba(0,0,0,0.55)',
 };
 
@@ -336,13 +336,13 @@ export const KEY_PRESS_DURATION_MS = 80;
 // exactly the same height as the real header's buttons.
 export const HEADER_HEIGHT = 60;
 
-// "How to play" popup (see RulesModal.tsx): fades in while scaling up from
-// RULES_MODAL_START_SCALE, and back out on close. Reduced motion: a plain
+// The popups (PopupModal.tsx: "How to play", the shop): fade in while scaling
+// up from POPUP_START_SCALE, and back out on close. Reduced motion: a plain
 // short fade, no scale.
-export const RULES_MODAL_OPEN_MS = 260;
-export const RULES_MODAL_CLOSE_MS = 200;
-export const RULES_MODAL_START_SCALE = 0.94;
-export const RULES_REDUCED_MOTION_DURATION_MS = 150;
+export const POPUP_OPEN_MS = 260;
+export const POPUP_CLOSE_MS = 200;
+export const POPUP_START_SCALE = 0.94;
+export const POPUP_REDUCED_MOTION_MS = 150;
 // The popup's 3 example tiles flip once, this far apart, right after it
 // finishes opening.
 export const RULES_TILE_REVEAL_STAGGER_MS = 150;

@@ -102,12 +102,12 @@ function NeutralTile({ letter, size }: { letter: string; size: number }) {
           width: size,
           height: size,
           borderRadius: Math.round(size * 0.24),
-          backgroundColor: color('rulesTileFill'),
-          borderColor: color('rulesTileBorder'),
+          backgroundColor: color('popupTileFill'),
+          borderColor: color('popupTileBorder'),
         },
       ]}
     >
-      <Animated.Text style={[styles.neutralTileText, { fontSize: size * 0.5, color: textColor('rulesTileText') }]}>
+      <Animated.Text style={[styles.neutralTileText, { fontSize: size * 0.5, color: textColor('popupTileText') }]}>
         {letter}
       </Animated.Text>
     </Animated.View>
@@ -191,14 +191,14 @@ function RulesText({
 }) {
   const { theme, textColor } = useTheme();
   return (
-    <Animated.Text style={[styles.bodyText, { color: textColor('rulesTextMuted') }, style]}>
+    <Animated.Text style={[styles.bodyText, { color: textColor('popupTextMuted') }, style]}>
       {children.map((part, i) =>
         part.bold ? (
           <Animated.Text
             key={i}
             style={[
               styles.boldText,
-              { color: textColor('rulesText') },
+              { color: textColor('popupText') },
               // The game font only ships one (already-bold) weight, so
               // font-weight alone can't distinguish this from the rest of
               // the text — this faint doubled-up shadow is the RN stand-in
@@ -209,7 +209,7 @@ function RulesText({
               Platform.OS === 'ios' && {
                 // Not on the native-animated allowlist, so a plain snapshot
                 // (it switches at the theme fade's midpoint).
-                textShadowColor: theme.rulesText,
+                textShadowColor: theme.popupText,
                 textShadowOffset: { width: 0.5, height: 0 },
                 textShadowRadius: 0,
               },
@@ -255,8 +255,8 @@ export default function RulesCard({ revealTrigger, visible }: Props) {
   return (
     <View>
       <View style={styles.attemptsRow}>
-        <Animated.View style={[styles.attemptsBadge, { backgroundColor: color('rulesBadgeBg') }]}>
-          <Animated.Text style={[styles.attemptsBadgeText, { color: textColor('rulesBadgeText') }]}>6</Animated.Text>
+        <Animated.View style={[styles.attemptsBadge, { backgroundColor: color('popupBadgeBg') }]}>
+          <Animated.Text style={[styles.attemptsBadgeText, { color: textColor('popupBadgeText') }]}>6</Animated.Text>
         </Animated.View>
         <RulesText style={styles.attemptsText}>
           {[{ text: 'ԴՈՒՔ ՈՒՆԵՔ 6 ՀՆԱՐԱՎՈՐՈՒԹՅՈՒՆ ԲԱՌԸ ԳՏՆԵԼՈՒ ՀԱՄԱՐ' }]}
@@ -269,7 +269,7 @@ export default function RulesCard({ revealTrigger, visible }: Props) {
         ))}
       </View>
 
-      <Animated.View style={[styles.divider, { backgroundColor: color('rulesDivider') }]} />
+      <Animated.View style={[styles.divider, { backgroundColor: color('popupDivider') }]} />
 
       <View style={styles.hintRows}>
         {HINT_ROWS.map((row, i) => (

@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
-import Coin from './Coin';
+import { Animated, Pressable, StyleSheet, View } from 'react-native';
+import CoinPillContent, { coinPillStyles } from './CoinPillContent';
 import IconButton from './IconButton';
 import ThemeToggleIcon from './ThemeToggleIcon';
 import { FONTS } from '../constants/theme';
@@ -11,13 +11,14 @@ type Props = {
   score: number;
   coins: number;
   onOpenRules: () => void;
+  onOpenShop: () => void; // the coin pill is the shop's entry point
 };
 
 // Forwards its ref to the coin pill specifically (not the whole header) —
-// WinFlow.tsx measures it (measureInWindow) to know exactly where flying
-// coins should land, and to place its own "stays visible above the overlay"
-// duplicate at the same spot.
-const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRules }, coinPillRef) {
+// WinFlow/LossFlow measure it (measureInWindow) to know exactly where flying
+// coins should land, and to place their own "stays visible above the overlay"
+// duplicate at the same spot. Tapping the pill opens the shop.
+const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRules, onOpenShop }, coinPillRef) {
   // `theme.headerIconColor` (a plain, instant value) is deliberately kept
   // for the small flat icons below — SymbolView's tintColor is a native
   // prop, not a style, so it can't be smoothly cross-faded the way an
@@ -26,9 +27,9 @@ const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRul
   const { theme, isDark, color, textColor, toggleTheme } = useTheme();
   const displayedCoins = useCountUp(coins);
 
-  // Left and right side groups share the center's flex weight, so the score
-  // block always lands in the true middle third of the header no matter how
-  // wide either side's content (icon buttons, coin pill) ends up being.
+  // The side groups take their content's width and the score block the
+  // rest: the coin pill is too wide for an equal three-way split on small
+  // phones, so the score sits centered in what's left rather than overlap.
   return (
     <View style={styles.header}>
       <View style={styles.sideGroupLeft}>
@@ -59,12 +60,22 @@ const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRul
           color={theme.headerIconColor}
           onPress={onOpenRules}
         />
-        <Animated.View ref={coinPillRef} collapsable={false} style={[styles.coinCounter, { backgroundColor: color('pill') }]}>
-          <Coin size={22} />
-          <Animated.Text style={[styles.coinCounterText, { color: textColor('pillText') }]}>
-            {displayedCoins}
-          </Animated.Text>
-        </Animated.View>
+        <Pressable onPress={onOpenShop} accessibilityRole="button" accessibilityLabel="Խանութ" hitSlop={6}>
+          {({ pressed }) => (
+            <Animated.View
+              ref={coinPillRef}
+              collapsable={false}
+              style={[coinPillStyles.pill, { backgroundColor: color('pill') }, pressed && styles.pillPressed]}
+            >
+              <CoinPillContent
+                value={displayedCoins}
+                textColor={textColor('pillText')}
+                plusColor={color('correct')}
+                plusEdgeColor={color('correctEdge')}
+              />
+            </Animated.View>
+          )}
+        </Pressable>
       </View>
     </View>
   );
@@ -78,15 +89,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
+    gap: 8,
   },
   sideGroupLeft: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   sideGroupRight: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
@@ -94,6 +104,7 @@ const styles = StyleSheet.create({
   },
   scoreBlock: {
     flex: 1,
+    minWidth: 0,
     alignItems: 'center',
   },
   scoreLabel: {
@@ -105,16 +116,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontFamily: FONTS.title,
   },
-  coinCounter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  coinCounterText: {
-    fontSize: 13,
-    fontFamily: FONTS.title,
+  pillPressed: {
+    opacity: 0.7,
   },
 });

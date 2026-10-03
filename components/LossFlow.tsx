@@ -1,7 +1,7 @@
 import { RefObject, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import Coin from './Coin';
+import CoinPillContent, { coinPillStyles } from './CoinPillContent';
 import CoinFlight from './CoinFlight';
 import ModalBackdrop from './ModalBackdrop';
 import ResultModal from './ResultModal';
@@ -550,6 +550,7 @@ export default function LossFlow({
             <Animated.View
               pointerEvents="none"
               style={[
+                coinPillStyles.pill,
                 styles.duplicatePill,
                 {
                   backgroundColor: theme.pill,
@@ -559,8 +560,12 @@ export default function LossFlow({
                 },
               ]}
             >
-              <Coin size={22} />
-              <Animated.Text style={[styles.duplicatePillText, { color: theme.pillText }]}>{pillValue}</Animated.Text>
+              <CoinPillContent
+                value={pillValue}
+                textColor={theme.pillText}
+                plusColor={theme.correct}
+                plusEdgeColor={theme.correctEdge}
+              />
             </Animated.View>
           )}
 
@@ -589,17 +594,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  // Positioned over the real header pill; its look is coinPillStyles.pill
+  // plus CoinPillContent, exactly like the header's (see CoinPillContent.tsx).
   duplicatePill: {
     position: 'absolute',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  duplicatePillText: {
-    fontSize: 13,
-    fontWeight: '700',
   },
 });

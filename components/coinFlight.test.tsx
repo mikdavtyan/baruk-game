@@ -2,9 +2,9 @@
 // Next mid-flight lands the header pill on the exact final balance, and no
 // coin still in the air may change it afterwards.
 import React, { createRef, useState } from 'react';
-import { Share, Text, View } from 'react-native';
+import { Share, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Coin from './Coin';
+import CoinPillContent from './CoinPillContent';
 import CoinFlight from './CoinFlight';
 import ResultModal from './ResultModal';
 import WinFlow from './WinFlow';
@@ -84,8 +84,8 @@ it('Next during the share-bonus flight lands the pill on the exact balance, with
   await act(async () => {
     jest.advanceTimersByTime(0); // resume + header pill measured
   });
-  // The header pill WinFlow draws above its overlay: a 22pt coin + the count.
-  const pill = () => root.root.findAll((n: any) => n.type === Coin && n.props.size === 22)[0]?.parent.findAllByType(Text)[0].props.children;
+  // The header pill WinFlow draws above its overlay (its CoinPillContent's count).
+  const pill = () => root.root.findAllByType(CoinPillContent)[0]?.props.value;
   expect(pill()).toBe(START);
 
   await act(async () => {
