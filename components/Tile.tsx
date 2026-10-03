@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { RefObject, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   FONT_LINE_HEIGHT_EM,
   FONTS,
+  HINT_BREATH_SCALE,
+  HINT_GHOST_START_SCALE,
+  HINT_REDUCED_FADE_MS,
+  HINT_SPARKS_MS,
   LetterState,
   NEUTRAL_TILE_BG,
   NEUTRAL_TILE_EDGE,
@@ -33,6 +37,13 @@ type Props = {
   // full strength in the correct green, inside a correct-green outline. Not a
   // fill, so it never reads as a scored tile; never yellow.
   ghostKind?: GhostKind;
+  // Set (and changed) when a Hint's light lands on this tile: the tile
+  // breathes once and the hint ghost scales/fades in. Reduced motion: the
+  // ghost just fades in, no breath. Any other appearance of a ghost (e.g.
+  // backspace bringing it back) stays static.
+  ghostEntranceId?: number;
+  // The tile's own view, measured by App as the Hint light's landing spot.
+  cellRef?: RefObject<View | null>;
 };
 
 export type GhostKind = 'hint' | 'carried';
@@ -72,9 +83,44 @@ export default function Tile({
   isCurrentRow = false,
   ghostLetter = null,
   ghostKind = 'hint',
+  ghostEntranceId,
+  cellRef,
 }: Props) {
   const { theme, color, textColor, reduceMotion } = useTheme();
   const [rotation] = useState(() => new Animated.Value(0)); // 0 = flat, 1 = edge-on
+  // A Hint landing here (see ghostEntranceId): the tile's breath (0 -> 1 -> 0)
+  // and the hint ghost's entrance (0 = small and clear, 1 = shown).
+  const [breath] = useState(() => new Animated.Value(0));
+  const [ghostIn] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    if (ghostEntranceId === undefined) return;
+    ghostIn.setValue(0);
+    const entrance = reduceMotion
+      ? Animated.timing(ghostIn, { toValue: 1, duration: HINT_REDUCED_FADE_MS, useNativeDriver: true })
+      : Animated.parallel([
+          Animated.timing(ghostIn, {
+            toValue: 1,
+            duration: HINT_SPARKS_MS,
+            easing: Easing.out(Easing.back(1.6)),
+            useNativeDriver: true,
+          }),
+          Animated.sequence([
+            Animated.timing(breath, { toValue: 1, duration: HINT_SPARKS_MS / 2, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+            Animated.timing(breath, { toValue: 0, duration: HINT_SPARKS_MS / 2, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          ]),
+        ]);
+    entrance.start();
+    return () => {
+      entrance.stop();
+      ghostIn.setValue(1);
+      breath.setValue(0);
+    };
+    // Only a new landing (re)starts it; reduceMotion is read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ghostEntranceId]);
+  const breathScale = breath.interpolate({ inputRange: [0, 1], outputRange: [1, HINT_BREATH_SCALE] });
+  const ghostOpacity = Animated.multiply(ghostIn, GHOST_OPACITY);
+  const ghostScale = reduceMotion ? 1 : ghostIn.interpolate({ inputRange: [0, 1], outputRange: [HINT_GHOST_START_SCALE, 1] });
   // The state actually painted. When a scored result arrives it lags behind
   // `state` until the flip reaches its halfway point, so the color is never
   // visible before the tile turns.
@@ -204,10 +250,12 @@ export default function Tile({
     // one. So each layer here carries only one kind. (The fill/border layer's
     // themed `color()`s are native-driven, like the flip.)
     <Animated.View
+      ref={cellRef}
+      collapsable={false}
       style={[
         styles.tile,
         { width: size, height: size, borderRadius: radius },
-        { transform: [{ perspective: 600 }, { rotateX }] },
+        { transform: [{ perspective: 600 }, { rotateX }, { scale: breathScale }] },
       ]}
     >
       <Animated.View
@@ -245,11 +293,15 @@ export default function Tile({
         </View>
       )}
       {showGhost && ghostKind === 'hint' && (
-        <View testID="ghost-hint" pointerEvents="none" style={[StyleSheet.absoluteFill, styles.center, styles.ghost]}>
+        <Animated.View
+          testID="ghost-hint"
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, styles.center, { opacity: ghostOpacity, transform: [{ scale: ghostScale }] }]}
+        >
           <Text style={[styles.letter, { fontSize, lineHeight: fontSize * FONT_LINE_HEIGHT_EM, color: theme.correct }]}>
             {letterLabel(ghostLetter!)}
           </Text>
-        </View>
+        </Animated.View>
       )}
       {showGhost && ghostKind === 'carried' && (
         <View testID="ghost-carried" pointerEvents="none" style={[StyleSheet.absoluteFill, styles.center]}>
@@ -286,9 +338,6 @@ const styles = StyleSheet.create({
   center: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  ghost: {
-    opacity: GHOST_OPACITY,
   },
   letter: {
     fontFamily: FONTS.tile,

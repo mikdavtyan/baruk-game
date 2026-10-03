@@ -8,3 +8,8 @@ import * as Haptics from 'expo-haptics';
 export function triggerKeyHaptic(): void {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 }
+
+// The same light tap, for a Hint's light landing on its cell.
+export function triggerHintLandingHaptic(): void {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+}

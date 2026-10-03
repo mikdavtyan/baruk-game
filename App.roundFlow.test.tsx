@@ -17,6 +17,7 @@ import SecondChanceModal from './components/SecondChanceModal';
 import SubmitButton from './components/SubmitButton';
 import Tile from './components/Tile';
 import Toast from './components/Toast';
+import { HINT_FLIGHT_MS, HINT_SPARKS_MS } from './constants/theme';
 import { WIN_FLOW_CONFIG } from './constants/winFlow';
 import { letterLabel } from './lib/letterDisplay';
 import { tokenizeArmenianWord } from './lib/tokenizeArmenian';
@@ -359,6 +360,7 @@ describe('power-ups', () => {
 
     for (let i = 1; i <= 3; i++) {
       await press('Hint');
+      await advance(HINT_FLIGHT_MS + HINT_SPARKS_MS); // a Hint keeps the power-ups busy until it has played
       expect(await stored('wordle:coins')).toBe(1000 - i * WIN_FLOW_CONFIG.hintPrice);
     }
     const revealed = root.root.findByType(Board).props.ghostHints.map((g: any) => g.index).sort();

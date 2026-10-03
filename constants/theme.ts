@@ -336,6 +336,21 @@ export const KEY_PRESS_DURATION_MS = 80;
 // exactly the same height as the real header's buttons.
 export const HEADER_HEIGHT = 60;
 
+// The Hint "magic flight" (HintFlightOverlay.tsx + App's handleHint): a green
+// light flies from the Hint button to the target cell (HINT_FLIGHT_MS), then
+// the tile breathes, sparks burst and the ghost scales in (HINT_SPARKS_MS).
+// App lands the ghost after HINT_FLIGHT_MS and frees the power-ups after the
+// sum — coupled timings: keep App's sums matching what the overlay plays.
+export const HINT_FLIGHT_MS = 380;
+export const HINT_SPARKS_MS = 220;
+export const HINT_SPARK_COUNT = 8;
+export const HINT_SPARK_TRAVEL = 22; // px each spark flies out from the cell's center
+export const HINT_LIGHT_SIZE = 14; // the light's bright core; its halo is twice that
+export const HINT_ARC = 0.25; // the curve's bulge, as a share of the flight's length
+export const HINT_BREATH_SCALE = 1.08; // the target tile's quick scale up and back, on landing
+export const HINT_GHOST_START_SCALE = 0.6; // the landed ghost scales in from this
+export const HINT_REDUCED_FADE_MS = 150; // reduced motion: no flight, the ghost just fades in
+
 // Full pages pushed in over the game (PushPage.tsx — the shop): an iOS-style
 // push from the right, the game sliding a little left under a dim. Reduced
 // motion: no movement, the page just fades in.

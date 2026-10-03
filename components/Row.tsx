@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Animated, Easing, StyleSheet } from 'react-native';
+import { RefObject, useEffect, useState } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import Tile, { GhostKind } from './Tile';
 import { LetterState, TILE_REVEAL_STAGGER_MS, WORD_LENGTH } from '../constants/theme';
 import {
@@ -31,7 +31,13 @@ type Props = RowData & {
   // meaningful for the in-progress row; Board only ever passes a non-empty
   // array there.
   ghostHints?: GhostHint[];
+  // The active row's tile refs (measured for the Hint light's landing) and
+  // the current Hint landing (which tile plays its entrance).
+  cellRefs?: RefObject<View | null>[];
+  hintLanding?: HintLanding | null;
 };
+
+export type HintLanding = { id: number; index: number };
 
 export type GhostHint = { index: number; letter: string; kind: GhostKind };
 
@@ -44,6 +50,8 @@ export default function Row({
   tileSize,
   activeIndex = null,
   ghostHints = [],
+  cellRefs,
+  hintLanding = null,
 }: Props) {
   const [shakeX] = useState(() => new Animated.Value(0));
   // The winning row's own tiles jump one after another — not a whole-row
@@ -119,6 +127,8 @@ export default function Row({
               isActiveCell={i === activeIndex}
               ghostLetter={ghostHints.find((g) => g.index === i)?.letter ?? null}
               ghostKind={ghostHints.find((g) => g.index === i)?.kind}
+              cellRef={cellRefs?.[i]}
+              ghostEntranceId={hintLanding?.index === i ? hintLanding.id : undefined}
             />
           </Animated.View>
         );

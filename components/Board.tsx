@@ -1,5 +1,6 @@
+import { RefObject } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Row, { GhostHint, RowData } from './Row';
+import Row, { GhostHint, HintLanding, RowData } from './Row';
 import { MAX_GUESSES } from '../constants/theme';
 
 type Props = {
@@ -11,6 +12,8 @@ type Props = {
   activeRowIndex?: number | null; // Hint's ghosts only ever apply to this row
   activeCellIndex?: number | null; // next-input cursor position within activeRowIndex
   ghostHints?: GhostHint[];
+  activeCellRefs?: RefObject<View | null>[]; // the active row's tiles, for the Hint light's landing
+  hintLanding?: HintLanding | null; // the Hint landing on the active row, if one is playing
 };
 
 export default function Board({
@@ -22,6 +25,8 @@ export default function Board({
   activeRowIndex = null,
   activeCellIndex = null,
   ghostHints = [],
+  activeCellRefs,
+  hintLanding = null,
 }: Props) {
   const padded = Array.from({ length: MAX_GUESSES }, (_, i) => rows[i]);
   return (
@@ -39,6 +44,8 @@ export default function Board({
             tileSize={tileSize}
             activeIndex={isActiveRow ? activeCellIndex : null}
             ghostHints={isActiveRow ? ghostHints : []}
+            cellRefs={isActiveRow ? activeCellRefs : undefined}
+            hintLanding={isActiveRow ? hintLanding : null}
           />
         );
       })}

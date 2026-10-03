@@ -25,6 +25,7 @@ type Props = {
   dartsVolleyId: number; // bumped each time Darts actually fires — replays BowIcon's recoil/reload
   dartsShotCount: number; // how many arrows the current/last volley has
   dartsButtonRef: RefObject<View | null>; // measured by App.tsx to know where arrows should fly from
+  hintButtonRef: RefObject<View | null>; // measured by App.tsx: where the Hint light takes off
 };
 
 // The bottom control bar: [ Hint ]  [ ԸՆԴՈՒՆԵԼ ]  [ Darts ]. ԸՆԴՈՒՆԵԼ is the
@@ -46,6 +47,7 @@ export default function BottomControls({
   dartsVolleyId,
   dartsShotCount,
   dartsButtonRef,
+  hintButtonRef,
 }: Props) {
   // theme.keyText (a plain snapshot) for the Hint icon — a native
   // SymbolView's tintColor isn't a style, so it can't take `color()`.
@@ -60,6 +62,7 @@ export default function BottomControls({
             tintColor={theme.keyText}
           />
         }
+        ref={hintButtonRef}
         label="Hint"
         price={WIN_FLOW_CONFIG.hintPrice}
         count={hintCount}

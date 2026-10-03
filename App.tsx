@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import {
@@ -14,9 +14,10 @@ import ArrowOverlay, { ArrowTarget } from './components/ArrowOverlay';
 import Board from './components/Board';
 import BottomControls from './components/BottomControls';
 import Header from './components/Header';
+import HintFlightOverlay, { HintFlight } from './components/HintFlightOverlay';
 import Keyboard, { ALL_LETTER_TOKENS, computeKeyGeometry } from './components/Keyboard';
 import LossFlow from './components/LossFlow';
-import { GhostHint, RowData } from './components/Row';
+import { GhostHint, HintLanding, RowData } from './components/Row';
 import RulesModal from './components/RulesModal';
 import { PushPageLayer, usePushPage } from './components/PushPage';
 import ShopScreen from './components/ShopScreen';
@@ -33,6 +34,9 @@ import {
   REDUCED_MOTION_ARROW_STAGGER_MS,
   ROW_REVEAL_DURATION_MS,
   ROW_SHAKE_DURATION_MS,
+  HINT_FLIGHT_MS,
+  HINT_REDUCED_FADE_MS,
+  HINT_SPARKS_MS,
   WORD_LENGTH,
   LetterState,
   FONT_FAMILY,
@@ -63,6 +67,7 @@ import {
 } from './lib/gameStorage';
 import { GamePhase, phaseFromPending } from './lib/gamePhase';
 import { computeKeyStates } from './lib/keyboardStates';
+import { triggerHintLandingHaptic } from './lib/haptics';
 import { measureWindow } from './lib/measureWindow';
 import { ThemeProvider, useTheme } from './lib/ThemeContext';
 import { adsLeftToday, localDayKey, nextAdRewards as nextAdRewardsFor } from './lib/shop';
@@ -285,6 +290,25 @@ function AppInner() {
   // so arrows really do start from and pass through where the bow button and
   // keyboard actually are on screen, not an assumed layout.
   const dartsButtonRef = useRef<View>(null);
+
+  // The Hint "magic flight" (HintFlightOverlay): purely visual — the hint is
+  // saved at tap time. `arrivingHintIndex` keeps that ghost hidden (and
+  // Submit ignored) until the light lands; `hintLanding` then makes its tile
+  // breathe and the ghost scale in. Positions are measured at tap time: the
+  // Hint button, and the target tile through the active row's cell refs.
+  const hintButtonRef = useRef<View>(null);
+  const [activeCellRefs] = useState(() => Array.from({ length: WORD_LENGTH }, () => createRef<View>()));
+  const [hintFlight, setHintFlight] = useState<HintFlight | null>(null);
+  const [arrivingHintIndex, setArrivingHintIndex] = useState<number | null>(null);
+  const [hintLanding, setHintLanding] = useState<HintLanding | null>(null);
+  // The flight's pending landing/finish timers, and an id that a board reset
+  // bumps so a flight still being measured never starts afterwards.
+  const hintTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const hintFlightIdRef = useRef(0);
+  useEffect(() => {
+    const timers = hintTimersRef;
+    return () => timers.current.forEach(clearTimeout); // unmount: nothing lands later
+  }, []);
   const keyboardAreaRef = useRef<View>(null);
 
   // The "How to play" popup (RulesModal): opened by the header's rules
@@ -401,12 +425,16 @@ function AppInner() {
   // ԸՆԴՈՒՆԵԼ button (the only submit action; there is no keyboard Enter key).
   const handleEnter = () => {
     if (phase !== 'playing') return;
+    // A Hint's light is still flying to this row — the row mustn't change under it.
+    if (arrivingHintIndex !== null) return;
     if (isBoardFull) return;
     if (guessValidity(enteredTokens) !== 'valid') return;
     const states = evaluateGuess(guess.tokens, secretWord);
     const nextSubmitted = [...submittedGuesses, { tokens: guess.tokens, states }];
     setSubmittedGuesses(nextSubmitted);
     setGuess(initialGuess());
+    // The landed Hint's entrance belonged to this row; the next row mustn't replay it.
+    setHintLanding(null);
     // Any ghost hint whose position the player just typed correctly (with
     // or without actually using it) is confirmed for real now, so it's
     // removed. Every other active ghost — one the player ignored or typed
@@ -536,6 +564,7 @@ function AppInner() {
   // therefore never visible, not even for one frame.
   const resetBoard = (commit: () => void, onBoardShown: () => void) => {
     boardShownCallbacksRef.current.push(onBoardShown);
+    cancelHintFlight(); // nothing lands on the new board
     commit();
     setBoardKey((k) => k + 1);
   };
@@ -642,6 +671,8 @@ function AppInner() {
     ...carriedGhosts.map((g) => ({ ...g, kind: 'carried' as const })),
     ...hintGhosts.filter((h) => !carriedGhosts.some((c) => c.index === h.index)).map((h) => ({ ...h, kind: 'hint' as const })),
   ];
+  // What the board shows: every ghost except a Hint whose light hasn't landed yet.
+  const visibleGhosts = ghosts.filter((g) => !(g.kind === 'hint' && g.index === arrivingHintIndex));
   // Hint only ever reveals a position that's still unknown: not green in any
   // guess of this word (the board before a retry included), not already a
   // ghost — and only in an empty cell, the only place a ghost is visible.
@@ -689,8 +720,23 @@ function AppInner() {
   // `guess.tokens`, so the player can type straight over it. Adds to the
   // existing ghosts rather than replacing them. Charged only when a letter
   // is actually revealed.
+  // Cancels a Hint flight (a board reset): stops its timers, hides the light,
+  // shows the (already saved) ghost, and frees the power-ups.
+  const cancelHintFlight = () => {
+    hintTimersRef.current.forEach(clearTimeout);
+    hintTimersRef.current = [];
+    hintFlightIdRef.current += 1;
+    setHintFlight(null);
+    setArrivingHintIndex(null);
+    setHintLanding(null);
+    powerUpBusyRef.current = false;
+  };
+  const afterHint = (fn: () => void, ms: number) => {
+    hintTimersRef.current.push(setTimeout(fn, ms));
+  };
+
   const handleHint = async () => {
-    if (hintDisabled || powerUpBusyRef.current) return;
+    if (hintDisabled || powerUpBusyRef.current || isDartsFiring) return;
     if (hintExhausted) {
       showToast(HINT_EXHAUSTED_TOAST);
       return;
@@ -703,12 +749,51 @@ function AppInner() {
       shopPage.open();
       return;
     }
-    powerUpBusyRef.current = true;
+    powerUpBusyRef.current = true; // until the whole flight has played
+    const flightId = ++hintFlightIdRef.current;
     const index = hintTargets[Math.floor(Math.random() * hintTargets.length)];
     const nextGhosts = [...hintGhosts, { index, letter: secretWord[index] }];
+    // Saved now, in one atomic write (a crash mid-flight keeps the ghost and
+    // the charge); only how it appears is animated below.
     await payFor('hint', hintPrice, { hintGhosts: nextGhosts });
+    if (flightId !== hintFlightIdRef.current) return; // the board was reset meanwhile
     setHintGhosts(nextGhosts);
-    powerUpBusyRef.current = false;
+    setArrivingHintIndex(index); // same render: the new ghost never flashes before the light lands
+
+    const land = () => {
+      setArrivingHintIndex(null);
+      setHintLanding((prev) => ({ id: (prev?.id ?? 0) + 1, index }));
+      if (!reduceMotion) triggerHintLandingHaptic();
+    };
+    const finish = () => {
+      hintTimersRef.current = [];
+      setHintFlight(null);
+      powerUpBusyRef.current = false;
+    };
+
+    // Reduced motion: no flight, no sparks — the ghost just fades in.
+    if (reduceMotion) {
+      land();
+      afterHint(finish, HINT_REDUCED_FADE_MS);
+      return;
+    }
+    const [from, to] = await Promise.all([measureWindow(hintButtonRef), measureWindow(activeCellRefs[index])]);
+    if (flightId !== hintFlightIdRef.current) return;
+    // Either end unmeasurable: no flight, the arrival effect in place only.
+    if (!from || !to) {
+      land();
+      afterHint(finish, HINT_SPARKS_MS);
+      return;
+    }
+    setHintFlight({
+      id: flightId,
+      origin: { x: from.x + from.width / 2, y: from.y + from.height / 2 },
+      target: { x: to.x + to.width / 2, y: to.y + to.height / 2 },
+    });
+    // Coupled with HintFlightOverlay: it lands after HINT_FLIGHT_MS, then
+    // its sparks play for HINT_SPARKS_MS.
+    afterHint(land, HINT_FLIGHT_MS);
+    afterHint(finish, HINT_FLIGHT_MS + HINT_SPARKS_MS);
   };
 
   // No flight — each target just fades to eliminated/absent directly,
@@ -853,7 +938,9 @@ function AppInner() {
               tileSize={tileSize}
               activeRowIndex={activeRowIndex}
               activeCellIndex={guess.activeIndex}
-              ghostHints={ghosts}
+              ghostHints={visibleGhosts}
+              activeCellRefs={activeCellRefs}
+              hintLanding={hintLanding}
             />
           )}
           {toast && <Toast key={toast.id} message={toast.message} onHidden={() => setToast(null)} />}
@@ -882,6 +969,7 @@ function AppInner() {
             dartsVolleyId={dartsVolley.id}
             dartsShotCount={dartsVolley.targets.length}
             dartsButtonRef={dartsButtonRef}
+            hintButtonRef={hintButtonRef}
           />
         </View>
         {/* Follows the in-app theme: 'auto' would follow the system scheme,
@@ -937,6 +1025,8 @@ function AppInner() {
           the SafeAreaView so its coordinate space matches measureInWindow's
           window-relative one exactly, with no safe-area offset to account for. */}
       <ArrowOverlay volleyId={dartsVolley.id} origin={dartsVolley.origin} targets={dartsVolley.targets} />
+      {/* The Hint light and its sparks — the same window-coordinate overlay idea. */}
+      <HintFlightOverlay flight={hintFlight} />
       {/* Above everything, end-of-round modals included. */}
       <PushPageLayer page={shopPage}>
         <ShopScreen
