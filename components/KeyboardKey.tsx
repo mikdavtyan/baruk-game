@@ -1,5 +1,5 @@
 import { memo, useLayoutEffect, useState } from 'react';
-import { Animated, Easing, StyleSheet } from 'react-native';
+import { AccessibilityActionEvent, Animated, Easing, StyleSheet } from 'react-native';
 import { SymbolViewProps } from 'expo-symbols';
 import Button3D from './Button3D';
 import {
@@ -11,7 +11,6 @@ import {
   LetterState,
   ThemeTokens,
 } from '../constants/theme';
-import { triggerKeyHaptic } from '../lib/haptics';
 import { useTheme } from '../lib/ThemeContext';
 import { ThemedSymbol } from './ThemedSnapshot';
 
@@ -22,7 +21,11 @@ type Props = {
   height: number;
   fontSize?: number; // letter size; the keyboard scales it with the key width
   icon?: SymbolViewProps['name']; // shown instead of the label text (label is still used for accessibility)
+  // A screen reader's activation (VoiceOver/TalkBack double-tap). Finger
+  // touches never reach the key: the Keyboard hit-tests them itself.
   onPress?: () => void;
+  // 0 = up, 1 = pressed — driven by the Keyboard while this key's finger is down.
+  pressProgress?: Animated.Value;
   // True for a key Darts/the bow just eliminated — uses the slower
   // KEY_IMPACT_COLOR_MS fade (timed to the arrow's flight) plus a small
   // squash-bounce, instead of the normal quick guess-scoring fade.
@@ -30,6 +33,8 @@ type Props = {
 };
 
 const KEY_MARGIN = 2.5;
+// The one accessibility action a key offers; constant so memo props stay equal.
+const ACTIVATE = [{ name: 'activate' as const }];
 const KEY_RADIUS = 8;
 
 // Shares its `absent` color with the gameboard's absent tiles (Tile.tsx
@@ -87,6 +92,7 @@ function KeyboardKey({
   fontSize = 20,
   icon,
   onPress,
+  pressProgress,
   slowFade = false,
 }: Props) {
   const { color, textColor: themedText, currentTheme } = useTheme();
@@ -177,29 +183,33 @@ function KeyboardKey({
   const textColor = isStateFading ? stateFadeText : isResult(state) ? '#ffffff' : themedText('keyText');
   const edgeColor = isStateFading ? stateFadeEdge : color(restingEdgeToken(state));
 
-  // One haptic tied directly to the same handler that actually processes
-  // the press (not a separate onPressIn/onPressOut listener), so a single
-  // physical press can never produce more than one.
-  const handlePress = () => {
-    triggerKeyHaptic();
-    onPress?.();
+  // Only the screen reader's activate reaches here (no touch handling, so a
+  // reader's double-tap can never also arrive as a touch on the key).
+  const handleAccessibilityAction = (e: AccessibilityActionEvent) => {
+    if (e.nativeEvent.actionName === 'activate') onPress?.();
   };
 
   const impactTranslateY = impactBounce.interpolate({ inputRange: [0, 1], outputRange: [0, 3] });
   const impactScale = impactBounce.interpolate({ inputRange: [0, 1], outputRange: [1, 0.94] });
 
   return (
-    <Animated.View style={{ transform: [{ translateY: impactTranslateY }, { scale: impactScale }] }}>
+    <Animated.View
+      style={{ transform: [{ translateY: impactTranslateY }, { scale: impactScale }] }}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityActions={ACTIVATE}
+      onAccessibilityAction={handleAccessibilityAction}
+    >
       <Button3D
         width={width}
         height={height}
         faceColor={backgroundColor}
         edgeColor={edgeColor}
         borderRadius={KEY_RADIUS}
-        onPress={handlePress}
         style={styles.key}
-        accessibilityRole="button"
-        accessibilityLabel={label}
+        touchless
+        pressProgress={pressProgress}
       >
         {icon ? (
           // tintColor is a native prop, not a style, so it takes the

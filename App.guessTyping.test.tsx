@@ -21,6 +21,7 @@ import App from './App';
 import Tile from './components/Tile';
 import { letterLabel } from './lib/letterDisplay';
 import { unmemo } from './test-utils/unmemo';
+import { tapKey } from './test-utils/keyboardTouch';
 
 // react-test-renderer has no bundled type declarations in this project;
 // `require`'d as `any` here rather than adding a new type-only dependency.
@@ -75,19 +76,6 @@ async function renderApp() {
   return root;
 }
 
-function findKey(root: any, token: string) {
-  const label = letterLabel(token);
-  return root.root.findAll(
-    (n: any) => n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
-  )[0];
-}
-
-function findBackspaceKey(root: any) {
-  return root.root.findAll(
-    (n: any) => n.props.accessibilityLabel === 'Ջնջել' && typeof n.props.onPress === 'function',
-  )[0];
-}
-
 // 200ms comfortably clears Tile's token entrance/exit animations
 // (TOKEN_ENTRANCE_DURATION_MS/TOKEN_EXIT_DURATION_MS, currently 130/100ms),
 // so each press's animation fully settles before the next assertion/press.
@@ -95,14 +83,14 @@ const ANIMATION_SETTLE_MS = 200;
 
 function pressKey(root: any, token: string) {
   act(() => {
-    findKey(root, token).props.onPress();
+    tapKey(root, letterLabel(token));
     jest.advanceTimersByTime(ANIMATION_SETTLE_MS);
   });
 }
 
 function pressBackspace(root: any) {
   act(() => {
-    findBackspaceKey(root).props.onPress();
+    tapKey(root, 'Ջնջել');
     jest.advanceTimersByTime(ANIMATION_SETTLE_MS);
   });
 }
@@ -112,7 +100,7 @@ function pressBackspace(root: any) {
 // Proves typing itself is never gated by the animation.
 function pressKeyNoSettle(root: any, token: string) {
   act(() => {
-    findKey(root, token).props.onPress();
+    tapKey(root, letterLabel(token));
   });
 }
 
@@ -211,9 +199,9 @@ describe('rapid typing is never blocked by the per-tile token animation', () => 
 
     // Rapid backspaces, again with no settle time between them.
     act(() => {
-      findBackspaceKey(root).props.onPress();
-      findBackspaceKey(root).props.onPress();
-      findBackspaceKey(root).props.onPress();
+      tapKey(root, 'Ջնջել');
+      tapKey(root, 'Ջնջել');
+      tapKey(root, 'Ջնջել');
       jest.advanceTimersByTime(1000);
     });
     expect(firstRowLetters(root)).toEqual(['գ', 'ա', '', '', '']);
@@ -288,8 +276,8 @@ describe('two presses landing in the same React batch (occasional duplicate/skip
     // one act() — simulating both landing in the same React batch, with no
     // render committed between them.
     act(() => {
-      findKey(root, 'ն').props.onPress();
-      findKey(root, 'ի').props.onPress();
+      tapKey(root, letterLabel('ն'));
+      tapKey(root, letterLabel('ի'));
       jest.advanceTimersByTime(ANIMATION_SETTLE_MS);
     });
 
@@ -303,8 +291,8 @@ describe('two presses landing in the same React batch (occasional duplicate/skip
     pressKey(root, 'գ');
 
     act(() => {
-      findKey(root, 'ա').props.onPress();
-      findKey(root, 'ր').props.onPress();
+      tapKey(root, letterLabel('ա'));
+      tapKey(root, letterLabel('ր'));
       jest.advanceTimersByTime(ANIMATION_SETTLE_MS);
     });
 

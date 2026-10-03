@@ -20,6 +20,7 @@ import { WIN_FLOW_CONFIG } from './constants/winFlow';
 import { letterLabel } from './lib/letterDisplay';
 import { tokenizeArmenianWord } from './lib/tokenizeArmenian';
 import { unmemo } from './test-utils/unmemo';
+import { tapKey } from './test-utils/keyboardTouch';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -88,7 +89,7 @@ async function renderApp() {
 
 async function pressKey(token: string) {
   await act(async () => {
-    root.root.findAll((n: any) => n.props.accessibilityLabel === letterLabel(token) && n.props.onPress)[0].props.onPress();
+    tapKey(root, letterLabel(token));
   });
 }
 

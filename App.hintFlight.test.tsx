@@ -17,6 +17,7 @@ import { HINT_FLIGHT_MS, HINT_REDUCED_FADE_MS, HINT_SPARKS_MS } from './constant
 import { letterLabel } from './lib/letterDisplay';
 import { tokenizeArmenianWord } from './lib/tokenizeArmenian';
 import { unmemo } from './test-utils/unmemo';
+import { tapKey } from './test-utils/keyboardTouch';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -84,7 +85,7 @@ async function renderApp() {
 
 async function pressKey(token: string) {
   await act(async () => {
-    root.root.findAll((n: any) => n.props.accessibilityLabel === letterLabel(token) && n.props.onPress)[0].props.onPress();
+    tapKey(root, letterLabel(token));
   });
 }
 
@@ -189,7 +190,7 @@ it('typing into the target cell mid-flight hides the landed ghost, and backspace
   expect(activeRow()[hint.index]).toBe(letters[hint.index]);
 
   await act(async () => {
-    root.root.findAll((n: any) => n.props.accessibilityLabel === 'Ջնջել' && n.props.onPress)[0].props.onPress();
+    tapKey(root, 'Ջնջել');
   });
   await advance(300);
   expect(activeRow()[hint.index]).toBe(`ghost:${hint.letter}`);

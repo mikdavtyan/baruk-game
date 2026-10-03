@@ -336,6 +336,10 @@ export const KEY_EDGE_HEIGHT = 4;
 export const KEY_EDGE_PRESSED_HEIGHT = 1;
 export const KEY_PRESS_MOVE_DISTANCE = KEY_EDGE_HEIGHT - KEY_EDGE_PRESSED_HEIGHT; // px the key face moves down while held
 export const KEY_PRESS_DURATION_MS = 80;
+// Holding Backspace: after BACKSPACE_REPEAT_DELAY_MS it deletes again every
+// BACKSPACE_REPEAT_INTERVAL_MS until the finger lifts (see Keyboard.tsx).
+export const BACKSPACE_REPEAT_DELAY_MS = 400;
+export const BACKSPACE_REPEAT_INTERVAL_MS = 70;
 
 // The game header's fixed height — shared with any full-screen overlay
 // (e.g. ResultModal) that needs its own top row of controls to land at

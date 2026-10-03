@@ -1,7 +1,12 @@
-import { memo, useMemo } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, GestureResponderEvent, StyleSheet, useWindowDimensions, View } from 'react-native';
 import KeyboardKey from './KeyboardKey';
-import { LetterState } from '../constants/theme';
+import {
+  BACKSPACE_REPEAT_DELAY_MS,
+  BACKSPACE_REPEAT_INTERVAL_MS,
+  LetterState,
+} from '../constants/theme';
+import { triggerKeyHaptic } from '../lib/haptics';
 import { KeyStates } from '../lib/keyboardStates';
 import { letterLabel } from '../lib/letterDisplay';
 
@@ -50,6 +55,11 @@ type Props = {
 
 const ROW_MARGIN_BOTTOM = 8; // must match styles.row.marginBottom below
 
+// The view that receives every keyboard touch (see the input model below),
+// and the Backspace key's accessibility label.
+export const KEYBOARD_TOUCH_SURFACE_ID = 'keyboard-touch-surface';
+export const BACKSPACE_LABEL = 'Ջնջել';
+
 export type KeyGeometry = { x: number; y: number; width: number; height: number };
 
 // Where a given key token actually renders, in the SAME coordinate space
@@ -79,13 +89,14 @@ export function computeKeyGeometry(token: string, windowWidth: number, windowHei
   const keyHeight = Math.round(Math.min(MAX_KEY_HEIGHT, Math.max(MIN_KEY_HEIGHT, windowHeight * KEY_HEIGHT_RATIO)));
 
   const slot = rowIndex === 3 ? row4Slot : letterSlot;
-  // Row 4's 9 letter keys + the wider backspace key exactly fill `available`
-  // by construction (row4Slot = available / (9 + BACKSPACE_UNITS)), so it
-  // never has a centering offset; rows 2–3 (10 keys @ letterSlot) also
-  // exactly fill it. Only row 1 (9 keys @ letterSlot) comes out narrower
-  // and gets centered — matches the comment in the layout constants above.
+  // Every row is centered in the keyboard (which spans the window). Row 4's
+  // 9 letter keys + the wider backspace key exactly fill `available` by
+  // construction (row4Slot = available / (9 + BACKSPACE_UNITS)), and rows 2–3
+  // (10 keys @ letterSlot) do too; row 1 (9 keys) comes out narrower. Up to
+  // MAX_KEYBOARD_WIDTH that's H_PADDING from the edge; on a wider window
+  // (tablet) the whole keyboard sits centered.
   const rowContentWidth = rowIndex === 3 ? available : rows[rowIndex].length * letterSlot;
-  const startX = H_PADDING + (available - rowContentWidth) / 2;
+  const startX = (windowWidth - rowContentWidth) / 2;
 
   const x = startX + colIndex * slot + slot / 2;
   const y = rowIndex * (keyHeight + ROW_MARGIN_BOTTOM) + keyHeight / 2;
@@ -93,12 +104,125 @@ export function computeKeyGeometry(token: string, windowWidth: number, windowHei
   return { x, y, width: slot - KEY_GAP, height: keyHeight };
 }
 
+// The Backspace key's geometry, in the same space as computeKeyGeometry: the
+// last slot of row 4, BACKSPACE_UNITS row-4 slots wide.
+export function computeBackspaceGeometry(windowWidth: number, windowHeight: number): KeyGeometry {
+  const last = computeKeyGeometry(ROW_4[ROW_4.length - 1], windowWidth, windowHeight)!;
+  const slot = last.width + KEY_GAP;
+  const x = last.x + slot / 2 + (slot * BACKSPACE_UNITS) / 2;
+  return { x, y: last.y, width: slot * BACKSPACE_UNITS - KEY_GAP, height: last.height };
+}
+
+// Which key a touch at (x, y) — in the keyboard's own coordinates — means:
+// the nearest row, then the nearest key center in that row. So the gaps
+// between keys (and between rows) hit their nearest key too: every point of
+// the keyboard is a target. Uses the same analytic geometry as Darts.
+const BACKSPACE = '\u232B'; // the hit-test's (and pressed-state map's) name for Backspace
+const KEY_ROWS = [ROW_1, ROW_2, ROW_3, ROW_4];
+export function hitTestKey(x: number, y: number, windowWidth: number, windowHeight: number): string {
+  const centers = (row: number) => {
+    const keys = KEY_ROWS[row].map((token) => {
+      const g = computeKeyGeometry(token, windowWidth, windowHeight)!;
+      return { token, x: g.x, y: g.y };
+    });
+    if (row === 3) keys.push({ token: BACKSPACE, ...computeBackspaceGeometry(windowWidth, windowHeight) });
+    return keys;
+  };
+  const nearest = <T,>(items: T[], distance: (item: T) => number) =>
+    items.reduce((best, item) => (distance(item) < distance(best) ? item : best));
+  const row = nearest([0, 1, 2, 3], (r) => Math.abs(centers(r)[0].y - y));
+  return nearest(centers(row), (k) => Math.abs(k.x - x)).token;
+}
+
 // Constants, so the memoized keys see the same props every render.
 const NO_TOKENS: string[] = [];
 const BACKSPACE_ICON = { ios: 'delete.left', android: 'backspace', web: 'backspace' } as const;
 
+// Input model. Keys have no touch handling of their own: every finger lands
+// on the keyboard's one surface (pointerEvents box-only), so several fingers
+// register at once — separate Pressables would let RN's responder system give
+// the touch to only one of them. Each touch is hit-tested (hitTestKey) and
+// fires on TOUCH DOWN: the letter appears at once, and a finger that slides
+// a little can't cancel it. Its key shows pressed until that finger lifts.
+// Holding Backspace repeats. Positions are the touch's location within the
+// surface itself (every touch targets it), so they stay right after any
+// layout change or resize. With a screen reader on, touches are ignored and
+// each key is activated through its accessibility action instead.
 function Keyboard({ keyStates, onKeyPress, onBackspace, dartsHitTokens = NO_TOKENS }: Props) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
+  // One press value per key (0 = up, 1 = pressed), driven here directly —
+  // a press never re-renders anything.
+  const [pressValues] = useState(() =>
+    Object.fromEntries([...ALL_LETTER_TOKENS, BACKSPACE].map((k) => [k, new Animated.Value(0)])),
+  );
+  const fingersRef = useRef(new Map<number, string>()); // touch identifier -> key
+  const repeatRef = useRef<{ finger: number; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const screenReaderRef = useRef(false);
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then((on) => {
+        if (mounted) screenReaderRef.current = on;
+      })
+      .catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('screenReaderChanged', (on: boolean) => {
+      screenReaderRef.current = on;
+    });
+    const repeat = repeatRef;
+    return () => {
+      mounted = false;
+      sub.remove();
+      if (repeat.current) clearTimeout(repeat.current.timer);
+    };
+  }, []);
+
+  const stopRepeat = () => {
+    if (repeatRef.current) clearTimeout(repeatRef.current.timer);
+    repeatRef.current = null;
+  };
+  const deleteOnce = () => {
+    triggerKeyHaptic();
+    onBackspace();
+  };
+  const handleTouchStart = (e: GestureResponderEvent) => {
+    if (screenReaderRef.current) return;
+    for (const touch of e.nativeEvent.changedTouches) {
+      const key = hitTestKey(touch.locationX, touch.locationY, windowWidth, windowHeight);
+      fingersRef.current.set(Number(touch.identifier), key);
+      // Pressed and released instantly, like a system keyboard — no animation.
+      pressValues[key].setValue(1);
+      if (key === BACKSPACE) {
+        deleteOnce();
+        stopRepeat();
+        const finger = Number(touch.identifier);
+        const tick = (delay: number) => {
+          repeatRef.current = {
+            finger,
+            timer: setTimeout(() => {
+              deleteOnce();
+              tick(BACKSPACE_REPEAT_INTERVAL_MS);
+            }, delay),
+          };
+        };
+        tick(BACKSPACE_REPEAT_DELAY_MS);
+      } else {
+        triggerKeyHaptic();
+        onKeyPress(key);
+      }
+    }
+  };
+  const handleTouchEnd = (e: GestureResponderEvent) => {
+    for (const touch of e.nativeEvent.changedTouches) {
+      const finger = Number(touch.identifier);
+      const key = fingersRef.current.get(finger);
+      if (key === undefined) continue;
+      fingersRef.current.delete(finger);
+      if (repeatRef.current?.finger === finger) stopRepeat();
+      // Another finger may still hold the same key.
+      if (![...fingersRef.current.values()].includes(key)) pressValues[key].setValue(0);
+    }
+  };
 
   const available = Math.min(windowWidth, MAX_KEYBOARD_WIDTH) - H_PADDING * 2;
   const letterSlot = available / 10; // rows 1–3
@@ -124,23 +248,32 @@ function Keyboard({ keyStates, onKeyPress, onBackspace, dartsHitTokens = NO_TOKE
       height={keyHeight}
       fontSize={fontSize}
       onPress={pressHandlers[letter]}
+      pressProgress={pressValues[letter]}
       slowFade={dartsHitTokens.includes(letter)}
     />
   );
 
   return (
-    <View style={styles.keyboard}>
+    <View
+      testID={KEYBOARD_TOUCH_SURFACE_ID}
+      style={styles.keyboard}
+      pointerEvents="box-only"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+    >
       <View style={styles.row}>{ROW_1.map((l) => letterKey(l, letterSlot))}</View>
       <View style={styles.row}>{ROW_2.map((l) => letterKey(l, letterSlot))}</View>
       <View style={styles.row}>{ROW_3.map((l) => letterKey(l, letterSlot))}</View>
       <View style={styles.row}>
         {ROW_4.map((l) => letterKey(l, row4Slot))}
         <KeyboardKey
-          label="Ջնջել"
+          label={BACKSPACE_LABEL}
           icon={BACKSPACE_ICON}
           width={row4Slot * BACKSPACE_UNITS - KEY_GAP}
           height={keyHeight}
           onPress={onBackspace}
+          pressProgress={pressValues[BACKSPACE]}
         />
       </View>
     </View>

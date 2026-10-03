@@ -25,6 +25,11 @@ type Props = {
   accessibilityRole?: 'button';
   accessibilityLabel?: string;
   accessibilityState?: { disabled?: boolean };
+  // Keyboard keys: no Pressable of their own (the Keyboard handles every
+  // touch on one surface) — the face only follows `pressProgress` (0 = up,
+  // 1 = pressed), driven by the owner. Accessibility then lives on the owner.
+  touchless?: boolean;
+  pressProgress?: Animated.Value;
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -61,10 +66,13 @@ export default forwardRef<View, Props>(function Button3D(
     accessibilityRole,
     accessibilityLabel,
     accessibilityState,
+    touchless = false,
+    pressProgress: externalPress,
   },
   ref,
 ) {
-  const pressProgress = useRef(new Animated.Value(0)).current;
+  const ownPress = useRef(new Animated.Value(0)).current;
+  const pressProgress = externalPress ?? ownPress;
 
   const handlePressIn = () => {
     Animated.timing(pressProgress, {
@@ -88,6 +96,29 @@ export default forwardRef<View, Props>(function Button3D(
   const translateY = pressProgress.interpolate({ inputRange: [0, 1], outputRange: [0, KEY_PRESS_MOVE_DISTANCE] });
   const faceHeight = height - KEY_EDGE_HEIGHT;
 
+  const faceStyle = [styles.face, { height: faceHeight, borderRadius, transform: [{ translateY }] }];
+  const face = (
+    <>
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius, backgroundColor: faceColor }]} />
+      {faceBackground ? (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius, overflow: 'hidden' }]}>
+          {faceBackground}
+        </View>
+      ) : null}
+      <View style={[styles.content, contentStyle]}>{children}</View>
+    </>
+  );
+
+  if (touchless) {
+    return (
+      <Animated.View style={[{ width, height, borderRadius, backgroundColor: edgeColor }, style]}>
+        <Animated.View ref={ref} style={faceStyle}>
+          {face}
+        </Animated.View>
+      </Animated.View>
+    );
+  }
+
   return (
     <Animated.View style={[{ width, height, borderRadius, backgroundColor: edgeColor }, style]}>
       <AnimatedPressable
@@ -99,15 +130,9 @@ export default forwardRef<View, Props>(function Button3D(
         accessibilityRole={accessibilityRole}
         accessibilityLabel={accessibilityLabel}
         accessibilityState={accessibilityState}
-        style={[styles.face, { height: faceHeight, borderRadius, transform: [{ translateY }] }]}
+        style={faceStyle}
       >
-        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius, backgroundColor: faceColor }]} />
-        {faceBackground ? (
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius, overflow: 'hidden' }]}>
-            {faceBackground}
-          </View>
-        ) : null}
-        <View style={[styles.content, contentStyle]}>{children}</View>
+        {face}
       </AnimatedPressable>
     </Animated.View>
   );

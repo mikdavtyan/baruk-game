@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import App from './App';
 import { THEME_FADE_MS } from './constants/theme';
 import { letterLabel } from './lib/letterDisplay';
+import { tapKey } from './test-utils/keyboardTouch';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -63,6 +64,10 @@ const press = async (label: string) => {
     root.root.findAll((n: any) => n.props.accessibilityLabel === label && n.props.onPress)[0].props.onPress();
   });
 };
+// A keyboard key, by a finger's touch down + up.
+const tap = async (label: string) => {
+  await act(async () => tapKey(root, label));
+};
 
 // Runs `action` and returns what rendered while it (and its settling) ran.
 async function measure(action: () => Promise<void>) {
@@ -85,11 +90,11 @@ const UNTOUCHED = ['Keyboard', 'KeyboardKey', 'Header', 'BottomControls', 'WinFl
 it('one keystroke re-renders only the typed row (at most 2 tiles), and a theme toggle only the snapshot leaves', async () => {
   await renderApp();
   const letter = await measure(async () => {
-    await press(letterLabel('ա'));
+    await tap(letterLabel('ա'));
     await advance(300);
   });
   const backspace = await measure(async () => {
-    await press('Ջնջել');
+    await tap('Ջնջել');
     await advance(300);
   });
   const toggle = await measure(async () => {
