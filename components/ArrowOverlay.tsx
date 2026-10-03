@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Animated, Easing, Image, Platform, StyleSheet, View } from 'react-native';
 import {
   ARROW_FLIGHT_DURATION_MS,
@@ -10,7 +10,7 @@ import {
   PARTICLE_BURST_COUNT,
   PARTICLE_FADE_MS,
 } from '../constants/theme';
-import { useTheme } from '../lib/ThemeContext';
+import { useThemeSnapshot } from '../lib/ThemeContext';
 
 const arrowLight = require('../assets/icons/arrow-light.png');
 const arrowDark = require('../assets/icons/arrow-dark.png');
@@ -238,8 +238,8 @@ function FlyingArrow({
 // leaves a brief particle burst + quivering-stuck-arrow at each impact.
 // Positions are resolved by App.tsx at the moment Darts fires (measuring the
 // real bow button and keyboard positions), not computed here.
-export default function ArrowOverlay({ volleyId, origin, targets }: Props) {
-  const { isDark, theme } = useTheme();
+function ArrowOverlay({ volleyId, origin, targets }: Props) {
+  const { isDark, theme } = useThemeSnapshot();
   if (!origin || targets.length === 0) return null;
 
   const arrowSource = isDark ? arrowDark : arrowLight;
@@ -297,3 +297,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(ArrowOverlay);

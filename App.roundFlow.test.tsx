@@ -21,6 +21,7 @@ import { HINT_FLIGHT_MS, HINT_SPARKS_MS } from './constants/theme';
 import { WIN_FLOW_CONFIG } from './constants/winFlow';
 import { letterLabel } from './lib/letterDisplay';
 import { tokenizeArmenianWord } from './lib/tokenizeArmenian';
+import { unmemo } from './test-utils/unmemo';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -120,10 +121,10 @@ async function retryByAd() {
 
 const stored = async (key: string) => JSON.parse((await AsyncStorage.getItem(key)) as string);
 const keyState = (token: string) =>
-  root.root.findAll((n: any) => n.type === KeyboardKey && n.props.label === letterLabel(token))[0].props.state;
+  root.root.findAll((n: any) => n.type === unmemo(KeyboardKey) && n.props.label === letterLabel(token))[0].props.state;
 // What a board row actually shows in each cell: its typed letter, or else
 // its ghost (rendered as that letter's label).
-const rowTiles = (row: number) => root.root.findAllByType(Tile).slice(row * 5, row * 5 + 5);
+const rowTiles = (row: number) => root.root.findAllByType(unmemo(Tile)).slice(row * 5, row * 5 + 5);
 const rowDisplay = (row: number) =>
   rowTiles(row).map((t: any) => {
     const shown = t.findAllByType(Text)[0]?.props.children; // an empty tile renders no text
@@ -306,13 +307,13 @@ describe('board reset (retry, ՆՈՐ ԽԱՂ)', () => {
   it('retry: the board resets and remounts while the modal still covers it, then the modal fades out', async () => {
     await renderApp();
     await loseRound();
-    const boardBefore = root.root.findByType(Board).instance ?? root.root.findByType(Board);
+    const boardBefore = root.root.findByType(unmemo(Board)).instance ?? root.root.findByType(unmemo(Board));
     await act(async () => {
       root.root.findByType(SecondChanceModal).props.onAdRetrySucceeded();
     });
     expect(lastRowFirstLetter()).toBe('');
     expect(root.root.findAllByType(SecondChanceModal)).toHaveLength(1);
-    expect(root.root.findByType(Board)).not.toBe(boardBefore); // a fresh mount
+    expect(root.root.findByType(unmemo(Board))).not.toBe(boardBefore); // a fresh mount
     expect(keyState('ն')).toBe('correct'); // the keyboard keeps its colors on a retry
     await advance(400); // one frame + the 250ms fade
     expect(root.root.findAllByType(ModalBackdrop)).toHaveLength(0);
@@ -350,7 +351,7 @@ describe('power-ups', () => {
     });
     await advance(100);
   };
-  const controls = () => root.root.findByType(BottomControls).props;
+  const controls = () => root.root.findByType(unmemo(BottomControls)).props;
   const toastMessages = () => root.root.findAllByType(Toast).map((t: any) => t.props.message);
 
   it('Hint reveals only unknown positions, charges only then, and when none is left dims and explains for free', async () => {
@@ -363,7 +364,7 @@ describe('power-ups', () => {
       await advance(HINT_FLIGHT_MS + HINT_SPARKS_MS); // a Hint keeps the power-ups busy until it has played
       expect(await stored('wordle:coins')).toBe(1000 - i * WIN_FLOW_CONFIG.hintPrice);
     }
-    const revealed = root.root.findByType(Board).props.ghostHints.map((g: any) => g.index).sort();
+    const revealed = root.root.findByType(unmemo(Board)).props.ghostHints.map((g: any) => g.index).sort();
     expect(revealed).toEqual([0, 1, 3]); // never a known position, never twice
 
     expect(controls().hintDimmed).toBe(true);
@@ -371,7 +372,7 @@ describe('power-ups', () => {
     await press('Hint');
     expect(toastMessages()).toEqual(['ԲՈԼՈՐ ՏԱՌԵՐՆ ԱՐԴԵՆ ԲԱՑ ԵՆ']);
     expect(await stored('wordle:coins')).toBe(1000 - 3 * WIN_FLOW_CONFIG.hintPrice);
-    expect(root.root.findByType(Board).props.ghostHints).toHaveLength(3);
+    expect(root.root.findByType(unmemo(Board)).props.ghostHints).toHaveLength(3);
   });
 
   it('Hint only reveals an empty unknown cell; with none in the row it is free, dimmed and explains why', async () => {
@@ -387,7 +388,7 @@ describe('power-ups', () => {
     await press('Hint');
     expect(toastMessages()).toEqual([NO_ROOM_TOAST]);
     expect(await stored('wordle:coins')).toBe(1000);
-    expect(root.root.findByType(Board).props.ghostHints).toEqual([]);
+    expect(root.root.findByType(unmemo(Board)).props.ghostHints).toEqual([]);
 
     // A full row: nowhere to show a ghost either. (The first toast is gone
     // first, so the one asserted below can only come from this tap.)
@@ -397,7 +398,7 @@ describe('power-ups', () => {
     await press('Hint');
     expect(toastMessages()).toEqual([NO_ROOM_TOAST]);
     expect(await stored('wordle:coins')).toBe(1000);
-    expect(root.root.findByType(Board).props.ghostHints).toEqual([]);
+    expect(root.root.findByType(unmemo(Board)).props.ghostHints).toEqual([]);
 
     // Free cell 3 (unknown) and 4 (known): the hint must land in 3.
     await pressBackspace();
@@ -405,7 +406,7 @@ describe('power-ups', () => {
     expect(controls().hintDimmed).toBe(false);
     await press('Hint');
     expect(await stored('wordle:coins')).toBe(1000 - WIN_FLOW_CONFIG.hintPrice);
-    expect(root.root.findByType(Board).props.ghostHints).toEqual([{ index: 3, letter: 'ու', kind: 'hint' }]);
+    expect(root.root.findByType(unmemo(Board)).props.ghostHints).toEqual([{ index: 3, letter: 'ու', kind: 'hint' }]);
     expect(rowDisplay(2)).toEqual(['ա', 'բ', 'գ', 'ghost:ու', '']);
   });
 
@@ -414,7 +415,7 @@ describe('power-ups', () => {
     await submitWord('բդեշխ'); // 5 letters already gray
     const secret = ['գ', 'ա', 'ր', 'ու', 'ն'];
     const wrongLeft = () =>
-      root.root.findAllByType(KeyboardKey).filter(
+      root.root.findAllByType(unmemo(KeyboardKey)).filter(
         (k: any) => !k.props.icon && k.props.state !== 'absent' && !secret.map(letterLabel).includes(k.props.label),
       ).length;
     expect(wrongLeft()).toBe(38 - 5 - 5);

@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useState } from 'react';
+import { memo, RefObject, useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import Tile, { GhostKind } from './Tile';
 import { LetterState, TILE_REVEAL_STAGGER_MS, WORD_LENGTH } from '../constants/theme';
@@ -41,7 +41,7 @@ export type HintLanding = { id: number; index: number };
 
 export type GhostHint = { index: number; letter: string; kind: GhostKind };
 
-export default function Row({
+function Row({
   letters,
   states,
   celebrate,
@@ -143,3 +143,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(Row);

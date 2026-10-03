@@ -8,6 +8,7 @@ import Tile from './Tile';
 import { LetterState } from '../constants/theme';
 import { SECOND_CHANCE_ENTER_DELAYS_MS } from '../constants/winFlow';
 import { ThemeProvider } from '../lib/ThemeContext';
+import { unmemo } from '../test-utils/unmemo';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -134,7 +135,7 @@ describe('ad loading', () => {
 describe('hero', () => {
   it('with no points and no streak at stake: the last guess as mini tiles and the found count', () => {
     render({ pointsAtRisk: 0, streakAtRisk: 0 });
-    const tiles = root.root.findAllByType(Tile);
+    const tiles = root.root.findAllByType(unmemo(Tile));
     expect(tiles.map((t: any) => [t.props.letter, t.props.state, t.props.size])).toEqual(
       BOARD[1].tokens.map((token, i) => [token, BOARD[1].states[i], 32]),
     );
@@ -147,6 +148,6 @@ describe('hero', () => {
   it('with points at stake: keeps the flame + points hero', () => {
     render({ pointsAtRisk: 40, streakAtRisk: 3 });
     expect(root.root.findAllByType(Flame)).toHaveLength(1);
-    expect(root.root.findAllByType(Tile)).toHaveLength(0);
+    expect(root.root.findAllByType(unmemo(Tile))).toHaveLength(0);
   });
 });

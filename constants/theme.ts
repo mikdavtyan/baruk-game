@@ -313,6 +313,12 @@ export const TILE_SHINE_DURATION_MS = 450;
 // place over this long, eased in-out; the plain `theme` snapshot flips at the
 // midpoint. Kept short on purpose — see docs/adr/0004.
 export const THEME_FADE_MS = 300;
+// Text colors fade on the native driver too (true), so a theme toggle does no
+// JS work per frame. If a device shows text NOT changing color with it (native
+// text color isn't confirmed to repaint on Android), set this to false: then
+// text colors switch once, at the fade's midpoint, while backgrounds still fade
+// natively. Every letter ends in the right color either way.
+export const TEXT_COLOR_NATIVE = true;
 
 // Short game toasts (e.g. "no hint left") over the top of the board.
 export const TOAST_FADE_MS = 180;

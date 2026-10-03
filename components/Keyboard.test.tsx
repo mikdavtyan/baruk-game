@@ -6,6 +6,7 @@ import Keyboard, { ALL_LETTER_TOKENS, computeKeyGeometry } from './Keyboard';
 import KeyboardKey from './KeyboardKey';
 import { letterLabel } from '../lib/letterDisplay';
 import { ThemeProvider } from '../lib/ThemeContext';
+import { unmemo } from '../test-utils/unmemo';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -20,7 +21,7 @@ it('every rendered key has the size computeKeyGeometry predicts', () => {
     );
   });
   const { width, height } = Dimensions.get('window');
-  const keys = root.root.findAllByType(KeyboardKey);
+  const keys = root.root.findAllByType(unmemo(KeyboardKey));
 
   for (const token of ALL_LETTER_TOKENS) {
     const rendered = keys.find((k: any) => k.props.label === letterLabel(token));

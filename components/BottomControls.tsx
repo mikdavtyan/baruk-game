@@ -1,12 +1,13 @@
-import { RefObject } from 'react';
+import { memo, RefObject } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 import BowIcon from './BowIcon';
 import PowerUpButton from './PowerUpButton';
 import SubmitButton from './SubmitButton';
 import { WIN_FLOW_CONFIG } from '../constants/winFlow';
 import { GuessValidity } from '../lib/guessValidity';
-import { useTheme } from '../lib/ThemeContext';
+import { ThemedSymbol } from './ThemedSnapshot';
+
+const HINT_ICON = { ios: 'magnifyingglass', android: 'search', web: 'search' } as const;
 
 // Each power-up shows its item count (a red badge) while any are held, and
 // its coin price (WIN_FLOW_CONFIG) once none are left — see PowerUpButton.
@@ -32,7 +33,7 @@ type Props = {
 // only submit action in the app — both side buttons are power-ups, not
 // alternate ways to submit. Hint and Darts now render through the exact
 // same neutral PowerUpButton style — only their icon differs.
-export default function BottomControls({
+function BottomControls({
   validity,
   onSubmit,
   onClearInvalid,
@@ -49,18 +50,13 @@ export default function BottomControls({
   dartsButtonRef,
   hintButtonRef,
 }: Props) {
-  // theme.keyText (a plain snapshot) for the Hint icon — a native
-  // SymbolView's tintColor isn't a style, so it can't take `color()`.
-  const { theme } = useTheme();
   return (
     <View style={styles.row}>
       <PowerUpButton
         icon={
-          <SymbolView
-            name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
-            size={24}
-            tintColor={theme.keyText}
-          />
+          // A snapshot-tinted leaf (a SymbolView's tintColor can't take
+          // `color()`), so a theme toggle re-renders only the icon.
+          <ThemedSymbol name={HINT_ICON} size={24} token="keyText" />
         }
         ref={hintButtonRef}
         label="Hint"
@@ -98,3 +94,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(BottomControls);

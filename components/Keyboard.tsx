@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import KeyboardKey from './KeyboardKey';
 import { LetterState } from '../constants/theme';
@@ -92,7 +93,11 @@ export function computeKeyGeometry(token: string, windowWidth: number, windowHei
   return { x, y, width: slot - KEY_GAP, height: keyHeight };
 }
 
-export default function Keyboard({ keyStates, onKeyPress, onBackspace, dartsHitTokens = [] }: Props) {
+// Constants, so the memoized keys see the same props every render.
+const NO_TOKENS: string[] = [];
+const BACKSPACE_ICON = { ios: 'delete.left', android: 'backspace', web: 'backspace' } as const;
+
+function Keyboard({ keyStates, onKeyPress, onBackspace, dartsHitTokens = NO_TOKENS }: Props) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
 
   const available = Math.min(windowWidth, MAX_KEYBOARD_WIDTH) - H_PADDING * 2;
@@ -103,6 +108,12 @@ export default function Keyboard({ keyStates, onKeyPress, onBackspace, dartsHitT
     Math.min(MAX_LETTER_FONT, Math.max(MIN_LETTER_FONT, (letterSlot - KEY_GAP) * LETTER_FONT_RATIO)),
   );
 
+  // One stable press handler per letter (onKeyPress itself is stable), so a
+  // key re-renders only when its own state changes.
+  const pressHandlers = useMemo(
+    () => Object.fromEntries(ALL_LETTER_TOKENS.map((l) => [l, () => onKeyPress(l)])),
+    [onKeyPress],
+  );
   const stateFor = (letter: string): LetterState => keyStates[letter] ?? 'empty';
   const letterKey = (letter: string, slot: number) => (
     <KeyboardKey
@@ -112,7 +123,7 @@ export default function Keyboard({ keyStates, onKeyPress, onBackspace, dartsHitT
       width={slot - KEY_GAP}
       height={keyHeight}
       fontSize={fontSize}
-      onPress={() => onKeyPress(letter)}
+      onPress={pressHandlers[letter]}
       slowFade={dartsHitTokens.includes(letter)}
     />
   );
@@ -126,7 +137,7 @@ export default function Keyboard({ keyStates, onKeyPress, onBackspace, dartsHitT
         {ROW_4.map((l) => letterKey(l, row4Slot))}
         <KeyboardKey
           label="Ջնջել"
-          icon={{ ios: 'delete.left', android: 'backspace', web: 'backspace' }}
+          icon={BACKSPACE_ICON}
           width={row4Slot * BACKSPACE_UNITS - KEY_GAP}
           height={keyHeight}
           onPress={onBackspace}
@@ -149,3 +160,6 @@ const styles = StyleSheet.create({
     marginBottom: ROW_MARGIN_BOTTOM,
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(Keyboard);

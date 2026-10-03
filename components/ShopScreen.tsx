@@ -1,4 +1,4 @@
-import { ReactNode, useRef, useState } from 'react';
+import { memo, ReactNode, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
@@ -20,7 +20,7 @@ import {
 import { FONTS, HEADER_HEIGHT, KEY_EDGE_HEIGHT } from '../constants/theme';
 import type { Inventory } from '../lib/gameStorage';
 import { packDiscountPercent } from '../lib/shop';
-import { useTheme } from '../lib/ThemeContext';
+import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
 
 type Props = {
   onBack: () => void;
@@ -46,8 +46,9 @@ const DIMMED_OPACITY = 0.45;
 // a daily-limited rewarded ad, and real-money packs coming soon). An
 // unaffordable pack or a used-up ad is dimmed but tappable, and explains why
 // in a toast.
-export default function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onWatchAd }: Props) {
-  const { theme, color, textColor } = useTheme();
+function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onWatchAd }: Props) {
+  const { color, textColor } = useTheme();
+  const { theme } = useThemeSnapshot();
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const showToast = (message: string) => setToast((t) => ({ id: (t?.id ?? 0) + 1, message }));
   const [adLoading, setAdLoading] = useState(false);
@@ -394,3 +395,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(ShopScreen);

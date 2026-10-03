@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import {
   HINT_ARC,
@@ -54,7 +54,7 @@ function samplePath(start: Point, end: Point) {
 // starts animations. Opacity and transform only, on the native driver.
 // `flight` going null (a board reset) stops it and hides everything at once.
 // App lands the ghost itself after HINT_FLIGHT_MS (coupled timing).
-export default function HintFlightOverlay({ flight }: { flight: HintFlight | null }) {
+function HintFlightOverlay({ flight }: { flight: HintFlight | null }) {
   const [travel] = useState(() => new Animated.Value(0)); // 0 -> 1 along the path
   const [burst] = useState(() => new Animated.Value(0)); // 0 -> 1: sparks out and gone
 
@@ -169,3 +169,6 @@ const styles = StyleSheet.create({
     backgroundColor: SPARK,
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(HintFlightOverlay);

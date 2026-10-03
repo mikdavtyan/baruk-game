@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useRef, useState } from 'react';
+import { memo, RefObject, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
@@ -71,7 +71,7 @@ function rewardBase(guessCount: number, afterRetry: boolean): number {
   return afterRetry ? Math.floor(full * WIN_FLOW_CONFIG.retryWinRewardFactor) : full;
 }
 
-export default function WinFlow({
+function WinFlow({
   active,
   secretWordTokens,
   submittedGuesses,
@@ -88,7 +88,7 @@ export default function WinFlow({
   resume,
   afterRetry,
 }: Props) {
-  const { theme, reduceMotion } = useTheme();
+  const { reduceMotion, color, textColor } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   // A pending win from before a relaunch (read by App before first render)
   // restores the exact modal that was showing — synchronously, so the live
@@ -504,7 +504,7 @@ export default function WinFlow({
                 coinPillStyles.pill,
                 styles.duplicatePill,
                 {
-                  backgroundColor: theme.pill,
+                  backgroundColor: color('pill'),
                   top: headerPillRect.y,
                   right: windowWidth - (headerPillRect.x + headerPillRect.width),
                   transform: [{ scale: pillScale }],
@@ -513,8 +513,8 @@ export default function WinFlow({
             >
               <CoinPillContent
                 value={pillValue}
-                textColor={theme.pillText}
-                plusColor={theme.correct}
+                textColor={textColor('pillText')}
+                plusColor={color('correct')}
               />
             </Animated.View>
           )}
@@ -548,3 +548,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(WinFlow);

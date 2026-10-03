@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import PopupModal from './PopupModal';
 import RulesCard from './RulesCard';
 
@@ -9,7 +9,7 @@ type Props = {
 
 // The "How to play" popup: the shared popup shell (PopupModal.tsx) holding
 // the rules (RulesCard), whose example tiles flip in once it has opened.
-export default function RulesModal({ open, onClose }: Props) {
+function RulesModal({ open, onClose }: Props) {
   // Bumped when an open animation finishes: RulesCard's example tiles flip
   // in only then.
   const [revealTrigger, setRevealTrigger] = useState(0);
@@ -19,3 +19,6 @@ export default function RulesModal({ open, onClose }: Props) {
     </PopupModal>
   );
 }
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(RulesModal);

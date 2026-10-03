@@ -1,5 +1,4 @@
 import { createRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import {
   Animated,
@@ -21,6 +20,7 @@ import { GhostHint, HintLanding, RowData } from './components/Row';
 import RulesModal from './components/RulesModal';
 import { PushPageLayer, usePushPage } from './components/PushPage';
 import ShopScreen from './components/ShopScreen';
+import { ThemedStatusBar } from './components/ThemedSnapshot';
 import Toast from './components/Toast';
 import WinFlow from './components/WinFlow';
 import {
@@ -67,6 +67,7 @@ import {
 } from './lib/gameStorage';
 import { GamePhase, phaseFromPending } from './lib/gamePhase';
 import { computeKeyStates } from './lib/keyboardStates';
+import { useStableCallback } from './lib/useStableCallback';
 import { triggerHintLandingHaptic } from './lib/haptics';
 import { measureWindow } from './lib/measureWindow';
 import { ThemeProvider, useTheme } from './lib/ThemeContext';
@@ -81,6 +82,13 @@ type SubmittedGuess = {
 
 
 // Tiles take up size + 8px each way (4px margin per side, 8px row gap).
+// Shared constants, so memoized children see the same arrays every render.
+const EMPTY_ROW: RowData = {
+  letters: Array<string>(WORD_LENGTH).fill(''),
+  states: Array<LetterState>(WORD_LENGTH).fill('empty'),
+};
+const NO_TOKENS: string[] = [];
+
 const TILE_SPACING = 8;
 const MAX_TILE_SIZE = 62;
 const MIN_TILE_SIZE = 30;
@@ -162,7 +170,7 @@ export default function App() {
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
 function AppInner() {
-  const { color, isDark, reduceMotion } = useTheme();
+  const { color, reduceMotion } = useTheme();
   const [fontsLoaded, fontError] = useFonts({
     [FONT_FAMILY]: require('./assets/fonts/GHEAGrapalat-Bold.otf'),
   });
@@ -649,13 +657,19 @@ function AppInner() {
   // than a separate parallel system. They reset automatically when a real
   // New Game clears all of them. The row still flipping is left out until
   // its whole reveal completes, then all of its keys update together.
-  const keyStates = computeKeyStates([
-    ...retainedGuesses,
-    ...(isRevealing ? submittedGuesses.slice(0, -1) : submittedGuesses),
-    ...(dartsRevealedAbsent.length > 0
-      ? [{ tokens: dartsRevealedAbsent, states: dartsRevealedAbsent.map(() => 'absent' as const) }]
-      : []),
-  ]);
+  // Memoized: a keystroke changes none of its inputs, so the Keyboard (memo)
+  // keeps the same object and doesn't re-render.
+  const keyStates = useMemo(
+    () =>
+      computeKeyStates([
+        ...retainedGuesses,
+        ...(isRevealing ? submittedGuesses.slice(0, -1) : submittedGuesses),
+        ...(dartsRevealedAbsent.length > 0
+          ? [{ tokens: dartsRevealedAbsent, states: dartsRevealedAbsent.map(() => 'absent' as const) }]
+          : []),
+      ]),
+    [retainedGuesses, isRevealing, submittedGuesses, dartsRevealedAbsent],
+  );
 
   // Shared "can the player interact right now" gate for all three bottom
   // controls (ԸՆԴՈՒՆԵԼ, Hint, Darts) — none of them act during a reveal or
@@ -663,16 +677,26 @@ function AppInner() {
   const isGameLocked = phase !== 'playing' || isBoardFull;
   // Ghosts on the active row: after a retry (retained guesses exist), every
   // position found green in any guess of this word, plus unused hint ghosts.
-  const greenPositions = correctPositionGhosts([...retainedGuesses, ...submittedGuesses]);
-  const carriedGhosts = retainedGuesses.length > 0 ? greenPositions : [];
-  // Each ghost knows its kind, so Tile can tell "I found this" (carried) from
-  // "a Hint showed this"; where both land on one position, carried wins.
-  const ghosts: GhostHint[] = [
-    ...carriedGhosts.map((g) => ({ ...g, kind: 'carried' as const })),
-    ...hintGhosts.filter((h) => !carriedGhosts.some((c) => c.index === h.index)).map((h) => ({ ...h, kind: 'hint' as const })),
-  ];
+  // Memoized like keyStates: the board's ghost array must keep its identity
+  // across keystrokes, or every Row would re-render.
+  const { greenPositions, ghosts } = useMemo(() => {
+    const greens = correctPositionGhosts([...retainedGuesses, ...submittedGuesses]);
+    const carriedGhosts = retainedGuesses.length > 0 ? greens : [];
+    // Each ghost knows its kind, so Tile can tell "I found this" (carried) from
+    // "a Hint showed this"; where both land on one position, carried wins.
+    const all: GhostHint[] = [
+      ...carriedGhosts.map((g) => ({ ...g, kind: 'carried' as const })),
+      ...hintGhosts
+        .filter((h) => !carriedGhosts.some((c) => c.index === h.index))
+        .map((h) => ({ ...h, kind: 'hint' as const })),
+    ];
+    return { greenPositions: greens, ghosts: all };
+  }, [retainedGuesses, submittedGuesses, hintGhosts]);
   // What the board shows: every ghost except a Hint whose light hasn't landed yet.
-  const visibleGhosts = ghosts.filter((g) => !(g.kind === 'hint' && g.index === arrivingHintIndex));
+  const visibleGhosts = useMemo(
+    () => ghosts.filter((g) => !(g.kind === 'hint' && g.index === arrivingHintIndex)),
+    [ghosts, arrivingHintIndex],
+  );
   // Hint only ever reveals a position that's still unknown: not green in any
   // guess of this word (the board before a retry included), not already a
   // ghost — and only in an empty cell, the only place a ghost is visible.
@@ -887,25 +911,67 @@ function AppInner() {
   // Build the 6 board rows from real state: submitted guesses (with their
   // permanently computed correct/present/absent states), the in-progress
   // row, and remaining blank rows.
-  const rows: RowData[] = Array.from({ length: MAX_GUESSES }, (_, rowIndex) => {
-    if (rowIndex < submittedGuesses.length) {
-      const { tokens, states } = submittedGuesses[rowIndex];
-      return { letters: tokens, states };
-    }
-    if (rowIndex === submittedGuesses.length) {
-      const letters = Array.from({ length: WORD_LENGTH }, (_, i) => guess.tokens[i] ?? '');
-      const states = letters.map((l) => (l ? ('filled' as const) : ('empty' as const)));
-      return { letters, states };
-    }
-    return {
-      letters: Array(WORD_LENGTH).fill(''),
-      states: Array(WORD_LENGTH).fill('empty' as const),
-    };
-  });
+  // Submitted and blank rows keep their arrays' identity, so a keystroke
+  // re-renders only the row being typed (Row and Tile are memoized).
+  const rows: RowData[] = useMemo(
+    () =>
+      Array.from({ length: MAX_GUESSES }, (_, rowIndex) => {
+        if (rowIndex < submittedGuesses.length) {
+          const { tokens, states } = submittedGuesses[rowIndex];
+          return { letters: tokens, states };
+        }
+        if (rowIndex === submittedGuesses.length) {
+          const letters = Array.from({ length: WORD_LENGTH }, (_, i) => guess.tokens[i] ?? '');
+          const states = letters.map((l) => (l ? ('filled' as const) : ('empty' as const)));
+          return { letters, states };
+        }
+        return EMPTY_ROW;
+      }),
+    [submittedGuesses, guess.tokens],
+  );
 
   // Hint only ever applies to the row currently being typed, and only while
   // the player can actually act.
   const activeRowIndex = phase === 'playing' ? submittedGuesses.length : null;
+
+  // Stable identities for the memoized children (Header, Keyboard,
+  // BottomControls, WinFlow, LossFlow, ShopScreen): App re-renders on every
+  // keystroke, and a fresh handler would re-render each of them.
+  const onKeyPress = useStableCallback(handleKeyPress);
+  const onBackspace = useStableCallback(handleBackspace);
+  const onSubmit = useStableCallback(handleEnter);
+  const onClearInvalid = useStableCallback(handleClearInvalidGuess);
+  const onHint = useStableCallback(handleHint);
+  const onDarts = useStableCallback(handleDarts);
+  const onOpenRules = useStableCallback(handleOpenRules);
+  const onBoardAreaLayout = useStableCallback(handleBoardAreaLayout);
+  const onNewGame = useStableCallback(handleNewGame);
+  const onLossRetry = useStableCallback(handleLossRetry);
+  const onRetryGranted = useStableCallback(handleRetryGranted);
+  const onBuyPack = useStableCallback(handleBuyPack);
+  const onWatchShopAd = useStableCallback(handleWatchShopAd);
+  const onStreakChange = useStableCallback((s: { current: number; best: number }) => {
+    setStreakState(s.current);
+    setBestStreak(s.best);
+  });
+  const onLossFinished = useStableCallback(() => setPhase('finished'));
+  const adsLeft = adsLeftToday(adRewards, localDayKey(new Date()));
+  // The page's content as one memoized element, so PushPageLayer (memo) sees
+  // the same `children` while nothing it shows has changed.
+  const shopScreen = useMemo(
+    () => (
+      <ShopScreen
+        onBack={shopPage.close}
+        visible={shopPage.onTop}
+        coins={coins}
+        inventory={inventory}
+        adsLeft={adsLeft}
+        onBuyPack={onBuyPack}
+        onWatchAd={onWatchShopAd}
+      />
+    ),
+    [shopPage.close, shopPage.onTop, coins, inventory, adsLeft, onBuyPack, onWatchShopAd],
+  );
 
   // Wait for the fonts so text never flashes in the system font (if loading
   // fails, render anyway with system fonts), and for the word bag.
@@ -926,8 +992,8 @@ function AppInner() {
         style={[styles.container, { backgroundColor: color('background') }]}
         edges={['top', 'bottom', 'left', 'right']}
       >
-        <Header ref={headerCoinRef} score={points} coins={coins} onOpenRules={handleOpenRules} onOpenShop={shopPage.open} />
-        <View style={styles.boardArea} onLayout={handleBoardAreaLayout} ref={boardAreaMeasureRef}>
+        <Header ref={headerCoinRef} score={points} coins={coins} onOpenRules={onOpenRules} onOpenShop={shopPage.open} />
+        <View style={styles.boardArea} onLayout={onBoardAreaLayout} ref={boardAreaMeasureRef}>
           {tileSize !== null && (
             <Board
               key={boardKey}
@@ -948,24 +1014,24 @@ function AppInner() {
         <View style={styles.keyboardArea} ref={keyboardAreaRef}>
           <Keyboard
             keyStates={keyStates}
-            onKeyPress={handleKeyPress}
-            onBackspace={handleBackspace}
-            dartsHitTokens={reduceMotion ? [] : dartsRevealedAbsent}
+            onKeyPress={onKeyPress}
+            onBackspace={onBackspace}
+            dartsHitTokens={reduceMotion ? NO_TOKENS : dartsRevealedAbsent}
           />
         </View>
         <View style={styles.bottomArea}>
           <BottomControls
             validity={guessValidity(enteredTokens)}
-            onSubmit={handleEnter}
-            onClearInvalid={handleClearInvalidGuess}
+            onSubmit={onSubmit}
+            onClearInvalid={onClearInvalid}
             hintDisabled={hintDisabled}
             hintCount={inventory.hint}
             dartsCount={inventory.darts}
             hintDimmed={hintDisabled || hintExhausted || hintNoRoom || !canPayHint}
-            onHint={handleHint}
+            onHint={onHint}
             dartsDisabled={dartsDisabled}
             dartsDimmed={dartsDisabled || dartsExhausted || !canPayDarts}
-            onDarts={handleDarts}
+            onDarts={onDarts}
             dartsVolleyId={dartsVolley.id}
             dartsShotCount={dartsVolley.targets.length}
             dartsButtonRef={dartsButtonRef}
@@ -974,7 +1040,7 @@ function AppInner() {
         </View>
         {/* Follows the in-app theme: 'auto' would follow the system scheme,
             which app.json pins to light. */}
-        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <ThemedStatusBar />
       </AnimatedSafeAreaView>
       </Animated.View>
       <WinFlow
@@ -986,21 +1052,18 @@ function AppInner() {
         headerCoinRef={headerCoinRef}
         coins={coins}
         onCoinsChange={setCoinsState}
-        onNextWord={handleNewGame}
+        onNextWord={onNewGame}
         afterRetry={retriesUsed > 0}
         points={points}
         onPointsChange={setPointsState}
         streak={streak}
         bestStreak={bestStreak}
-        onStreakChange={(s) => {
-          setStreakState(s.current);
-          setBestStreak(s.best);
-        }}
+        onStreakChange={onStreakChange}
       />
       <LossFlow
         active={phase === 'lost-awaiting-decision' || phase === 'finished'}
         resume={resumed?.loss ?? null}
-        onFinished={() => setPhase('finished')}
+        onFinished={onLossFinished}
         roundId={roundId}
         finalGuesses={submittedGuesses}
         secretWordTokens={secretWord}
@@ -1011,14 +1074,11 @@ function AppInner() {
         onPointsChange={setPointsState}
         streak={streak}
         bestStreak={bestStreak}
-        onStreakChange={(s) => {
-          setStreakState(s.current);
-          setBestStreak(s.best);
-        }}
-        onRetry={handleLossRetry}
-        onRetryGranted={handleRetryGranted}
+        onStreakChange={onStreakChange}
+        onRetry={onLossRetry}
+        onRetryGranted={onRetryGranted}
         initialRetriesUsed={retriesUsed}
-        onNewGame={handleNewGame}
+        onNewGame={onNewGame}
       />
       {/* Fixed, full-screen overlay above everything (App.tsx measures real
           on-screen positions at fire time — see handleDarts) — sits outside
@@ -1029,15 +1089,7 @@ function AppInner() {
       <HintFlightOverlay flight={hintFlight} />
       {/* Above everything, end-of-round modals included. */}
       <PushPageLayer page={shopPage}>
-        <ShopScreen
-          onBack={shopPage.close}
-          visible={shopPage.onTop}
-          coins={coins}
-          inventory={inventory}
-          adsLeft={adsLeftToday(adRewards, localDayKey(new Date()))}
-          onBuyPack={handleBuyPack}
-          onWatchAd={handleWatchShopAd}
-        />
+        {shopScreen}
       </PushPageLayer>
       <RulesModal open={rulesOpen} onClose={handleCloseRules} />
     </SafeAreaProvider>

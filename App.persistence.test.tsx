@@ -19,6 +19,7 @@ import Tile from './components/Tile';
 import { WIN_FLOW_CONFIG } from './constants/winFlow';
 import { letterLabel } from './lib/letterDisplay';
 import { tokenizeArmenianWord } from './lib/tokenizeArmenian';
+import { unmemo } from './test-utils/unmemo';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -154,10 +155,10 @@ function crashAfterWrites(at: number | ((keys: string[]) => boolean), { before =
 }
 
 const keyState = (token: string) =>
-  root.root.findAll((n: any) => n.type === KeyboardKey && n.props.label === letterLabel(token))[0].props.state;
+  root.root.findAll((n: any) => n.type === unmemo(KeyboardKey) && n.props.label === letterLabel(token))[0].props.state;
 // What a board row actually shows in each cell: its typed letter, or else
 // its ghost (rendered as that letter's label).
-const rowTiles = (row: number) => root.root.findAllByType(Tile).slice(row * 5, row * 5 + 5);
+const rowTiles = (row: number) => root.root.findAllByType(unmemo(Tile)).slice(row * 5, row * 5 + 5);
 const rowDisplay = (row: number) =>
   rowTiles(row).map((t: any) => {
     const shown = t.findAllByType(Text)[0]?.props.children; // an empty tile renders no text
@@ -421,9 +422,9 @@ describe('paid power-ups survive a relaunch', () => {
       root.root.findAll((n: any) => n.props.label === label && n.props.onPress)[0].props.onPress();
     });
   };
-  const ghosts = () => root.root.findByType(Board).props.ghostHints;
+  const ghosts = () => root.root.findByType(unmemo(Board)).props.ghostHints;
   const grayKeys = () =>
-    root.root.findAllByType(KeyboardKey).filter((k: any) => !k.props.icon && k.props.state === 'absent').length;
+    root.root.findAllByType(unmemo(KeyboardKey)).filter((k: any) => !k.props.icon && k.props.state === 'absent').length;
   const relaunch = async () => {
     await act(async () => root.unmount());
     await renderApp();

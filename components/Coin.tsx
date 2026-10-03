@@ -1,7 +1,7 @@
-import { useId } from 'react';
+import { memo, useId } from 'react';
 import { Platform, View } from 'react-native';
 import Svg, { Circle, ClipPath, Defs, G, LinearGradient, Path, RadialGradient, Stop } from 'react-native-svg';
-import { useTheme } from '../lib/ThemeContext';
+import { useThemeSnapshot } from '../lib/ThemeContext';
 
 type Props = {
   size?: number;
@@ -16,10 +16,11 @@ type Props = {
 // private id prefix, which is the RN-native way to get the same guarantee
 // the spec's "don't inline it" was after on the web.
 export default function Coin({ size = 24 }: Props) {
-  const { theme } = useTheme();
+  // The shadow color is the only themed part, so only this thin outer view
+  // reads the snapshot; the SVG art (CoinArt) is memoized and never re-renders
+  // on a theme toggle.
+  const { theme } = useThemeSnapshot();
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '_');
-  const id = (name: string) => `${uid}-${name}`;
-  const ref = (name: string) => `url(#${id(name)})`;
 
   return (
     <View
@@ -38,7 +39,18 @@ export default function Coin({ size = 24 }: Props) {
         },
       ]}
     >
-      <Svg width={size} height={size} viewBox="0 0 64 64">
+      <CoinArt size={size} uid={uid} />
+    </View>
+  );
+}
+
+// The coin's SVG — fixed game-art colors, the same in both themes. `uid`
+// prefixes its gradient/clip ids (see above).
+const CoinArt = memo(function CoinArt({ size, uid }: { size: number; uid: string }) {
+  const id = (name: string) => `${uid}-${name}`;
+  const ref = (name: string) => `url(#${id(name)})`;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 64 64">
         <Defs>
           <RadialGradient id={id('face')} cx="0.34" cy="0.28" r="0.85">
             <Stop offset="0" stopColor="#FFF6C4" />
@@ -109,7 +121,6 @@ export default function Coin({ size = 24 }: Props) {
           <Path d="M2 30L34 -2h9L11 30z" fill="#FFFFFF" opacity={0.22} />
         </G>
         <Path d="M49 11l1.3 3.6 3.6 1.3-3.6 1.3L49 20.8l-1.3-3.6-3.6-1.3 3.6-1.3z" fill="#FFFFFF" opacity={0.95} />
-      </Svg>
-    </View>
+    </Svg>
   );
-}
+});

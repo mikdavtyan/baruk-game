@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Animated, Dimensions, StyleSheet, View } from 'react-native';
 import Coin from './Coin';
 import { CONFETTI_DURATION_MS, CONFETTI_PIECE_COUNT } from '../constants/winFlow';
-import { useTheme } from '../lib/ThemeContext';
+import { useThemeSnapshot } from '../lib/ThemeContext';
 
 // Simple closed-form projectile-with-linear-drag physics, sampled at a
 // handful of points and fed through Animated.interpolate — the same
@@ -50,7 +50,7 @@ type Props = {
 };
 
 export default function WinConfetti({ originX, originY, onDone }: Props) {
-  const { theme } = useTheme();
+  const { theme } = useThemeSnapshot();
   const [progress] = useState(() => new Animated.Value(0));
 
   const [pieces] = useState<Piece[]>(() => {

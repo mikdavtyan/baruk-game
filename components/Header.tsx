@@ -1,8 +1,7 @@
-import { forwardRef } from 'react';
+import { forwardRef, memo } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
-import IconButton from './IconButton';
-import ThemeToggleIcon from './ThemeToggleIcon';
+import { ThemedIconButton, ThemeToggleButton } from './ThemedSnapshot';
 import { FONTS } from '../constants/theme';
 import { useTheme } from '../lib/ThemeContext';
 import { useCountUp } from '../lib/useCountUp';
@@ -18,13 +17,13 @@ type Props = {
 // WinFlow/LossFlow measure it (measureInWindow) to know exactly where flying
 // coins should land, and to place their own "stays visible above the overlay"
 // duplicate at the same spot. Tapping the pill opens the shop.
-const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRules, onOpenShop }, coinPillRef) {
-  // `theme.headerIconColor` (a plain, instant value) is deliberately kept
-  // for the small flat icons below — SymbolView's tintColor is a native
-  // prop, not a style, so it can't be smoothly cross-faded the way an
-  // Animated.Text/View's color/backgroundColor can. Everything else here
-  // uses `color()` so it morphs in place with the rest of the app.
-  const { theme, isDark, color, textColor, toggleTheme } = useTheme();
+// Memoized (with stable props from App), so a keystroke never re-renders it.
+const Header = memo(forwardRef<View, Props>(function Header({ score, coins, onOpenRules, onOpenShop }, coinPillRef) {
+  // The flat icons' tint (a native prop, not a style) can't fade, so they read
+  // the snapshot inside their own tiny components (ThemedSnapshot.tsx) — a
+  // theme toggle re-renders those, never this header. Everything else here
+  // uses color()/textColor(), which fade in place.
+  const { color, textColor } = useTheme();
   const displayedCoins = useCountUp(coins);
 
   // Left and right side groups share the center's flex weight, so the score
@@ -33,15 +32,13 @@ const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRul
   return (
     <View style={styles.header}>
       <View style={styles.sideGroupLeft}>
-        <IconButton
+        {/* Non-functional for now — no navigation logic yet. */}
+        <ThemedIconButton
           icon={{ ios: 'chevron.left', android: 'arrow_back_ios_new', web: 'arrow_back_ios_new' }}
           label="Back"
-          color={theme.headerIconColor}
-          // Non-functional for now — no navigation logic yet.
+          token="headerIconColor"
         />
-        <IconButton label="Toggle dark mode" color={theme.headerIconColor} onPress={toggleTheme}>
-          <ThemeToggleIcon isDark={isDark} color={theme.headerIconColor} />
-        </IconButton>
+        <ThemeToggleButton />
       </View>
       <View style={styles.scoreBlock}>
         <Animated.Text
@@ -54,10 +51,10 @@ const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRul
         <Animated.Text style={[styles.scoreValue, { color: textColor('headerValueColor') }]}>{score}</Animated.Text>
       </View>
       <View style={styles.sideGroupRight}>
-        <IconButton
+        <ThemedIconButton
           icon={{ ios: 'questionmark.circle', android: 'help_outline', web: 'help_outline' }}
           label="Rules"
-          color={theme.headerIconColor}
+          token="headerIconColor"
           onPress={onOpenRules}
         />
         <Pressable onPress={onOpenShop} accessibilityRole="button" accessibilityLabel="Խանութ" hitSlop={6}>
@@ -78,7 +75,7 @@ const Header = forwardRef<View, Props>(function Header({ score, coins, onOpenRul
       </View>
     </View>
   );
-});
+}));
 
 export default Header;
 

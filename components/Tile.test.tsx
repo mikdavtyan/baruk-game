@@ -9,6 +9,7 @@ import { letterLabel } from '../lib/letterDisplay';
 import { ThemeProvider } from '../lib/ThemeContext';
 
 const TestRenderer: any = require('react-test-renderer');
+const normalizeColor: (c: unknown) => number | null = require('react-native/Libraries/StyleSheet/normalizeColor').default;
 const { act } = TestRenderer;
 
 let root: any;
@@ -52,10 +53,11 @@ function layers() {
       const o = StyleSheet.flatten(n.props?.style)?.opacity;
       if (typeof o === 'number') opacity *= o;
     }
-    return { label: t.props.children, color: StyleSheet.flatten(t.props.style).color, opacity };
+    // Colors compared normalized: themed text colors render as animated rgba() strings.
+    return { label: t.props.children, color: normalizeColor(StyleSheet.flatten(t.props.style).color), opacity };
   });
 }
-const GHOST = { label: letterLabel('ձ'), color: lightTheme.correct, opacity: 0.4 };
+const GHOST = { label: letterLabel('ձ'), color: normalizeColor(lightTheme.correct), opacity: 0.4 };
 
 it('shows the ghost in the same pale static style through repeated typing and deleting', () => {
   render();
@@ -65,7 +67,7 @@ it('shows the ghost in the same pale static style through repeated typing and de
     const typed = layers();
     expect(typed).toHaveLength(1);
     expect(typed[0].label).toBe(letterLabel('ձ'));
-    expect(typed[0].color).not.toBe(lightTheme.correct); // ink, not green, before the reveal
+    expect(typed[0].color).not.toBe(normalizeColor(lightTheme.correct)); // ink, not green, before the reveal
     update({ letter: '', state: 'empty' });
     expect(layers()).toEqual([GHOST]); // backspace restores it identically
   }

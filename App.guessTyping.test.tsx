@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import App from './App';
 import Tile from './components/Tile';
 import { letterLabel } from './lib/letterDisplay';
+import { unmemo } from './test-utils/unmemo';
 
 // react-test-renderer has no bundled type declarations in this project;
 // `require`'d as `any` here rather than adding a new type-only dependency.
@@ -119,7 +120,7 @@ function pressKeyNoSettle(root: any, token: string) {
 // rows first, but nothing is submitted yet in these tests).
 const firstRowLetters = (root: any) =>
   root.root
-    .findAllByType(Tile)
+    .findAllByType(unmemo(Tile))
     .slice(0, 5)
     .map((t: any) => t.props.letter);
 

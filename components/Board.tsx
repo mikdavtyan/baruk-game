@@ -1,7 +1,11 @@
-import { RefObject } from 'react';
+import { memo, RefObject } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Row, { GhostHint, HintLanding, RowData } from './Row';
 import { MAX_GUESSES } from '../constants/theme';
+
+// Shared empty arrays: a fresh `[]` per render would defeat Row's memo.
+const NO_GHOSTS: GhostHint[] = [];
+const NO_CELLS: never[] = [];
 
 type Props = {
   rows: RowData[]; // should have length MAX_GUESSES
@@ -16,7 +20,7 @@ type Props = {
   hintLanding?: HintLanding | null; // the Hint landing on the active row, if one is playing
 };
 
-export default function Board({
+function Board({
   rows,
   celebrateRowIndex = null,
   shakeRowIndex = null,
@@ -24,7 +28,7 @@ export default function Board({
   tileSize,
   activeRowIndex = null,
   activeCellIndex = null,
-  ghostHints = [],
+  ghostHints = NO_GHOSTS,
   activeCellRefs,
   hintLanding = null,
 }: Props) {
@@ -36,14 +40,14 @@ export default function Board({
         return (
           <Row
             key={i}
-            letters={row?.letters ?? []}
-            states={row?.states ?? []}
+            letters={row?.letters ?? NO_CELLS}
+            states={row?.states ?? NO_CELLS}
             celebrate={i === celebrateRowIndex}
             shake={i === shakeRowIndex}
             lossShake={i === lossShakeRowIndex}
             tileSize={tileSize}
             activeIndex={isActiveRow ? activeCellIndex : null}
-            ghostHints={isActiveRow ? ghostHints : []}
+            ghostHints={isActiveRow ? ghostHints : NO_GHOSTS}
             cellRefs={isActiveRow ? activeCellRefs : undefined}
             hintLanding={isActiveRow ? hintLanding : null}
           />
@@ -58,3 +62,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(Board);

@@ -7,7 +7,7 @@ import {
   ARROW_STUCK_FADE_MS,
   ICON_RELOAD_MS,
 } from '../constants/theme';
-import { useTheme } from '../lib/ThemeContext';
+import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
 
 // Provided art (see chat) — a flat raster per theme, not a multi-part SVG,
 // so unlike the original spec's separately-animatable nocked-arrow glyph,
@@ -37,7 +37,8 @@ function totalVolleyMs(shotCount: number) {
 // fades-out/slides-back-in detail — this plays across the whole icon
 // instead of isolating just the small arrow inside it.
 export default function BowIcon({ size = 24, volleyId, shotCount }: Props) {
-  const { isDark, reduceMotion } = useTheme();
+  const { reduceMotion } = useTheme();
+  const { isDark } = useThemeSnapshot();
   const [recoil] = useState(() => new Animated.Value(0)); // 0 = rest, 1 = fully recoiled
   const [reload] = useState(() => new Animated.Value(1)); // dips to 0 then back to 1
   const isFirstRun = useRef(true);

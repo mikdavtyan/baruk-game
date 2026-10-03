@@ -5,7 +5,7 @@ import BowIcon from './BowIcon';
 import Tile from './Tile';
 import { FONTS, KEY_EDGE_HEIGHT, LetterState, RULES_TILE_REVEAL_STAGGER_MS, TILE_FLIP_DURATION_MS } from '../constants/theme';
 import { letterLabel } from '../lib/letterDisplay';
-import { useTheme } from '../lib/ThemeContext';
+import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
 
 // The rules themselves — the body of the "How to play" popup (RulesModal.tsx
 // draws the panel, title and close button around it).
@@ -189,7 +189,8 @@ function RulesText({
   style?: StyleProp<TextStyle>;
   children: TextPart[];
 }) {
-  const { theme, textColor } = useTheme();
+  const { textColor } = useTheme();
+  const { theme } = useThemeSnapshot();
   return (
     <Animated.Text style={[styles.bodyText, { color: textColor('popupTextMuted') }, style]}>
       {children.map((part, i) =>
@@ -226,7 +227,8 @@ function RulesText({
 }
 
 export default function RulesCard({ revealTrigger, visible }: Props) {
-  const { theme, color, textColor, reduceMotion } = useTheme();
+  const { color, textColor, reduceMotion } = useTheme();
+  const { theme } = useThemeSnapshot();
   const [revealedCount, setRevealedCount] = useState(reduceMotion ? EXAMPLES.length : 0);
 
   // Snaps straight back to neutral — no animation to disable first, since

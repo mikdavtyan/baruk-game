@@ -1,6 +1,6 @@
-import { useLayoutEffect, useState } from 'react';
+import { memo, useLayoutEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
-import { SymbolView, SymbolViewProps } from 'expo-symbols';
+import { SymbolViewProps } from 'expo-symbols';
 import Button3D from './Button3D';
 import {
   FONT_LINE_HEIGHT_EM,
@@ -13,6 +13,7 @@ import {
 } from '../constants/theme';
 import { triggerKeyHaptic } from '../lib/haptics';
 import { useTheme } from '../lib/ThemeContext';
+import { ThemedSymbol } from './ThemedSnapshot';
 
 type Props = {
   label: string;
@@ -78,7 +79,7 @@ function restingEdgeToken(s: LetterState): keyof ThemeTokens {
 const isResult = (s: LetterState): s is 'correct' | 'present' | 'absent' =>
   s === 'correct' || s === 'present' || s === 'absent';
 
-export default function KeyboardKey({
+function KeyboardKey({
   label,
   state = 'empty',
   width,
@@ -88,7 +89,9 @@ export default function KeyboardKey({
   onPress,
   slowFade = false,
 }: Props) {
-  const { theme, color, textColor: themedText } = useTheme();
+  const { color, textColor: themedText, currentTheme } = useTheme();
+  // Read without subscribing: only a key's own state-change fade uses it.
+  const theme = currentTheme();
   // 0 = showing fromState's colors, 1 = showing state's colors.
   const [progress] = useState(() => new Animated.Value(1));
   // The state the key is fading from. Key states only ever strengthen (see
@@ -132,7 +135,7 @@ export default function KeyboardKey({
       toValue: 1,
       duration: isDartsHit ? KEY_IMPACT_COLOR_MS : KEY_COLOR_FADE_MS,
       easing: Easing.out(Easing.quad),
-      useNativeDriver: false, // the label's color rides this too, and Text colors stay on the JS side
+      useNativeDriver: false, // the label's step switch rides this too; a brief, per-key fade, never per keystroke
     });
     fade.start(({ finished }) => finished && setIsStateFading(false));
 
@@ -201,7 +204,7 @@ export default function KeyboardKey({
         {icon ? (
           // tintColor is a native prop, not a style, so it takes the
           // snapshot `theme` rather than `color()`.
-          <SymbolView name={icon} size={22} tintColor={theme.keyText} />
+          <ThemedSymbol name={icon} size={22} token="keyText" />
         ) : (
           <Animated.Text
             style={[
@@ -232,3 +235,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.tile,
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(KeyboardKey);

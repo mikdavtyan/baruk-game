@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import App from './App';
 import ShopScreen from './components/ShopScreen';
 import Toast from './components/Toast';
+import { unmemo } from './test-utils/unmemo';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -117,7 +118,7 @@ const relaunch = async () => {
   await act(async () => root.unmount());
   await renderApp();
 };
-const shop = () => root.root.findByType(ShopScreen);
+const shop = () => root.root.findByType(unmemo(ShopScreen));
 // The text a host element (by testID) inside the shop page shows.
 const textOf = (testID: string) => {
   const node = shop().findAll((n: any) => typeof n.type === 'string' && n.props.testID === testID)[0];

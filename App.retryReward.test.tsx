@@ -14,6 +14,7 @@ import Tile from './components/Tile';
 import { WIN_FLOW_CONFIG } from './constants/winFlow';
 import { letterLabel } from './lib/letterDisplay';
 import { tokenizeArmenianWord } from './lib/tokenizeArmenian';
+import { unmemo } from './test-utils/unmemo';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -109,7 +110,7 @@ const stored = async (key: string) => JSON.parse((await AsyncStorage.getItem(key
 
 
 const keyState = (token: string) =>
-  root.root.findAll((n: any) => n.type === KeyboardKey && n.props.label === letterLabel(token))[0].props.state;
+  root.root.findAll((n: any) => n.type === unmemo(KeyboardKey) && n.props.label === letterLabel(token))[0].props.state;
 const relaunch = async () => {
   await act(async () => root.unmount());
   await renderApp();
@@ -207,7 +208,7 @@ it('letters carried over from the lost board look different from Hint ghosts', a
   });
   await advance(100);
 
-  const tiles = root.root.findAllByType(Tile).slice(0, 5);
+  const tiles = root.root.findAllByType(unmemo(Tile)).slice(0, 5);
   const kinds = tiles.map((t: any) => (t.props.ghostLetter ? t.props.ghostKind : null));
   expect(kinds.filter((k: any) => k === 'carried')).toHaveLength(2);
   expect(kinds[2]).toBe('carried');

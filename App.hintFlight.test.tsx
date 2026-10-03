@@ -16,6 +16,7 @@ import Tile from './components/Tile';
 import { HINT_FLIGHT_MS, HINT_REDUCED_FADE_MS, HINT_SPARKS_MS } from './constants/theme';
 import { letterLabel } from './lib/letterDisplay';
 import { tokenizeArmenianWord } from './lib/tokenizeArmenian';
+import { unmemo } from './test-utils/unmemo';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -101,7 +102,7 @@ const relaunch = async () => {
   await act(async () => root.unmount());
   await renderApp();
 };
-const overlayFlight = () => root.root.findByType(HintFlightOverlay).props.flight;
+const overlayFlight = () => root.root.findByType(unmemo(HintFlightOverlay)).props.flight;
 const tapHint = async () => {
   await act(async () => {
     root.root.findAll((n: any) => n.props.label === 'Hint' && n.props.onPress)[0].props.onPress();
@@ -109,9 +110,9 @@ const tapHint = async () => {
 };
 // What each cell of the active row shows: a typed letter, `ghost:x`, or ''.
 const activeRow = () => {
-  const row = root.root.findByType(Board).props.activeRowIndex;
+  const row = root.root.findByType(unmemo(Board)).props.activeRowIndex;
   return root.root
-    .findAllByType(Tile)
+    .findAllByType(unmemo(Tile))
     .slice(row * 5, row * 5 + 5)
     .map((t: any) => {
       if (t.props.letter) return t.props.letter;
@@ -120,7 +121,7 @@ const activeRow = () => {
     });
 };
 const savedHint = async () => (await stored('wordle:round')).hintGhosts[0] as { index: number; letter: string };
-const submittedCount = () => root.root.findByType(Board).props.activeRowIndex;
+const submittedCount = () => root.root.findByType(unmemo(Board)).props.activeRowIndex;
 
 beforeEach(async () => {
   await AsyncStorage.setItem('wordle:coins', JSON.stringify(1000));
@@ -254,7 +255,7 @@ it('a board reset mid-flight cancels the flight; nothing lands on the new board'
   await tapHint();
   await advance(50);
   await act(async () => {
-    root.root.findByType(LossFlow).props.onNewGame(() => {}); // a new game, as the loss result's button does
+    root.root.findByType(unmemo(LossFlow)).props.onNewGame(() => {}); // a new game, as the loss result's button does
   });
   expect(overlayFlight()).toBeNull();
   await advance(HINT_FLIGHT_MS + HINT_SPARKS_MS + 100);
@@ -272,6 +273,6 @@ it('after the landing, submitting the row never replays the entrance on the next
     root.root.findByType(SubmitButton).props.onPress();
   });
   await advance(1000);
-  const replaying = root.root.findAllByType(Tile).filter((t: any) => t.props.ghostEntranceId !== undefined);
+  const replaying = root.root.findAllByType(unmemo(Tile)).filter((t: any) => t.props.ghostEntranceId !== undefined);
   expect(replaying).toHaveLength(0);
 });

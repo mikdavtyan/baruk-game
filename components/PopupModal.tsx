@@ -11,7 +11,7 @@ import {
   POPUP_REDUCED_MOTION_MS,
   POPUP_START_SCALE,
 } from '../constants/theme';
-import { useTheme } from '../lib/ThemeContext';
+import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
 
 type Props = {
   open: boolean;
@@ -30,7 +30,8 @@ type Props = {
 // plain short fade. It stays mounted until its close animation ends, then
 // renders nothing.
 export default function PopupModal({ open, onClose, title, onOpened, children }: Props) {
-  const { theme, color, textColor, reduceMotion } = useTheme();
+  const { color, textColor, reduceMotion } = useTheme();
+  const { theme } = useThemeSnapshot();
   const [mounted, setMounted] = useState(open);
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {

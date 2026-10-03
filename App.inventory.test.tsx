@@ -15,6 +15,7 @@ import SubmitButton from './components/SubmitButton';
 import { WIN_FLOW_CONFIG } from './constants/winFlow';
 import { letterLabel } from './lib/letterDisplay';
 import { tokenizeArmenianWord } from './lib/tokenizeArmenian';
+import { unmemo } from './test-utils/unmemo';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -160,9 +161,9 @@ const tap = async (label: 'Hint' | 'Darts') => {
   });
   await advance(1000);
 };
-const ghosts = () => root.root.findByType(Board).props.ghostHints;
+const ghosts = () => root.root.findByType(unmemo(Board)).props.ghostHints;
 const grayKeys = () =>
-  root.root.findAllByType(KeyboardKey).filter((k: any) => !k.props.icon && k.props.state === 'absent').length;
+  root.root.findAllByType(unmemo(KeyboardKey)).filter((k: any) => !k.props.icon && k.props.state === 'absent').length;
 const shopShown = () => root.root.findAll((n: any) => typeof n.type === 'string' && n.props.children === 'ԽԱՆՈՒԹ').length > 0;
 const setInventory = (hint: number, darts: number) =>
   AsyncStorage.setItem('wordle:inventory', JSON.stringify({ hint, darts }));
@@ -246,7 +247,7 @@ describe('at 0', () => {
     await AsyncStorage.setItem('wordle:coins', JSON.stringify(WIN_FLOW_CONFIG.dartsPrice - 1));
     await renderApp();
     await submitWord('դպրոց');
-    const controls = root.root.findByType(BottomControls).props;
+    const controls = root.root.findByType(unmemo(BottomControls)).props;
     expect([controls.hintDisabled, controls.dartsDisabled]).toEqual([false, false]);
 
     await tap('Hint');
@@ -258,7 +259,7 @@ describe('at 0', () => {
   it('a locked game still disables both buttons', async () => {
     await renderApp();
     await loseRound(); // the round is over
-    const controls = root.root.findByType(BottomControls).props;
+    const controls = root.root.findByType(unmemo(BottomControls)).props;
     expect([controls.hintDisabled, controls.dartsDisabled]).toEqual([true, true]);
   });
 });

@@ -10,7 +10,7 @@ import Ribbon from './Ribbon';
 import ShineSweep from './ShineSweep';
 import { darken, FONTS } from '../constants/theme';
 import { BUTTON_ENTER_STAGGER_MS, BUTTON_ENTER_START_MS, COIN_PILE_BOUNCE_MS, REWARD_COUNT_UP_MS } from '../constants/winFlow';
-import { useTheme } from '../lib/ThemeContext';
+import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
 import { useCountUp } from '../lib/useCountUp';
 
 const RAY_COUNT = 16;
@@ -110,7 +110,8 @@ export default function RewardModal({
   onNext,
   disabled,
 }: Props) {
-  const { theme, color } = useTheme();
+  const { color } = useTheme();
+  const { theme } = useThemeSnapshot();
   const [rewardAmount, setRewardAmount] = useState(baseReward);
   const [adLoading, setAdLoading] = useState(false);
   const displayedReward = useCountUp(rewardAmount, REWARD_COUNT_UP_MS);

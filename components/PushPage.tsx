@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Animated, BackHandler, Easing, PanResponder, PanResponderInstance, Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import {
   PAGE_CLOSE_MS,
@@ -17,6 +17,7 @@ import {
   PAGE_SWIPE_MIN_VELOCITY,
 } from '../constants/theme';
 import { useTheme } from '../lib/ThemeContext';
+import { useStableCallback } from '../lib/useStableCallback';
 
 // A full page pushed in over the game like an iOS navigation push (the
 // shop), recovered from the old "How to play" page (before b41380f). One
@@ -53,7 +54,9 @@ export function usePushPage(): PushPageController {
   // the hardware back button and a swipe all check it).
   const animatingRef = useRef(false);
 
-  const open = () => {
+  // Stable identities (and a memoized controller below), so App's frequent
+  // re-renders never re-render the page or rebuild its animated nodes.
+  const open = useStableCallback(() => {
     if (animatingRef.current || onTop) return;
     animatingRef.current = true;
     setEverOpened(true);
@@ -72,9 +75,9 @@ export function usePushPage(): PushPageController {
         });
       });
     });
-  };
+  });
 
-  const close = () => {
+  const close = useStableCallback(() => {
     if (animatingRef.current || !onTop) return;
     animatingRef.current = true;
     Animated.timing(push, {
@@ -86,7 +89,7 @@ export function usePushPage(): PushPageController {
       animatingRef.current = false;
       if (finished) setOnTop(false);
     });
-  };
+  });
 
   // Android's hardware/gesture back button closes the page (with the same
   // animation) instead of exiting the app, whenever it's the one on top.
@@ -199,24 +202,32 @@ export function usePushPage(): PushPageController {
     }),
   );
 
-  return {
-    everOpened,
-    onTop,
-    open,
-    close,
-    panHandlers: swipeResponder.panHandlers,
-    gameTranslateX: reduceMotion
-      ? 0
-      : push.interpolate({ inputRange: [0, 1], outputRange: [0, -windowWidth * PAGE_GAME_PARALLAX_FRACTION] }),
-    dimOpacity: reduceMotion ? 0 : push.interpolate({ inputRange: [0, 1], outputRange: [0, 0.3] }),
-    pageTranslateX: reduceMotion ? 0 : push.interpolate({ inputRange: [0, 1], outputRange: [windowWidth, 0] }),
-    pageOpacity: reduceMotion ? push : 1,
-  };
+  const nodes = useMemo(
+    () => ({
+      gameTranslateX: reduceMotion
+        ? 0
+        : push.interpolate({ inputRange: [0, 1], outputRange: [0, -windowWidth * PAGE_GAME_PARALLAX_FRACTION] }),
+      dimOpacity: reduceMotion ? 0 : push.interpolate({ inputRange: [0, 1], outputRange: [0, 0.3] }),
+      pageTranslateX: reduceMotion ? 0 : push.interpolate({ inputRange: [0, 1], outputRange: [windowWidth, 0] }),
+      pageOpacity: reduceMotion ? push : 1,
+    }),
+    [reduceMotion, push, windowWidth],
+  );
+  return useMemo(
+    () => ({ everOpened, onTop, open, close, panHandlers: swipeResponder.panHandlers, ...nodes }),
+    [everOpened, onTop, open, close, swipeResponder, nodes],
+  );
 }
 
 // The dim over the game and the sliding page itself. Render it above the
 // game screen (whose transform comes from `page.gameTranslateX`).
-export function PushPageLayer({ page, children }: { page: PushPageController; children: ReactNode }) {
+export const PushPageLayer = memo(function PushPageLayer({
+  page,
+  children,
+}: {
+  page: PushPageController;
+  children: ReactNode;
+}) {
   return (
     <>
       <Animated.View style={[styles.dim, { opacity: page.dimOpacity }]} pointerEvents="none" />
@@ -237,7 +248,7 @@ export function PushPageLayer({ page, children }: { page: PushPageController; ch
       )}
     </>
   );
-}
+});
 
 const styles = StyleSheet.create({
   dim: {

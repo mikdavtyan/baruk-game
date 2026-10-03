@@ -9,6 +9,7 @@ import App from './App';
 import Coin from './components/Coin';
 import PopupModal from './components/PopupModal';
 import ShopScreen from './components/ShopScreen';
+import { unmemo } from './test-utils/unmemo';
 
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
@@ -83,7 +84,7 @@ const pressBack = async () => {
 
 // The page stays mounted once opened; "shown" means it's the page on top.
 const shopPageShown = () => {
-  const page = root.root.findAll((n: any) => n.type === ShopScreen);
+  const page = root.root.findAll((n: any) => n.type === unmemo(ShopScreen));
   return page.length > 0 && page[0].props.visible === true;
 };
 

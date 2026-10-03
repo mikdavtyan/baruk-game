@@ -17,7 +17,7 @@ import {
   RESULT_TILE_FLIP_STAGGER_MS,
 } from '../constants/winFlow';
 import { RankedEntry } from '../lib/leaderboard';
-import { useTheme } from '../lib/ThemeContext';
+import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
 import { useCountUp } from '../lib/useCountUp';
 
 type Props = {
@@ -161,7 +161,8 @@ const UNRANKED_TEXT = '#BDB6AA';
 const LOSS_RIBBON_HEIGHT = 40;
 
 function LeaderboardRow({ rank, name, points, isPlayer }: { rank: number; name: string; points: number; isPlayer: boolean }) {
-  const { theme, textColor } = useTheme();
+  const { textColor } = useTheme();
+  const { theme } = useThemeSnapshot();
   return (
     <Animated.View
       style={[
@@ -216,7 +217,8 @@ export default function ResultModal({
   disabled,
   reduceMotion = false,
 }: Props) {
-  const { theme, color, textColor } = useTheme();
+  const { color, textColor } = useTheme();
+  const { theme } = useThemeSnapshot();
   const insets = useSafeAreaInsets();
   const isLoss = variant === 'loss';
 

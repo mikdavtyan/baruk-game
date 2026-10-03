@@ -1,4 +1,4 @@
-import { RefObject, useEffect, useRef, useState } from 'react';
+import { memo, RefObject, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
@@ -79,7 +79,7 @@ type Props = {
   onFinished: () => void; // the loss result is decided — App's phase -> 'finished'
 };
 
-export default function LossFlow({
+function LossFlow({
   active,
   roundId,
   finalGuesses,
@@ -99,7 +99,7 @@ export default function LossFlow({
   resume,
   onFinished,
 }: Props) {
-  const { theme, reduceMotion } = useTheme();
+  const { reduceMotion, color, textColor } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   // A pending loss from before a relaunch (read by App before first render)
   // restores the exact modal that was showing — synchronously, so the live
@@ -553,7 +553,7 @@ export default function LossFlow({
                 coinPillStyles.pill,
                 styles.duplicatePill,
                 {
-                  backgroundColor: theme.pill,
+                  backgroundColor: color('pill'),
                   top: headerPillRect.y,
                   right: windowWidth - (headerPillRect.x + headerPillRect.width),
                   transform: [{ scale: pillScale }, { translateX: pillShakeX }],
@@ -562,8 +562,8 @@ export default function LossFlow({
             >
               <CoinPillContent
                 value={pillValue}
-                textColor={theme.pillText}
-                plusColor={theme.correct}
+                textColor={textColor('pillText')}
+                plusColor={color('correct')}
               />
             </Animated.View>
           )}
@@ -599,3 +599,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(LossFlow);

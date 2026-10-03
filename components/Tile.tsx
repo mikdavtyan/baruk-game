@@ -1,5 +1,5 @@
-import { RefObject, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { memo, RefObject, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   FONT_LINE_HEIGHT_EM,
@@ -75,7 +75,7 @@ function tileColors(state: LetterState, color: ColorFn, textColor: ColorFn) {
   return { bg: 'transparent', text: textColor('typedLetter') }; // empty / filled
 }
 
-export default function Tile({
+function Tile({
   letter,
   state,
   revealDelay = 0,
@@ -86,7 +86,7 @@ export default function Tile({
   ghostEntranceId,
   cellRef,
 }: Props) {
-  const { theme, color, textColor, reduceMotion } = useTheme();
+  const { color, textColor, reduceMotion } = useTheme();
   const [rotation] = useState(() => new Animated.Value(0)); // 0 = flat, 1 = edge-on
   // A Hint landing here (see ghostEntranceId): the tile's breath (0 -> 1 -> 0)
   // and the hint ghost's entrance (0 = small and clear, 1 = shown).
@@ -245,7 +245,7 @@ export default function Tile({
     // Split into nested layers on purpose: RN's Animated can't mix a
     // native-driven animation (this outer view's flip rotateX; the letter's
     // pop scale below) with a JS-driven one (the letter's themed color, via
-    // `textColor()`) on the *same* node — doing so throws "Style property ...
+    // `textColor()`, when TEXT_COLOR_NATIVE is false) on the *same* node — doing so throws "Style property ...
     // is not supported by native animated module" and breaks the native-driven
     // one. So each layer here carries only one kind. (The fill/border layer's
     // themed `color()`s are native-driven, like the flip.)
@@ -298,9 +298,11 @@ export default function Tile({
           pointerEvents="none"
           style={[StyleSheet.absoluteFill, styles.center, { opacity: ghostOpacity, transform: [{ scale: ghostScale }] }]}
         >
-          <Text style={[styles.letter, { fontSize, lineHeight: fontSize * FONT_LINE_HEIGHT_EM, color: theme.correct }]}>
+          <Animated.Text
+            style={[styles.letter, { fontSize, lineHeight: fontSize * FONT_LINE_HEIGHT_EM, color: textColor('correct') }]}
+          >
             {letterLabel(ghostLetter!)}
-          </Text>
+          </Animated.Text>
         </Animated.View>
       )}
       {showGhost && ghostKind === 'carried' && (
@@ -363,3 +365,6 @@ const styles = StyleSheet.create({
     bottom: '-30%',
   },
 });
+
+// Memoized: App re-renders on every keystroke (see the stable props there).
+export default memo(Tile);

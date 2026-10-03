@@ -3,30 +3,41 @@
 // gradients, PNGs) flips once at the midpoint, taps mid-fade are ignored, and
 // reduced motion switches instantly.
 import React, { useEffect } from 'react';
-import { AccessibilityInfo } from 'react-native';
+import { AccessibilityInfo, Animated } from 'react-native';
 import { darkTheme, lightTheme, THEME_FADE_MS, ThemeTokens } from '../constants/theme';
-import { ThemeProvider, useTheme } from './ThemeContext';
+import { ThemeProvider, useTheme, useThemeSnapshot } from './ThemeContext';
 
 const normalizeColor: (c: unknown) => number | null = require('react-native/Libraries/StyleSheet/normalizeColor').default;
 const TestRenderer: any = require('react-test-renderer');
 const { act } = TestRenderer;
 
 let root: any;
-let api: ReturnType<typeof useTheme>;
+let api: ReturnType<typeof useTheme> & ReturnType<typeof useThemeSnapshot>;
 let darkHistory: boolean[] = []; // isDark after every commit where it changed
 
 function Probe() {
-  const theme = useTheme();
+  const colors = useTheme();
+  const snapshot = useThemeSnapshot();
   useEffect(() => {
+    const theme = { ...colors, ...snapshot };
     api = theme;
     if (darkHistory[darkHistory.length - 1] !== theme.isDark) darkHistory.push(theme.isDark);
   });
   return null;
 }
 
+// The fade is native-driven, and native-driven animations finish at once in
+// Jest (no native module). Run the same timings on the JS side here, so they
+// follow fake timers and the midpoint / busy window can be observed.
+const realTiming = Animated.timing;
 beforeEach(() => {
   jest.useFakeTimers();
   darkHistory = [];
+  // RN's jest setup makes this a jest.fn, which restoreAllMocks doesn't reset.
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+  jest
+    .spyOn(Animated, 'timing')
+    .mockImplementation((value, config) => realTiming(value, { ...config, useNativeDriver: false }));
 });
 afterEach(() => {
   act(() => {
@@ -111,4 +122,55 @@ it('reduced motion switches instantly, on the first render after the tap', async
   expect(api.isDark).toBe(true);
   expect(api.theme.background).toBe(darkTheme.background);
   expectAllTokens(darkTheme);
+});
+
+it('runs every fade timing on the native driver (no JS work per frame)', async () => {
+  (Animated.timing as jest.Mock).mockClear();
+  await render();
+  await tap();
+  await advance(THEME_FADE_MS * 2);
+  const configs = (Animated.timing as jest.Mock).mock.calls.map(([, config]) => config);
+  expect(configs.length).toBeGreaterThan(0);
+  expect(configs.every((c) => c.useNativeDriver === true)).toBe(true);
+  expectAllTokens(darkTheme);
+});
+
+it('with TEXT_COLOR_NATIVE false, text colors switch once at the midpoint and end correct', async () => {
+  let Isolated = {} as typeof import('./ThemeContext');
+  const ReactNative = require('react-native');
+  jest.isolateModules(() => {
+    // Share React and RN with the test (one React instance; the spied timing).
+    jest.doMock('react', () => React);
+    jest.doMock('react-native', () => ReactNative);
+    jest.doMock('../constants/theme', () => ({ ...jest.requireActual('../constants/theme'), TEXT_COLOR_NATIVE: false }));
+    Isolated = require('./ThemeContext');
+  });
+  const IsolatedProvider = Isolated.ThemeProvider;
+  let iso = {} as ReturnType<typeof useTheme> & ReturnType<typeof useThemeSnapshot>;
+  function IsoProbe() {
+    const colors = Isolated.useTheme();
+    const snapshot = Isolated.useThemeSnapshot();
+    useEffect(() => {
+      iso = { ...colors, ...snapshot };
+    });
+    return null;
+  }
+  await act(async () => {
+    root = TestRenderer.create(
+      <IsolatedProvider>
+        <IsoProbe />
+      </IsolatedProvider>,
+    );
+  });
+  const text = (key: keyof ThemeTokens) => normalizeColor((iso.textColor(key) as any).__getValue());
+  await act(async () => iso.toggleTheme());
+  await advance(THEME_FADE_MS / 2 - 20);
+  expect(text('keyText')).toBe(normalizeColor(lightTheme.keyText)); // no per-frame text fade
+  await advance(40); // just past the midpoint: one switch
+  expect(text('keyText')).toBe(normalizeColor(darkTheme.keyText));
+  await advance(THEME_FADE_MS);
+  for (const key of Object.keys(darkTheme) as (keyof ThemeTokens)[]) {
+    expect([key, text(key)]).toEqual([key, normalizeColor(darkTheme[key])]);
+    expect([key, normalizeColor((iso.color(key) as any).__getValue())]).toEqual([key, normalizeColor(darkTheme[key])]);
+  }
 });
