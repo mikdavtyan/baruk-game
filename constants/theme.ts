@@ -392,3 +392,36 @@ export const POPUP_REDUCED_MOTION_MS = 150;
 // finishes opening.
 export const RULES_TILE_REVEAL_STAGGER_MS = 150;
 
+// The menu's background: letter tiles drifting slowly upward, each at its own
+// pace, size and slight rotation, looping (see MenuBackground.tsx). Very low
+// opacity on purpose — it must never compete with the cards or hurt text
+// legibility, in either theme. `x` is a fraction of the screen width, `phase`
+// where in its climb (0 = just below the screen, 1 = just above) a tile starts.
+export type MenuBackgroundTile = {
+  token: string;
+  x: number;
+  size: number;
+  periodMs: number; // one full climb; distinct per tile
+  phase: number;
+  rotateFrom: number; // degrees
+  rotateTo: number;
+  opacity: number;
+  kind: 'empty' | 'correct' | 'present';
+};
+export const MENU_BG_TILES: MenuBackgroundTile[] = [
+  { token: 'ա', x: 0.1, size: 30, periodMs: 26000, phase: 0.05, rotateFrom: -10, rotateTo: 4, opacity: 0.1, kind: 'correct' },
+  { token: 'ր', x: 0.28, size: 22, periodMs: 34000, phase: 0.62, rotateFrom: 8, rotateTo: -6, opacity: 0.08, kind: 'empty' },
+  { token: 'ու', x: 0.46, size: 36, periodMs: 23000, phase: 0.33, rotateFrom: -6, rotateTo: 9, opacity: 0.09, kind: 'present' },
+  { token: 'ն', x: 0.66, size: 26, periodMs: 30000, phase: 0.81, rotateFrom: 5, rotateTo: -8, opacity: 0.08, kind: 'empty' },
+  { token: 'գ', x: 0.86, size: 32, periodMs: 25000, phase: 0.14, rotateFrom: -4, rotateTo: 10, opacity: 0.1, kind: 'correct' },
+  { token: 'բ', x: 0.18, size: 24, periodMs: 31000, phase: 0.47, rotateFrom: 6, rotateTo: -4, opacity: 0.08, kind: 'present' },
+  { token: 'ե', x: 0.38, size: 20, periodMs: 36000, phase: 0.9, rotateFrom: -8, rotateTo: 3, opacity: 0.07, kind: 'empty' },
+  { token: 'կ', x: 0.57, size: 28, periodMs: 27000, phase: 0.71, rotateFrom: 9, rotateTo: -5, opacity: 0.09, kind: 'correct' },
+  { token: 'մ', x: 0.77, size: 22, periodMs: 33000, phase: 0.39, rotateFrom: -5, rotateTo: 7, opacity: 0.08, kind: 'empty' },
+  { token: 'տ', x: 0.94, size: 26, periodMs: 29000, phase: 0.56, rotateFrom: 7, rotateTo: -9, opacity: 0.08, kind: 'present' },
+  { token: 'ս', x: 0.04, size: 22, periodMs: 35000, phase: 0.26, rotateFrom: -7, rotateTo: 5, opacity: 0.07, kind: 'empty' },
+  { token: 'լ', x: 0.52, size: 24, periodMs: 32000, phase: 0.02, rotateFrom: 4, rotateTo: -7, opacity: 0.08, kind: 'correct' },
+];
+// The tiles' corner radius and border, as fractions of their size / px.
+export const MENU_BG_TILE_CORNER_RATIO = 0.24;
+export const MENU_BG_TILE_BORDER = 2;

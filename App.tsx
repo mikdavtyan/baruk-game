@@ -1062,6 +1062,7 @@ function AppInner() {
             onOpenShop={shopPage.open}
             onOpenPage={onOpenMenuPage}
             onOpenProfile={onOpenProfile}
+            backgroundPaused={gamePage.onTop || infoPage.onTop || shopPage.onTop}
           />
         </Animated.View>
       </Animated.View>

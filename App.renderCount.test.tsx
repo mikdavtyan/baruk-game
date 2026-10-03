@@ -97,6 +97,7 @@ const UNTOUCHED = [
   'ShopScreen',
   // The menu under the game page, and its pages.
   'MenuScreen',
+  'MenuBackground',
   'Avatar',
   'FortuneWheelIcon',
   'EmptyPage',

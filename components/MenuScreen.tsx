@@ -6,6 +6,7 @@ import Avatar from './Avatar';
 import Button3D from './Button3D';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
 import FortuneWheelIcon from './FortuneWheelIcon';
+import MenuBackground from './MenuBackground';
 import { ThemedSymbol } from './ThemedSnapshot';
 import Toast from './Toast';
 import { Profile } from '../constants/profile';
@@ -51,6 +52,7 @@ type Props = {
   onOpenShop: () => void;
   onOpenPage: (page: MenuPage) => void;
   onOpenProfile: () => void;
+  backgroundPaused: boolean; // a page covers the menu: its drifting tiles stop
 };
 
 // The home screen the app opens on. Top: the profile (avatar, name, points)
@@ -58,7 +60,17 @@ type Props = {
 // cards — ԴԱՍԱԿԱՆ (the Classic game page) and ՕՐՎԱ ԲԱՌ (coming soon). Bottom:
 // five icon-only buttons. Memoized with stable props from App, so a
 // keystroke in the game never re-renders it.
-function MenuScreen({ profile, points, coins, classicSubtitle, onOpenClassic, onOpenShop, onOpenPage, onOpenProfile }: Props) {
+function MenuScreen({
+  profile,
+  points,
+  coins,
+  classicSubtitle,
+  onOpenClassic,
+  onOpenShop,
+  onOpenPage,
+  onOpenProfile,
+  backgroundPaused,
+}: Props) {
   const { color, textColor } = useTheme();
   const { width: windowWidth } = useWindowDimensions();
   const cardWidth = Math.min(windowWidth * CARD_WIDTH_FRACTION, CARD_MAX_WIDTH);
@@ -87,11 +99,10 @@ function MenuScreen({ profile, points, coins, classicSubtitle, onOpenClassic, on
   const symbol = (name: SymbolViewProps['name']) => <ThemedSymbol name={name} size={BAR_ICON_SIZE} token="headerIconColor" />;
 
   return (
-    <AnimatedSafeAreaView
-      testID="menu"
-      style={[styles.screen, { backgroundColor: color('background') }]}
-      edges={['top', 'bottom', 'left', 'right']}
-    >
+    <Animated.View testID="menu" style={[styles.screen, { backgroundColor: color('background') }]}>
+    {/* Behind everything, across the whole screen (outside the safe area). */}
+    <MenuBackground paused={backgroundPaused} />
+    <AnimatedSafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.topBar}>
         <Pressable
           onPress={onOpenProfile}
@@ -172,6 +183,7 @@ function MenuScreen({ profile, points, coins, classicSubtitle, onOpenClassic, on
         {barButton(MENU_PAGE_TITLES.settings, symbol(ICONS.settings), () => onOpenPage('settings'))}
       </View>
     </AnimatedSafeAreaView>
+    </Animated.View>
   );
 }
 

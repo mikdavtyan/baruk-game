@@ -9,7 +9,7 @@ import App from './App';
 import Avatar from './components/Avatar';
 import PopupModal from './components/PopupModal';
 import { AVATARS } from './constants/profile';
-import { menu, pressLabel } from './test-utils/navigation';
+import { menu, pressable, pressLabel } from './test-utils/navigation';
 import { unmemo } from './test-utils/unmemo';
 
 const TestRenderer: any = require('react-test-renderer');
@@ -70,11 +70,16 @@ const typeName = async (text: string) => {
 };
 const openProfile = () => pressLabel(root, 'ՊՐՈՖԻԼ', menu(root));
 const closeProfile = () => pressLabel(root, 'Փակել', popup());
+// The name shown in the menu's profile button (not the avatar's initial, not
+// the points line).
 const menuName = () => {
-  const texts = menu(root)
+  const profileButton = pressable(menu(root), 'ՊՐՈՖԻԼ');
+  const initial = profileButton.findByType(unmemo(Avatar)).findAllByType(Text)[0];
+  return profileButton
     .findAllByType(Text)
-    .map((t: any) => [].concat(t.props.children).join(''));
-  return texts.find((t: string) => t.length > 1 && !t.endsWith('ՄԻԱՎՈՐ') && t !== 'ԴԱՍԱԿԱՆ');
+    .filter((t: any) => t !== initial)
+    .map((t: any) => [].concat(t.props.children).join(''))
+    .find((t: string) => !t.endsWith('ՄԻԱՎՈՐ'));
 };
 const menuAvatar = () => menu(root).findByType(unmemo(Avatar)).props;
 const stored = async () => JSON.parse((await AsyncStorage.getItem('wordle:profile')) as string);
