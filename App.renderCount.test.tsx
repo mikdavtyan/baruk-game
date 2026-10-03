@@ -100,6 +100,7 @@ const UNTOUCHED = [
   'Avatar',
   'FortuneWheelIcon',
   'EmptyPage',
+  'ProfileModal',
 ];
 
 it('one keystroke re-renders only the typed row (at most 2 tiles), and a theme toggle only the snapshot leaves', async () => {

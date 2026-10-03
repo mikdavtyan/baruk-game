@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LetterState } from '../constants/theme';
 import { WIN_FLOW_CONFIG } from '../constants/winFlow';
+import { Profile } from '../constants/profile';
+import { normalizeProfile } from './profile';
 import { tokenizeArmenianWord } from './tokenizeArmenian';
 
 // All the win-flow's own persisted state (coins, streak, the "pending win"
@@ -21,6 +23,7 @@ const KEYS = {
   round: 'wordle:round',
   rulesSeen: 'wordle:rulesSeen',
   inventory: 'wordle:inventory',
+  profile: 'wordle:profile',
   adRewards: 'wordle:adRewards',
 } as const;
 
@@ -182,6 +185,11 @@ export async function getRound(): Promise<SavedRound | null> {
 // moment it first does, so it never opens automatically again (the header's
 // rules button still opens it any time).
 export const getRulesSeen = () => getJSON<boolean>(KEYS.rulesSeen, false);
+
+// The local player profile (constants/profile.ts). Read back through
+// normalizeProfile, so a missing or malformed record is the default profile.
+export const getProfile = async (): Promise<Profile> => normalizeProfile(await getJSON<Partial<Profile> | null>(KEYS.profile, null));
+export const setProfile = (profile: Profile) => setJSON(KEYS.profile, profile);
 export const setRulesSeen = () => setJSON(KEYS.rulesSeen, true);
 
 export const getPendingWin = () => getJSON<PendingWin | null>(KEYS.pendingWin, null);

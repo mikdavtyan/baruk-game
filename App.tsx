@@ -19,6 +19,7 @@ import LossFlow from './components/LossFlow';
 import { GhostHint, HintLanding, RowData } from './components/Row';
 import EmptyPage from './components/EmptyPage';
 import MenuScreen, { MENU_PAGE_TITLES, MenuPage } from './components/MenuScreen';
+import ProfileModal from './components/ProfileModal';
 import RulesModal from './components/RulesModal';
 import { PushPageLayer, usePushPage } from './components/PushPage';
 import ShopScreen from './components/ShopScreen';
@@ -56,6 +57,7 @@ import {
   getPendingWin,
   getPoints,
   getRound,
+  getProfile,
   getRulesSeen,
   getStreak,
   Inventory,
@@ -64,11 +66,13 @@ import {
   SavedRound,
   saveAtomically,
   setRound,
+  setProfile,
   setRulesSeen,
   WordBag,
 } from './lib/gameStorage';
 import { GamePhase, phaseFromPending } from './lib/gamePhase';
-import { DEFAULT_PROFILE } from './constants/profile';
+import { DEFAULT_PROFILE, Profile } from './constants/profile';
+import { normalizeProfile } from './lib/profile';
 import { computeKeyStates } from './lib/keyboardStates';
 import { useStableCallback } from './lib/useStableCallback';
 import { triggerHintLandingHaptic } from './lib/haptics';
@@ -347,7 +351,16 @@ function AppInner() {
   const gamePage = usePushPage({ isCovered: () => rulesOpenRef.current || shopOnTopRef.current });
   const infoPage = usePushPage();
   const [infoPageKind, setInfoPageKind] = useState<MenuPage>('wheel');
-  const [profile] = useState(DEFAULT_PROFILE);
+  // The local profile (wordle:profile), edited in the ՊՐՈՖԻԼ popup the menu's
+  // profile opens; saved (normalized) when the popup closes.
+  const [profile, setProfileState] = useState<Profile>(DEFAULT_PROFILE);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const handleCloseProfile = (draft: Profile) => {
+    const next = normalizeProfile(draft);
+    setProfileState(next);
+    setProfile(next);
+    setProfileOpen(false);
+  };
   // The rules popup opens by itself the first time the player opens the
   // Classic page; the flag is saved as it opens, so closing the app with it
   // still open doesn't bring it back.
@@ -538,8 +551,10 @@ function AppInner() {
       getRulesSeen(),
       getInventory(),
       getAdRewards(),
+      getProfile(),
     ]).then(
-      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory, savedAdRewards]) => {
+      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory, savedAdRewards, savedProfile]) => {
+        setProfileState(savedProfile);
         setInventory(savedInventory);
         setAdRewards(savedAdRewards);
         setRulesSeenState(rulesSeen);
@@ -975,7 +990,8 @@ function AppInner() {
   const onOpenRules = useStableCallback(handleOpenRules);
   const onOpenClassic = useStableCallback(handleOpenClassic);
   const onOpenMenuPage = useStableCallback(handleOpenMenuPage);
-  const onOpenProfile = useStableCallback(() => {});
+  const onOpenProfile = useStableCallback(() => setProfileOpen(true));
+  const onCloseProfile = useStableCallback(handleCloseProfile);
   // The Classic card's subtitle: a result waiting (a pending reward, second
   // chance or loss result — the end-of-round phases mirror those records),
   // else guesses submitted in this attempt, else nothing in progress.
@@ -1033,8 +1049,8 @@ function AppInner() {
       <Animated.View
         style={[styles.container, { transform: [{ translateX: gamePage.gameTranslateX }] }]}
         pointerEvents={gamePage.onTop || infoPage.onTop || shopPage.onTop ? 'none' : 'auto'}
-        importantForAccessibility={gamePage.onTop || infoPage.onTop || shopPage.onTop || rulesOpen ? 'no-hide-descendants' : 'auto'}
-        accessibilityElementsHidden={gamePage.onTop || infoPage.onTop || shopPage.onTop || rulesOpen}
+        importantForAccessibility={gamePage.onTop || infoPage.onTop || shopPage.onTop || rulesOpen || profileOpen ? 'no-hide-descendants' : 'auto'}
+        accessibilityElementsHidden={gamePage.onTop || infoPage.onTop || shopPage.onTop || rulesOpen || profileOpen}
       >
         <Animated.View style={[styles.container, { transform: [{ translateX: infoPage.gameTranslateX }] }]}>
           <MenuScreen
@@ -1174,6 +1190,7 @@ function AppInner() {
         {shopScreen}
       </PushPageLayer>
       <RulesModal open={rulesOpen} onClose={handleCloseRules} />
+      <ProfileModal open={profileOpen} profile={profile} onClose={onCloseProfile} />
       {/* Follows the in-app theme: 'auto' would follow the system scheme,
           which app.json pins to light. */}
       <ThemedStatusBar />
