@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing } from 'react-native';
 import { darkTheme, lightTheme, TEXT_COLOR_NATIVE, THEME_FADE_MS, ThemeTokens } from '../constants/theme';
 
@@ -31,6 +31,9 @@ type ThemeColorsValue = {
   // The current snapshot WITHOUT subscribing to it — for render-time logic
   // that runs anyway for another reason (e.g. a key's own state-change fade).
   currentTheme: () => ThemeTokens;
+  // Sets the theme at once, without a fade and without reporting it to
+  // `onDarkChange` — for restoring the saved choice before the first render.
+  setDarkInstant: (dark: boolean) => void;
 };
 
 type ThemeSnapshotValue = {
@@ -53,7 +56,9 @@ function interpolations(progress: Animated.Value) {
 }
 
 // Defaults to light. Only the header's moon/sun button flips it.
-export function ThemeProvider({ children }: { children: ReactNode }) {
+// `onDarkChange` hears every theme change a player makes (the header's toggle,
+// Settings' switch), at the moment the snapshot flips — App saves it.
+export function ThemeProvider({ children, onDarkChange }: { children: ReactNode; onDarkChange?: (dark: boolean) => void }) {
   const [isDark, setIsDark] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [progress] = useState(() => new Animated.Value(0)); // 0 = light, 1 = dark — native-driven
@@ -77,9 +82,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const onDarkChangeRef = useRef(onDarkChange);
+  useLayoutEffect(() => {
+    onDarkChangeRef.current = onDarkChange;
+  });
   const flipSnapshot = (dark: boolean) => {
     snapshotRef.current = dark ? darkTheme : lightTheme;
     setIsDark(dark);
+    onDarkChangeRef.current?.(dark);
   };
 
   const toggleTheme = useCallback(() => {
@@ -111,10 +121,22 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const color = useCallback<ColorFn>((key) => viewNodes[key], [viewNodes]);
   const textColor = useCallback<ColorFn>((key) => textNodes[key], [textNodes]);
   const currentTheme = useCallback(() => snapshotRef.current, []);
+  const setDarkInstant = useCallback(
+    (dark: boolean) => {
+      if (busyRef.current) return;
+      const to = dark ? 1 : 0;
+      targetRef.current = to;
+      progress.setValue(to);
+      textProgress.setValue(to);
+      snapshotRef.current = dark ? darkTheme : lightTheme;
+      setIsDark(dark);
+    },
+    [progress, textProgress],
+  );
 
   const colors = useMemo<ThemeColorsValue>(
-    () => ({ toggleTheme, color, textColor, reduceMotion, currentTheme }),
-    [toggleTheme, color, textColor, reduceMotion, currentTheme],
+    () => ({ toggleTheme, color, textColor, reduceMotion, currentTheme, setDarkInstant }),
+    [toggleTheme, color, textColor, reduceMotion, currentTheme, setDarkInstant],
   );
   const snapshot = useMemo<ThemeSnapshotValue>(() => ({ theme: isDark ? darkTheme : lightTheme, isDark }), [isDark]);
   return (

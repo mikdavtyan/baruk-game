@@ -447,3 +447,7 @@ export const WHEEL_SPIN_MS = 900;
 export const WHEEL_OVERSHOOT_TURNS = 0.035;
 export const WHEEL_SETTLE_MS = 380;
 export const WHEEL_BUTTON_SIZE = 64;
+
+// The Settings tab's on/off switches: the knob slide and the track's fade
+// to green (native driver).
+export const SETTINGS_SWITCH_MS = 160;

@@ -19,6 +19,9 @@ _Avoid_: home page, lobby, main screen
 The player's local name and avatar, shown on the menu with their points. Kept on the device only (no account yet); the name defaults to ԽԱՂԱՑՈՂ.
 _Avoid_: account, user (there's no login)
 
+**Settings** (ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ):
+The Settings tab: the dark theme and haptics (both remembered), how to play, about, the profile, and resetting progress (coins, points, streak, items and the current game; the profile and settings stay). Saving progress and feedback are coming soon.
+
 **Classic** (ԴԱՍԱԿԱՆ):
 The game itself, as a page pushed over the menu. The only game mode; **Word of the day** (ՕՐՎԱ ԲԱՌ) is announced as coming soon and does nothing yet.
 

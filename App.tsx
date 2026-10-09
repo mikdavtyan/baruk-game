@@ -9,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import ArrowOverlay, { ArrowTarget } from './components/ArrowOverlay';
 import Board from './components/Board';
 import BottomControls from './components/BottomControls';
@@ -23,6 +22,8 @@ import MainTabs from './components/MainTabs';
 import MenuScreen from './components/MenuScreen';
 import { TabId } from './components/TabBar';
 import ProfileModal from './components/ProfileModal';
+import SettingsScreen from './components/SettingsScreen';
+import { AboutModal, ResetConfirmModal } from './components/SettingsPopups';
 import RulesModal from './components/RulesModal';
 import { PushPageLayer, usePushPage } from './components/PushPage';
 import ShopScreen from './components/ShopScreen';
@@ -60,6 +61,8 @@ import {
   getPendingWin,
   getPoints,
   getRound,
+  getDarkMode,
+  getHapticsOn,
   getProfile,
   getRulesSeen,
   getStreak,
@@ -69,6 +72,9 @@ import {
   SavedRound,
   saveAtomically,
   setRound,
+  resetProgress,
+  setDarkMode,
+  setHapticsOn,
   setProfile,
   setRulesSeen,
   WordBag,
@@ -78,7 +84,7 @@ import { DEFAULT_PROFILE, Profile } from './constants/profile';
 import { normalizeProfile } from './lib/profile';
 import { computeKeyStates } from './lib/keyboardStates';
 import { useStableCallback } from './lib/useStableCallback';
-import { triggerHintLandingHaptic } from './lib/haptics';
+import { setHapticsEnabled, triggerHintLandingHaptic, triggerWarningHaptic } from './lib/haptics';
 import { measureWindow } from './lib/measureWindow';
 import { ThemeProvider, useTheme } from './lib/ThemeContext';
 import { adsLeftToday, localDayKey, nextAdRewards as nextAdRewardsFor } from './lib/shop';
@@ -170,17 +176,22 @@ function correctPositionGhosts(guesses: SubmittedGuess[]): Ghost[] {
 }
 
 export default function App() {
+  // Settings' ԶՐՈՅԱՑՆԵԼ ԱՌԱՋԸՆԹԱՑԸ clears the saved progress, then remounts the
+  // whole game (a new key) so every bit of state reloads from storage. The
+  // theme lives above it, so it stays as it is.
+  const [resetKey, setResetKey] = useState(0);
+  const onProgressReset = useCallback(() => setResetKey((k) => k + 1), []);
   return (
-    <ThemeProvider>
-      <AppInner />
+    <ThemeProvider onDarkChange={setDarkMode}>
+      <AppInner key={resetKey} onProgressReset={onProgressReset} />
     </ThemeProvider>
   );
 }
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 
-function AppInner() {
-  const { color, reduceMotion } = useTheme();
+function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
+  const { color, reduceMotion, setDarkInstant } = useTheme();
   const [fontsLoaded, fontError] = useFonts({
     [FONT_FAMILY]: require('./assets/fonts/GHEAGrapalat-Bold.otf'),
   });
@@ -360,6 +371,21 @@ function AppInner() {
   // profile opens; saved (normalized) when the popup closes.
   const [profile, setProfileState] = useState<Profile>(DEFAULT_PROFILE);
   const [profileOpen, setProfileOpen] = useState(false);
+  // The Settings tab: the haptics switch (saved; lib/haptics.ts checks the
+  // flag), the about popup and the reset confirmation.
+  const [hapticsOn, setHapticsOnState] = useState(true);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const handleToggleHaptics = () => {
+    const next = !hapticsOn;
+    setHapticsOnState(next);
+    setHapticsEnabled(next);
+    setHapticsOn(next);
+  };
+  const handleConfirmReset = async () => {
+    await resetProgress();
+    onProgressReset();
+  };
   const handleCloseProfile = (draft: Profile) => {
     const next = normalizeProfile(draft);
     setProfileState(next);
@@ -386,7 +412,7 @@ function AppInner() {
   useLayoutEffect(() => {
     navRef.current = {
       activeTab,
-      covered: gamePage.onTop || wheelPage.onTop || shopPage.onTop || rulesOpen || profileOpen,
+      covered: gamePage.onTop || wheelPage.onTop || shopPage.onTop || rulesOpen || profileOpen || aboutOpen || resetOpen,
     };
   });
   useEffect(() => {
@@ -536,7 +562,7 @@ function AppInner() {
         setResultRowIndex(nextSubmitted.length - 1);
         setLossShakeRowIndex(nextSubmitted.length - 1);
         if (!reduceMotion) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+          triggerWarningHaptic();
         }
         setTimeout(() => setLossShakeRowIndex(null), LOSS_SHAKE_DURATION_MS);
       } else {
@@ -572,9 +598,16 @@ function AppInner() {
       getInventory(),
       getAdRewards(),
       getProfile(),
+      getDarkMode(),
+      getHapticsOn(),
     ]).then(
-      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory, savedAdRewards, savedProfile]) => {
+      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory, savedAdRewards, savedProfile, darkMode, haptics]) => {
         setProfileState(savedProfile);
+        // Settings, before the first render: the saved theme at once (no
+        // light flash), and the haptics switch.
+        setDarkInstant(darkMode);
+        setHapticsEnabled(haptics);
+        setHapticsOnState(haptics);
         setInventory(savedInventory);
         setAdRewards(savedAdRewards);
         setRulesSeenState(rulesSeen);
@@ -603,7 +636,7 @@ function AppInner() {
         setPhase(startPhase);
       },
     );
-  }, []);
+  }, [setDarkInstant]); // stable: the load runs once
 
   // The saved round, kept current: saved whenever any part of it changes, so a
   // relaunch puts the round back exactly where it was (see
@@ -1013,6 +1046,12 @@ function AppInner() {
   const onOpenShopTab = useStableCallback(() => setActiveTab('shop'));
   const onOpenProfile = useStableCallback(() => setProfileOpen(true));
   const onCloseProfile = useStableCallback(handleCloseProfile);
+  const onToggleHaptics = useStableCallback(handleToggleHaptics);
+  const onOpenAbout = useStableCallback(() => setAboutOpen(true));
+  const onCloseAbout = useStableCallback(() => setAboutOpen(false));
+  const onOpenReset = useStableCallback(() => setResetOpen(true));
+  const onCloseReset = useStableCallback(() => setResetOpen(false));
+  const onConfirmReset = useStableCallback(handleConfirmReset);
   // The Classic card's subtitle: a result waiting (a pending reward, second
   // chance or loss result — the end-of-round phases mirror those records),
   // else guesses submitted in this attempt, else nothing in progress.
@@ -1088,7 +1127,18 @@ function AppInner() {
       ),
       tasks: <EmptyPage title="ԱՌԱՋԱԴՐԱՆՔՆԵՐ" visible={activeTab === 'tasks'} />,
       leaders: <EmptyPage title="ԱՌԱՋԱՏԱՐՆԵՐ" visible={activeTab === 'leaders'} />,
-      settings: <EmptyPage title="ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ" visible={activeTab === 'settings'} />,
+      settings: (
+        <SettingsScreen
+          visible={activeTab === 'settings'}
+          profile={profile}
+          hapticsOn={hapticsOn}
+          onToggleHaptics={onToggleHaptics}
+          onOpenRules={onOpenRules}
+          onOpenAbout={onOpenAbout}
+          onOpenProfile={onOpenProfile}
+          onResetProgress={onOpenReset}
+        />
+      ),
     }),
     [
       profile,
@@ -1101,6 +1151,11 @@ function AppInner() {
       onOpenProfile,
       activeTab,
       homeHidden,
+      hapticsOn,
+      onToggleHaptics,
+      onOpenRules,
+      onOpenAbout,
+      onOpenReset,
       inventory,
       adsLeft,
       onBuyPack,
@@ -1255,6 +1310,8 @@ function AppInner() {
       </PushPageLayer>
       <RulesModal open={rulesOpen} onClose={handleCloseRules} />
       <ProfileModal open={profileOpen} profile={profile} onClose={onCloseProfile} />
+      <AboutModal open={aboutOpen} onClose={onCloseAbout} />
+      <ResetConfirmModal open={resetOpen} onCancel={onCloseReset} onConfirm={onConfirmReset} />
       {/* Follows the in-app theme: 'auto' would follow the system scheme,
           which app.json pins to light. */}
       <ThemedStatusBar />

@@ -25,6 +25,8 @@ const KEYS = {
   inventory: 'wordle:inventory',
   profile: 'wordle:profile',
   adRewards: 'wordle:adRewards',
+  darkMode: 'wordle:darkMode',
+  haptics: 'wordle:haptics',
 } as const;
 
 export type Streak = { current: number; best: number };
@@ -190,6 +192,34 @@ export const getRulesSeen = () => getJSON<boolean>(KEYS.rulesSeen, false);
 // normalizeProfile, so a missing or malformed record is the default profile.
 export const getProfile = async (): Promise<Profile> => normalizeProfile(await getJSON<Partial<Profile> | null>(KEYS.profile, null));
 export const setProfile = (profile: Profile) => setJSON(KEYS.profile, profile);
+
+// Settings: the dark theme (off by default) and haptics (on by default), as
+// separate keys so changing one never overwrites the other.
+export const getDarkMode = () => getJSON<boolean>(KEYS.darkMode, false);
+export const setDarkMode = (on: boolean) => setJSON(KEYS.darkMode, on);
+export const getHapticsOn = () => getJSON<boolean>(KEYS.haptics, true);
+export const setHapticsOn = (on: boolean) => setJSON(KEYS.haptics, on);
+
+// Settings' ԶՐՈՅԱՑՆԵԼ ԱՌԱՋԸՆԹԱՑԸ: the player's progress — coins, points,
+// streak, items, the current game and any end-of-round record — in one
+// removal. Kept: the profile, the settings, the rules-seen flag, the word bag
+// (the current word starts over), and the per-day ad counter and share
+// claims (so a reset can't be used to farm them).
+export async function resetProgress(): Promise<void> {
+  try {
+    await AsyncStorage.multiRemove([
+      KEYS.coins,
+      KEYS.points,
+      KEYS.streak,
+      KEYS.inventory,
+      KEYS.round,
+      KEYS.pendingWin,
+      KEYS.pendingLoss,
+    ]);
+  } catch {
+    // Like every write here: a failure isn't fatal.
+  }
+}
 export const setRulesSeen = () => setJSON(KEYS.rulesSeen, true);
 
 export const getPendingWin = () => getJSON<PendingWin | null>(KEYS.pendingWin, null);

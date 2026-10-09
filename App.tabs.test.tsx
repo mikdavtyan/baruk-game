@@ -134,12 +134,12 @@ it.each(TABS.filter((t) => t !== 'home'))(
   },
 );
 
+// (Settings has its own content: App.settings.test.tsx.)
 it('the empty tabs show only their title — no back arrow, no placeholder', async () => {
   await renderApp();
   for (const [tab, title] of [
     ['tasks', 'ԱՌԱՋԱԴՐԱՆՔՆԵՐ'],
     ['leaders', 'ԱՌԱՋԱՏԱՐՆԵՐ'],
-    ['settings', 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ'],
   ] as const) {
     await selectTab(root, tab);
     expect(textsIn(tabContent(root, tab))).toEqual([title]);

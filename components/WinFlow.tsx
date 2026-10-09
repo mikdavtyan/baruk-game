@@ -1,6 +1,6 @@
 import { memo, RefObject, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { triggerLightImpact } from '../lib/haptics';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
 import CoinFlight from './CoinFlight';
 import ModalBackdrop from './ModalBackdrop';
@@ -253,7 +253,7 @@ function WinFlow({
     ]).start();
 
     if (i % 2 === 0) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      triggerLightImpact();
     }
   };
 

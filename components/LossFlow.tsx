@@ -1,6 +1,6 @@
 import { memo, RefObject, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
-import * as Haptics from 'expo-haptics';
+import { triggerLightImpact } from '../lib/haptics';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
 import CoinFlight from './CoinFlight';
 import ModalBackdrop from './ModalBackdrop';
@@ -296,7 +296,7 @@ function LossFlow({
       Animated.timing(pillScale, { toValue: 1.15, duration: 90, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(pillScale, { toValue: 1, duration: 160, easing: Easing.out(Easing.quad), useNativeDriver: true }),
     ]).start();
-    if (i % 2 === 0) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (i % 2 === 0) triggerLightImpact();
   };
   const stepPillDown = () => {
     departCountRef.current += 1;
@@ -348,7 +348,7 @@ function LossFlow({
         setClosingSnapshot(null);
         setHeaderPillRect(null);
         setIsTransitioning(false);
-        if (!reduceMotion) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+        if (!reduceMotion) triggerLightImpact();
       }),
     );
   };
