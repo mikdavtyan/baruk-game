@@ -345,15 +345,16 @@ function AppInner() {
     rulesOpenRef.current = rulesOpen;
     shopOnTopRef.current = shopPage.onTop;
   });
-  // Navigation: the main screen is the tabs (MainTabs: ԽԱՆՈՒԹ, ԱՆԻՎ, ՄԵՆՅՈՒ —
-  // Home, the menu, where the app opens — ԱՌԱՋԱԴՐԱՆՔՆԵՐ, ԱՌԱՋԱՏԱՐՆԵՐ). Pushed
-  // over them: the Classic game (`gamePage`) and Settings (`settingsPage`,
-  // from Home's gear); the shop page (`shopPage`) is pushed over the game.
+  // Navigation: the main screen is the tabs (MainTabs: ԽԱՆՈՒԹ, ԱՌԱՋԱԴՐԱՆՔՆԵՐ,
+  // ՄԵՆՅՈՒ — Home, the menu, where the app opens — ԱՌԱՋԱՏԱՐՆԵՐ,
+  // ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ). Pushed over them: the Classic game (`gamePage`) and the
+  // fortune wheel (`wheelPage`, from Home's wheel button); the shop page
+  // (`shopPage`) is pushed over the game.
   // All game state lives here, so leaving the game changes nothing.
   // Android back goes to whatever covers the game first (the rules popup, the
   // shop): their handlers can register before the page's in the same commit.
   const gamePage = usePushPage({ isCovered: () => rulesOpenRef.current || shopOnTopRef.current });
-  const settingsPage = usePushPage();
+  const wheelPage = usePushPage();
   const [activeTab, setActiveTab] = useState<TabId>('home');
   // The local profile (wordle:profile), edited in the ՊՐՈՖԻԼ popup the menu's
   // profile opens; saved (normalized) when the popup closes.
@@ -385,7 +386,7 @@ function AppInner() {
   useLayoutEffect(() => {
     navRef.current = {
       activeTab,
-      covered: gamePage.onTop || settingsPage.onTop || shopPage.onTop || rulesOpen || profileOpen,
+      covered: gamePage.onTop || wheelPage.onTop || shopPage.onTop || rulesOpen || profileOpen,
     };
   });
   useEffect(() => {
@@ -1050,14 +1051,16 @@ function AppInner() {
     [shopPage.close, shopPage.onTop, coins, inventory, adsLeft, onBuyPack, onWatchShopAd],
   );
 
-  const settingsPageContent = useMemo(
-    () => <EmptyPage title="ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ" onBack={settingsPage.close} visible={settingsPage.onTop} />,
-    [settingsPage.close, settingsPage.onTop],
+  const wheelPageContent = useMemo(
+    () => <EmptyPage title="ԲԱԽՏԻ ԱՆԻՎ" onBack={wheelPage.close} visible={wheelPage.onTop} />,
+    [wheelPage.close, wheelPage.onTop],
   );
   // Each tab's content, memoized (with stable props), so a keystroke in the
-  // game re-renders no tab. The menu background runs only while Home is the
-  // visible tab.
-  const anyPageOnTop = gamePage.onTop || settingsPage.onTop || shopPage.onTop;
+  // game re-renders no tab. Home's idle motion (the menu background, the
+  // wheel's spin) runs only while Home is what's on screen: its tab is active
+  // and no page or popup covers it.
+  const anyPageOnTop = gamePage.onTop || wheelPage.onTop || shopPage.onTop;
+  const homeHidden = activeTab !== 'home' || anyPageOnTop || profileOpen || rulesOpen;
   const tabContents = useMemo(
     () => ({
       home: (
@@ -1068,9 +1071,9 @@ function AppInner() {
           classicSubtitle={classicSubtitle}
           onOpenClassic={onOpenClassic}
           onOpenShop={onOpenShopTab}
-          onOpenSettings={settingsPage.open}
+          onOpenWheel={wheelPage.open}
           onOpenProfile={onOpenProfile}
-          backgroundPaused={activeTab !== 'home' || anyPageOnTop}
+          backgroundPaused={homeHidden}
         />
       ),
       shop: (
@@ -1083,9 +1086,9 @@ function AppInner() {
           onWatchAd={onWatchShopAd}
         />
       ),
-      wheel: <EmptyPage title="ԲԱԽՏԻ ԱՆԻՎ" visible={activeTab === 'wheel'} />,
       tasks: <EmptyPage title="ԱՌԱՋԱԴՐԱՆՔՆԵՐ" visible={activeTab === 'tasks'} />,
       leaders: <EmptyPage title="ԱՌԱՋԱՏԱՐՆԵՐ" visible={activeTab === 'leaders'} />,
+      settings: <EmptyPage title="ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ" visible={activeTab === 'settings'} />,
     }),
     [
       profile,
@@ -1094,10 +1097,10 @@ function AppInner() {
       classicSubtitle,
       onOpenClassic,
       onOpenShopTab,
-      settingsPage.open,
+      wheelPage.open,
       onOpenProfile,
       activeTab,
-      anyPageOnTop,
+      homeHidden,
       inventory,
       adsLeft,
       onBuyPack,
@@ -1122,7 +1125,7 @@ function AppInner() {
         importantForAccessibility={anyPageOnTop || rulesOpen || profileOpen ? 'no-hide-descendants' : 'auto'}
         accessibilityElementsHidden={anyPageOnTop || rulesOpen || profileOpen}
       >
-        <Animated.View style={[styles.container, { transform: [{ translateX: settingsPage.gameTranslateX }] }]}>
+        <Animated.View style={[styles.container, { transform: [{ translateX: wheelPage.gameTranslateX }] }]}>
           <MainTabs active={activeTab} onSelect={onSelectTab} contents={tabContents} />
         </Animated.View>
       </Animated.View>
@@ -1242,8 +1245,8 @@ function AppInner() {
       {/* The Hint light and its sparks — the same window-coordinate overlay idea. */}
       <HintFlightOverlay flight={hintFlight} />
       </PushPageLayer>
-      <PushPageLayer page={settingsPage} testID="page-settings">
-        {settingsPageContent}
+      <PushPageLayer page={wheelPage} testID="page-wheel">
+        {wheelPageContent}
       </PushPageLayer>
       </Animated.View>
       {/* Above everything, the game page and its end-of-round modals included. */}

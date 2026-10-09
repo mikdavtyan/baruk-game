@@ -86,9 +86,9 @@ async function measure(action: () => Promise<void>) {
 // timing is native-driven).
 const KEYSTROKE_MAX_RENDERS = 60;
 // The toggle re-renders only snapshot leaves (icon tints, the status bar…);
-// each tinted icon is ~4 renders (ThemedSymbol → SymbolView → native). 90
-// since the tab bar + Home's gear added icons.
-const TOGGLE_MAX_RENDERS = 90;
+// each tinted SymbolView is ~4 renders. The tab bar's custom icons have fixed
+// colors, so they add none.
+const TOGGLE_MAX_RENDERS = 80;
 // Never re-rendered by a keystroke or a theme toggle.
 const UNTOUCHED = [
   'Keyboard',
@@ -102,6 +102,13 @@ const UNTOUCHED = [
   'MenuScreen',
   'MainTabs',
   'TabBar',
+  'WheelButton',
+  // The custom game icons: fixed colors, so not even a theme toggle re-renders them.
+  'ShopCartIcon',
+  'BookIcon',
+  'HouseIcon',
+  'PodiumIcon',
+  'GearIcon',
   'MenuBackground',
   'Avatar',
   'FortuneWheelIcon',

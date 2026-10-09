@@ -1,8 +1,9 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, AppState, Easing, StyleSheet, useWindowDimensions } from 'react-native';
+import { Animated, Easing, StyleSheet, useWindowDimensions } from 'react-native';
 import { FONTS, MENU_BG_TILE_BORDER, MENU_BG_TILE_CORNER_RATIO, MENU_BG_TILES } from '../constants/theme';
 import { letterLabel } from '../lib/letterDisplay';
 import { useTheme } from '../lib/ThemeContext';
+import { useAppActive } from '../lib/useAppActive';
 
 // The menu's calm background: a few very faint letter tiles (board-tile
 // style) drifting slowly upward with a slight rotation, each at its own pace
@@ -19,11 +20,7 @@ import { useTheme } from '../lib/ThemeContext';
 function MenuBackground({ paused }: { paused: boolean }) {
   const { color, textColor, reduceMotion } = useTheme();
   const { width, height } = useWindowDimensions();
-  const [appActive, setAppActive] = useState(() => AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
-  useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => setAppActive(state === 'active'));
-    return () => sub.remove();
-  }, []);
+  const appActive = useAppActive();
 
   const [tiles] = useState(() =>
     MENU_BG_TILES.map((tile) => ({ clock: new Animated.Value(0), offset: new Animated.Value(tile.phase) })),

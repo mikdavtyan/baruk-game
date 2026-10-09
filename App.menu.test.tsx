@@ -183,7 +183,7 @@ it('ՕՐՎԱ ԲԱՌ only shows the ՇՈՒՏՈՎ toast', async () => {
   expect(root.root.findAllByType(Toast).map((t: any) => t.props.message)).toEqual(['ՇՈՒՏՈՎ']);
   await advance(1000);
   expect(pageShown(root, PAGE.game)).toBe(false);
-  expect(pageShown(root, PAGE.settings)).toBe(false);
+  expect(pageShown(root, PAGE.wheel)).toBe(false);
   expect(shopShown()).toBe(false);
 });
 

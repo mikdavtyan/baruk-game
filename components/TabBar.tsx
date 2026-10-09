@@ -1,9 +1,7 @@
 import { memo, ReactNode, useEffect, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet } from 'react-native';
-import { SymbolViewProps } from 'expo-symbols';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import FortuneWheelIcon from './FortuneWheelIcon';
-import { ThemedSymbol } from './ThemedSnapshot';
+import { BookIcon, GearIcon, HouseIcon, PodiumIcon, ShopCartIcon } from './TabIcons';
 import {
   FONTS,
   TAB_ACTIVATE_MS,
@@ -17,28 +15,29 @@ import {
 import { useTheme } from '../lib/ThemeContext';
 
 // The main screen's tabs, left to right; Home (the menu) is the center one.
-export const TABS = ['shop', 'wheel', 'home', 'tasks', 'leaders'] as const;
+export const TABS = ['shop', 'tasks', 'home', 'leaders', 'settings'] as const;
 export type TabId = (typeof TABS)[number];
 export const TAB_LABELS: Record<TabId, string> = {
   shop: 'ԽԱՆՈՒԹ',
-  wheel: 'ԱՆԻՎ',
-  home: 'ՄԵՆՅՈՒ',
   tasks: 'ԱՌԱՋԱԴՐԱՆՔՆԵՐ',
+  home: 'ՄԵՆՅՈՒ',
   leaders: 'ԱՌԱՋԱՏԱՐՆԵՐ',
+  settings: 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ',
 };
 
-const SYMBOLS: Record<Exclude<TabId, 'wheel'>, SymbolViewProps['name']> = {
-  shop: { ios: 'bag.fill', android: 'shopping_bag', web: 'shopping_bag' },
-  home: { ios: 'house.fill', android: 'home', web: 'home' },
-  tasks: { ios: 'book.fill', android: 'menu_book', web: 'menu_book' },
-  leaders: { ios: 'trophy.fill', android: 'emoji_events', web: 'emoji_events' },
+// Custom game icons in the fortune wheel's style (TabIcons.tsx): fixed
+// colors, so a theme toggle never re-renders them.
+const ICONS: Record<TabId, (props: { size?: number }) => ReactNode> = {
+  shop: ShopCartIcon,
+  tasks: BookIcon,
+  home: HouseIcon,
+  leaders: PodiumIcon,
+  settings: GearIcon,
 };
-const icon = (tab: TabId): ReactNode =>
-  tab === 'wheel' ? (
-    <FortuneWheelIcon size={TAB_ICON_SIZE + 4} />
-  ) : (
-    <ThemedSymbol name={SYMBOLS[tab]} size={TAB_ICON_SIZE} token="headerIconColor" />
-  );
+const icon = (tab: TabId): ReactNode => {
+  const Icon = ICONS[tab];
+  return <Icon size={TAB_ICON_SIZE} />;
+};
 
 // A mobile-game tab bar, always at the bottom of the main screen. The active
 // tab's cell rises on a raised plate, its icon grows (TAB_ICON_ACTIVE_SCALE)

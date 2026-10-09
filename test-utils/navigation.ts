@@ -6,7 +6,7 @@ import { act } from 'react';
 export const PAGE = {
   game: 'page-game',
   shop: 'page-shop',
-  settings: 'page-settings', // from Home's gear
+  wheel: 'page-wheel', // the fortune wheel, from Home's wheel button
 } as const;
 
 export const CLASSIC_LABEL = 'ԴԱՍԱԿԱՆ';
@@ -55,10 +55,10 @@ export const pageShown = (root: any, id: string) => {
 // Armenian labels players (and tests) press them by.
 export const TAB = {
   shop: 'ԽԱՆՈՒԹ',
-  wheel: 'ԱՆԻՎ',
-  home: 'ՄԵՆՅՈՒ',
   tasks: 'ԱՌԱՋԱԴՐԱՆՔՆԵՐ',
+  home: 'ՄԵՆՅՈՒ',
   leaders: 'ԱՌԱՋԱՏԱՐՆԵՐ',
+  settings: 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ',
 } as const;
 export type TabId = keyof typeof TAB;
 

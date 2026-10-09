@@ -1,8 +1,8 @@
-// The main screen's tab bar: ԽԱՆՈՒԹ, ԱՆԻՎ, ՄԵՆՅՈՒ (Home, the center, where the
-// app opens), ԱՌԱՋԱԴՐԱՆՔՆԵՐ, ԱՌԱՋԱՏԱՐՆԵՐ. The active tab is selected and shows
-// its name; inactive tabs show no text and their content is display:'none'
-// once the switch is over (never hidden by transform/opacity alone). Settings
-// is a push page from Home's gear; Classic a push page over everything.
+// The main screen's tab bar: ԽԱՆՈՒԹ, ԱՌԱՋԱԴՐԱՆՔՆԵՐ, ՄԵՆՅՈՒ (Home, the center,
+// where the app opens), ԱՌԱՋԱՏԱՐՆԵՐ, ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ. The active tab is selected
+// and shows its name; inactive tabs show no text and their content is
+// display:'none' once the switch is over (never hidden by transform/opacity
+// alone). Classic and the fortune wheel are push pages over the tabs.
 import React from 'react';
 import { AccessibilityInfo, Animated, BackHandler, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -103,6 +103,14 @@ const selected = (tab: TabId) => tabButton(tab).props.accessibilityState?.select
 const shownTabs = () => TABS.filter((t) => tabShown(root, t));
 const stored = async (key: string) => JSON.parse((await AsyncStorage.getItem(key)) as string);
 
+it('the tabs, left to right: Shop, Tasks, Home (center), Leaderboard, Settings', async () => {
+  await renderApp();
+  const labels = tabBar(root)
+    .findAll((n: any) => typeof n.type === 'string' && n.props.accessibilityRole === 'tab')
+    .map((n: any) => n.props.accessibilityLabel);
+  expect(labels).toEqual(['ԽԱՆՈՒԹ', 'ԱՌԱՋԱԴՐԱՆՔՆԵՐ', 'ՄԵՆՅՈՒ', 'ԱՌԱՋԱՏԱՐՆԵՐ', 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ']);
+});
+
 it('opens on Home, with the bar visible and only Home selected and labelled', async () => {
   await renderApp();
   expect(tabBar(root)).toBeTruthy();
@@ -129,9 +137,9 @@ it.each(TABS.filter((t) => t !== 'home'))(
 it('the empty tabs show only their title — no back arrow, no placeholder', async () => {
   await renderApp();
   for (const [tab, title] of [
-    ['wheel', 'ԲԱԽՏԻ ԱՆԻՎ'],
     ['tasks', 'ԱՌԱՋԱԴՐԱՆՔՆԵՐ'],
     ['leaders', 'ԱՌԱՋԱՏԱՐՆԵՐ'],
+    ['settings', 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ'],
   ] as const) {
     await selectTab(root, tab);
     expect(textsIn(tabContent(root, tab))).toEqual([title]);
@@ -167,14 +175,12 @@ it('the coin pill on Home switches to the Shop tab', async () => {
   expect(page(root, PAGE.shop) ? pageShown(root, PAGE.shop) : false).toBe(false); // not the push page
 });
 
-it("the gear on Home opens Settings as a page, and its back arrow closes it", async () => {
+it('Settings is a tab: Home has no gear, and there is no Settings page', async () => {
   await renderApp();
-  await pressLabel(root, 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ', menu(root));
-  expect(pageShown(root, PAGE.settings)).toBe(true);
-  expect(textsIn(page(root, PAGE.settings))).toEqual(['ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ']);
-  await pressLabel(root, 'Հետ', page(root, PAGE.settings));
-  expect(pageShown(root, PAGE.settings)).toBe(false);
-  expect(shownTabs()).toEqual(['home']);
+  expect(menu(root).findAll((n: any) => n.props.accessibilityLabel === 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ')).toHaveLength(0);
+  expect(page(root, 'page-settings')).toBeUndefined();
+  await selectTab(root, 'settings');
+  expect(shownTabs()).toEqual(['settings']);
 });
 
 it('Classic opens over the tabs (the bar covered and inert) and returns to Home', async () => {
@@ -212,9 +218,9 @@ it('Android back on another tab goes to Home; on Home it is not handled (the app
 
 it('a page over Home still handles Android back first', async () => {
   await renderApp();
-  await pressLabel(root, 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ', menu(root));
+  await pressLabel(root, 'ԲԱԽՏԻ ԱՆԻՎ', menu(root));
   expect(await pressBack()).toBe(true);
-  expect(pageShown(root, PAGE.settings)).toBe(false);
+  expect(pageShown(root, PAGE.wheel)).toBe(false);
   expect(shownTabs()).toEqual(['home']);
 });
 
@@ -255,8 +261,8 @@ it('reduced motion switches tabs instantly: the old tab is display:none at once'
   (AccessibilityInfo.isReduceMotionEnabled as jest.Mock).mockResolvedValue(true);
   await renderApp();
   await act(async () => {
-    pressable(tabBar(root), TAB.wheel).props.onPress();
+    pressable(tabBar(root), TAB.settings).props.onPress();
   });
-  expect(shownTabs()).toEqual(['wheel']); // no timers advanced
-  expect(selected('wheel')).toBe(true);
+  expect(shownTabs()).toEqual(['settings']); // no timers advanced
+  expect(selected('settings')).toBe(true);
 });

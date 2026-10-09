@@ -430,10 +430,20 @@ export const MENU_BG_TILE_BORDER = 2;
 // cell rises on a plate, its icon grows and its name fades + scales in;
 // switching slides the content toward the new tab. All native driver.
 export const TAB_BAR_HEIGHT = 62; // plus the bottom safe-area inset
-export const TAB_ICON_SIZE = 26;
+export const TAB_ICON_SIZE = 28;
 export const TAB_ICON_ACTIVE_SCALE = 1.3;
 export const TAB_RAISE = 16; // px the active cell's icon and plate rise above the bar's center
 export const TAB_PLATE_SIZE = 58;
 export const TAB_LABEL_START_SCALE = 0.6;
 export const TAB_ACTIVATE_MS = 220; // the raise/grow/label of the new tab, and the old one settling back
 export const TAB_SLIDE_MS = 240; // the content slide between tabs
+
+// Home's fortune wheel button (WheelButton.tsx): every WHEEL_IDLE_INTERVAL_MS
+// it spins once — a quick full turn with an ease-out (WHEEL_SPIN_MS) that
+// overshoots by WHEEL_OVERSHOOT_TURNS, then settles back with a small wobble
+// (WHEEL_SETTLE_MS) — like a real wheel stopping.
+export const WHEEL_IDLE_INTERVAL_MS = 5500;
+export const WHEEL_SPIN_MS = 900;
+export const WHEEL_OVERSHOOT_TURNS = 0.035;
+export const WHEEL_SETTLE_MS = 380;
+export const WHEEL_BUTTON_SIZE = 64;

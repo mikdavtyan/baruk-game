@@ -5,8 +5,8 @@ import Avatar from './Avatar';
 import Button3D from './Button3D';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
 import MenuBackground from './MenuBackground';
-import { ThemedIconButton } from './ThemedSnapshot';
 import Toast from './Toast';
+import WheelButton from './WheelButton';
 import { Profile } from '../constants/profile';
 import { FONTS } from '../constants/theme';
 import { letterLabel } from '../lib/letterDisplay';
@@ -22,7 +22,6 @@ const TITLE_TILE_SIZE = 46;
 const CARD_HEIGHT = 84;
 const CARD_MAX_WIDTH = 340;
 const CARD_WIDTH_FRACTION = 0.82;
-const GEAR_ICON = { ios: 'gearshape.fill', android: 'settings', web: 'settings' } as const;
 // The tab bar below owns the bottom safe area.
 const EDGES = ['top', 'left', 'right'] as const;
 
@@ -33,16 +32,18 @@ type Props = {
   classicSubtitle: string; // ԽԱՂԱԼ / ՇԱՐՈՒՆԱԿԵԼ · N/6 / ՇԱՐՈՒՆԱԿԵԼ (App derives it)
   onOpenClassic: () => void;
   onOpenShop: () => void; // the coin pill: App switches to the Shop tab
-  onOpenSettings: () => void; // the gear: Settings, a push page
+  onOpenWheel: () => void; // the fortune wheel button: the wheel page
   onOpenProfile: () => void;
   backgroundPaused: boolean; // a page covers the menu: its drifting tiles stop
 };
 
 // The Home tab (ՄԵՆՅՈՒ), where the app opens. Top: the profile (avatar, name,
-// points), the Settings gear and the coin pill (the Shop tab). Center: the
-// title and the two game cards — ԴԱՍԱԿԱՆ (the Classic game page) and ՕՐՎԱ ԲԱՌ
-// (coming soon). The tab bar is below it (MainTabs). Memoized with stable
-// props from App, so a keystroke in the game never re-renders it.
+// points) and the coin pill (the Shop tab); under the pill, on the right, the
+// fortune wheel button (its own row, so it never overlaps the title or the
+// cards on a small screen). Center: the title and the two game cards —
+// ԴԱՍԱԿԱՆ (the Classic game page) and ՕՐՎԱ ԲԱՌ (coming soon). The tab bar is
+// below it (MainTabs). Memoized with stable props from App, so a keystroke in
+// the game never re-renders it.
 function MenuScreen({
   profile,
   points,
@@ -50,7 +51,7 @@ function MenuScreen({
   classicSubtitle,
   onOpenClassic,
   onOpenShop,
-  onOpenSettings,
+  onOpenWheel,
   onOpenProfile,
   backgroundPaused,
 }: Props) {
@@ -82,16 +83,16 @@ function MenuScreen({
             </Animated.Text>
           </View>
         </Pressable>
-        <View style={styles.topRight}>
-          <ThemedIconButton icon={GEAR_ICON} label="ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ" token="headerIconColor" onPress={onOpenSettings} />
-          <Pressable onPress={onOpenShop} accessibilityRole="button" accessibilityLabel="Խանութ" hitSlop={6}>
-            {({ pressed }) => (
-              <Animated.View style={[coinPillStyles.pill, { backgroundColor: color('pill') }, pressed && styles.pressed]}>
-                <CoinPillContent value={coins} textColor={textColor('pillText')} plusColor={color('correct')} />
-              </Animated.View>
-            )}
-          </Pressable>
-        </View>
+        <Pressable onPress={onOpenShop} accessibilityRole="button" accessibilityLabel="Խանութ" hitSlop={6}>
+          {({ pressed }) => (
+            <Animated.View style={[coinPillStyles.pill, { backgroundColor: color('pill') }, pressed && styles.pressed]}>
+              <CoinPillContent value={coins} textColor={textColor('pillText')} plusColor={color('correct')} />
+            </Animated.View>
+          )}
+        </Pressable>
+      </View>
+      <View style={styles.wheelRow}>
+        <WheelButton onPress={onOpenWheel} paused={backgroundPaused} />
       </View>
 
       <View style={styles.center}>
@@ -227,9 +228,9 @@ const styles = StyleSheet.create({
   dimmed: {
     opacity: 0.55,
   },
-  topRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+  wheelRow: {
+    alignItems: 'flex-end',
+    paddingRight: 16,
+    marginTop: -4,
   },
 });

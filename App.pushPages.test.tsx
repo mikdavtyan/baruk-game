@@ -118,14 +118,14 @@ describe('a closed page is invisible and inert, whatever its transform', () => {
   });
 });
 
-// How a player opens each page: the game and Settings from Home (the card,
-// the gear), the shop page from the game's coin pill.
+// How a player opens each page: the game and the fortune wheel from Home (the
+// card, the wheel button), the shop page from the game's coin pill.
 const openers: Record<string, () => Promise<void>> = {
   [PAGE.game]: async () => {
     await act(async () => pressable(menu(root), 'ԴԱՍԱԿԱՆ').props.onPress());
   },
-  [PAGE.settings]: async () => {
-    await act(async () => pressable(menu(root), 'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ').props.onPress());
+  [PAGE.wheel]: async () => {
+    await act(async () => pressable(menu(root), 'ԲԱԽՏԻ ԱՆԻՎ').props.onPress());
   },
   [PAGE.shop]: async () => {
     await pressLabel(root, 'ԴԱՍԱԿԱՆ', menu(root));
@@ -136,7 +136,7 @@ const openers: Record<string, () => Promise<void>> = {
 describe.each([
   ['the game', PAGE.game],
   ['the shop', PAGE.shop],
-  ['the Settings', PAGE.settings],
+  ['the fortune wheel', PAGE.wheel],
 ])('%s page', (_name, id) => {
   const open = async () => {
     await openers[id]();

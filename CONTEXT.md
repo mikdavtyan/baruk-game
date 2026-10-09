@@ -5,11 +5,14 @@ Baruk is an offline Armenian word-guessing game: the player has six guesses to f
 ## Screens
 
 **Tab bar**:
-The bar always at the bottom of the main screen, with five tabs: ԽԱՆՈՒԹ (shop), ԱՆԻՎ (fortune wheel), ՄԵՆՅՈՒ (the menu — the center tab, where the app opens), ԱՌԱՋԱԴՐԱՆՔՆԵՐ (tasks), ԱՌԱՋԱՏԱՐՆԵՐ (leaderboard). The active tab rises and shows its name. Pages (the Classic game, Settings, the shop over the game) cover it.
+The bar always at the bottom of the main screen, with five tabs: ԽԱՆՈՒԹ (shop), ԱՌԱՋԱԴՐԱՆՔՆԵՐ (tasks), ՄԵՆՅՈՒ (the menu — the center tab, where the app opens), ԱՌԱՋԱՏԱՐՆԵՐ (leaderboard), ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ (settings). The active tab rises and shows its name. Pages (the Classic game, the fortune wheel, the shop over the game) cover it.
 _Avoid_: bottom bar, navigation bar
 
 **Menu** (ՄԵՆՅՈՒ, home):
-The Home tab, where the app opens: the profile, the Settings gear and coins at the top, the game title and the game cards (ԴԱՍԱԿԱՆ, and ՕՐՎԱ ԲԱՌ coming soon) in the middle. Leaving a game for the menu changes nothing in it.
+The Home tab, where the app opens: the profile and coins at the top, the fortune wheel button under the coins, the game title and the game cards (ԴԱՍԱԿԱՆ, and ՕՐՎԱ ԲԱՌ coming soon) in the middle. Leaving a game for the menu changes nothing in it.
+
+**Fortune wheel** (ԲԱԽՏԻ ԱՆԻՎ):
+A button on the menu (it idly spins, with a ՊՏՏԻ՛Ր badge) that opens its own page. The page is empty for now; prizes are not decided.
 _Avoid_: home page, lobby, main screen
 
 **Profile** (ՊՐՈՖԻԼ):
@@ -20,7 +23,7 @@ _Avoid_: account, user (there's no login)
 The game itself, as a page pushed over the menu. The only game mode; **Word of the day** (ՕՐՎԱ ԲԱՌ) is announced as coming soon and does nothing yet.
 
 **Page**:
-A full screen pushed over the tabs from the right (the Classic game, Settings, the shop over the game); back arrow, Android back or an iOS left-edge swipe return. A tab is not a page.
+A full screen pushed over the tabs from the right (the Classic game, the fortune wheel, the shop over the game); back arrow, Android back or an iOS left-edge swipe return. A tab is not a page.
 _Avoid_: modal, popup (those are the centered panels)
 
 ## Words and guesses
