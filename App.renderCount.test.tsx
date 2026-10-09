@@ -104,6 +104,7 @@ const UNTOUCHED = [
   'TabBar',
   'WheelButton',
   'SettingsScreen',
+  'TasksScreen',
   'AboutModal',
   'ResetConfirmModal',
   // The custom game icons: fixed colors, so not even a theme toggle re-renders them.

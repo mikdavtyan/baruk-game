@@ -23,6 +23,9 @@ import MenuScreen from './components/MenuScreen';
 import { TabId } from './components/TabBar';
 import ProfileModal from './components/ProfileModal';
 import SettingsScreen from './components/SettingsScreen';
+import TasksScreen from './components/TasksScreen';
+import { TaskId } from './constants/tasks';
+import { claimTask, DailyTasks, hasClaimable, recordTaskEvent, TaskEvent, tasksForDay } from './lib/tasks';
 import { AboutModal, ResetConfirmModal } from './components/SettingsPopups';
 import RulesModal from './components/RulesModal';
 import { PushPageLayer, usePushPage } from './components/PushPage';
@@ -63,6 +66,7 @@ import {
   getRound,
   getDarkMode,
   getHapticsOn,
+  getTasks,
   getProfile,
   getRulesSeen,
   getStreak,
@@ -75,6 +79,7 @@ import {
   resetProgress,
   setDarkMode,
   setHapticsOn,
+  setTasks,
   setProfile,
   setRulesSeen,
   WordBag,
@@ -374,6 +379,30 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
   // The Settings tab: the haptics switch (saved; lib/haptics.ts checks the
   // flag), the about popup and the reset confirmation.
   const [hapticsOn, setHapticsOnState] = useState(true);
+  // Daily tasks (wordle:tasks, lib/tasks.ts): today's 3, moved by play and
+  // claimed on the Tasks tab. `todayTasks()` rolls the record over to a new
+  // day (after midnight) whenever it's read for a change.
+  const [tasks, setTasksState] = useState<DailyTasks | null>(null);
+  const todayTasks = (): DailyTasks => tasksForDay(tasks, localDayKey(new Date()));
+  // A task-moving event outside the economy writes (a won word): saved on its own.
+  const recordTask = (event: TaskEvent) => {
+    const base = todayTasks();
+    const next = recordTaskEvent(base, event);
+    if (next !== tasks) {
+      setTasksState(next);
+      setTasks(next);
+    }
+  };
+  // ՍՏԱՆԱԼ: the reward and the claim saved in one atomic write, then shown.
+  const handleClaimTask = async (id: TaskId) => {
+    const claimed = claimTask(todayTasks(), id);
+    if (!claimed) return;
+    const nextCoins = latestRef.current.coins + claimed.reward;
+    await saveAtomically({ coins: nextCoins, tasks: claimed.record });
+    latestRef.current = { ...latestRef.current, coins: nextCoins };
+    setCoinsState(nextCoins);
+    setTasksState(claimed.record);
+  };
   const [aboutOpen, setAboutOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const handleToggleHaptics = () => {
@@ -533,6 +562,9 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
     if (guessValidity(enteredTokens) !== 'valid') return;
     const states = evaluateGuess(guess.tokens, secretWord);
     const nextSubmitted = [...submittedGuesses, { tokens: guess.tokens, states }];
+    // A win counts for the daily tasks the moment it's submitted (a relaunch
+    // replaying its celebration never submits it again).
+    if (states.every((s) => s === 'correct')) recordTask({ type: 'win', guesses: nextSubmitted.length });
     setSubmittedGuesses(nextSubmitted);
     setGuess(initialGuess());
     // The landed Hint's entrance belonged to this row; the next row mustn't replay it.
@@ -600,9 +632,14 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
       getProfile(),
       getDarkMode(),
       getHapticsOn(),
+      getTasks(),
     ]).then(
-      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory, savedAdRewards, savedProfile, darkMode, haptics]) => {
+      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory, savedAdRewards, savedProfile, darkMode, haptics, savedTasks]) => {
         setProfileState(savedProfile);
+        // Today's tasks: a missing or earlier day's record becomes fresh ones (saved).
+        const todaysTasks = tasksForDay(savedTasks, localDayKey(new Date()));
+        setTasksState(todaysTasks);
+        if (todaysTasks !== savedTasks) setTasks(todaysTasks);
         // Settings, before the first render: the saved theme at once (no
         // light flash), and the haptics switch.
         setDarkInstant(darkMode);
@@ -825,15 +862,18 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
   // keep the purchase without paying. Saved first; the UI state follows.
   const payFor = async (item: keyof Inventory, price: number, purchase: Partial<SavedRound>) => {
     const round = { ...currentRound, ...purchase };
+    // The use also moves its daily task, in the same write.
+    const nextTasks = recordTaskEvent(todayTasks(), { type: item });
     if (inventory[item] > 0) {
       const next = { ...inventory, [item]: inventory[item] - 1 };
-      await saveAtomically({ inventory: next, round });
+      await saveAtomically({ inventory: next, round, tasks: nextTasks });
       setInventory(next);
     } else {
       const next = coins - price;
-      await saveAtomically({ coins: next, round });
+      await saveAtomically({ coins: next, round, tasks: nextTasks });
       setCoinsState(next);
     }
+    setTasksState(nextTasks);
   };
 
   // Adds a low-opacity green "ghost" of the secret word's real letter at a
@@ -1042,7 +1082,19 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
   const onDarts = useStableCallback(handleDarts);
   const onOpenRules = useStableCallback(handleOpenRules);
   const onOpenClassic = useStableCallback(handleOpenClassic);
-  const onSelectTab = useStableCallback((tab: TabId) => setActiveTab(tab));
+  const onSelectTab = useStableCallback((tab: TabId) => {
+    setActiveTab(tab);
+    // Opening Tasks after midnight shows (and saves) the new day's tasks.
+    if (tab === 'tasks') {
+      const today = todayTasks();
+      if (today !== tasks) {
+        setTasksState(today);
+        setTasks(today);
+      }
+    }
+  });
+  const onClaimTask = useStableCallback(handleClaimTask);
+  const tabBadges = useMemo(() => ({ tasks: !!tasks && hasClaimable(tasks) }), [tasks]);
   const onOpenShopTab = useStableCallback(() => setActiveTab('shop'));
   const onOpenProfile = useStableCallback(() => setProfileOpen(true));
   const onCloseProfile = useStableCallback(handleCloseProfile);
@@ -1125,7 +1177,9 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
           onWatchAd={onWatchShopAd}
         />
       ),
-      tasks: <EmptyPage title="ԱՌԱՋԱԴՐԱՆՔՆԵՐ" visible={activeTab === 'tasks'} />,
+      tasks: tasks ? (
+        <TasksScreen visible={activeTab === 'tasks'} tasks={tasks} coins={coins} onClaim={onClaimTask} />
+      ) : null,
       leaders: <EmptyPage title="ԱՌԱՋԱՏԱՐՆԵՐ" visible={activeTab === 'leaders'} />,
       settings: (
         <SettingsScreen
@@ -1151,6 +1205,8 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
       onOpenProfile,
       activeTab,
       homeHidden,
+      tasks,
+      onClaimTask,
       hapticsOn,
       onToggleHaptics,
       onOpenRules,
@@ -1181,7 +1237,7 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
         accessibilityElementsHidden={anyPageOnTop || rulesOpen || profileOpen}
       >
         <Animated.View style={[styles.container, { transform: [{ translateX: wheelPage.gameTranslateX }] }]}>
-          <MainTabs active={activeTab} onSelect={onSelectTab} contents={tabContents} />
+          <MainTabs active={activeTab} onSelect={onSelectTab} contents={tabContents} badges={tabBadges} />
         </Animated.View>
       </Animated.View>
       {/* The Classic game page — pre-mounted (offscreen and inert until

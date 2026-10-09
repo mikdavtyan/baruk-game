@@ -1,6 +1,6 @@
 import { memo, ReactNode, useLayoutEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, useWindowDimensions, View } from 'react-native';
-import TabBar, { TabId, TABS } from './TabBar';
+import TabBar, { TabBadges, TabId, TABS } from './TabBar';
 import { TAB_SLIDE_MS } from '../constants/theme';
 import { useTheme } from '../lib/ThemeContext';
 
@@ -8,6 +8,7 @@ type Props = {
   active: TabId;
   onSelect: (tab: TabId) => void;
   contents: Record<TabId, ReactNode>; // memoized by App
+  badges?: TabBadges; // memoized by App
 };
 
 // The main screen: the active tab's content above the always-visible tab bar.
@@ -18,7 +19,7 @@ type Props = {
 // or opacity alone (on an Android device a view hidden only that way has
 // been seen to stay on screen). The display switch sits on a plain outer
 // view; the slide's transform on an inner Animated.View.
-function MainTabs({ active, onSelect, contents }: Props) {
+function MainTabs({ active, onSelect, contents, badges }: Props) {
   const { reduceMotion } = useTheme();
   const { width } = useWindowDimensions();
   const [offsets] = useState(() => Object.fromEntries(TABS.map((t) => [t, new Animated.Value(0)])) as Record<TabId, Animated.Value>);
@@ -80,7 +81,7 @@ function MainTabs({ active, onSelect, contents }: Props) {
           );
         })}
       </View>
-      <TabBar active={active} onSelect={onSelect} />
+      <TabBar active={active} onSelect={onSelect} badges={badges} />
     </View>
   );
 }

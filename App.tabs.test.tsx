@@ -134,13 +134,10 @@ it.each(TABS.filter((t) => t !== 'home'))(
   },
 );
 
-// (Settings has its own content: App.settings.test.tsx.)
-it('the empty tabs show only their title — no back arrow, no placeholder', async () => {
+// (Settings and Tasks have their own content: App.settings / App.tasks tests.)
+it('the empty tab shows only its title — no back arrow, no placeholder', async () => {
   await renderApp();
-  for (const [tab, title] of [
-    ['tasks', 'ԱՌԱՋԱԴՐԱՆՔՆԵՐ'],
-    ['leaders', 'ԱՌԱՋԱՏԱՐՆԵՐ'],
-  ] as const) {
+  for (const [tab, title] of [['leaders', 'ԱՌԱՋԱՏԱՐՆԵՐ']] as const) {
     await selectTab(root, tab);
     expect(textsIn(tabContent(root, tab))).toEqual([title]);
     expect(tabContent(root, tab).findAll((n: any) => n.props.accessibilityLabel === 'Հետ')).toHaveLength(0);

@@ -19,6 +19,10 @@ _Avoid_: home page, lobby, main screen
 The player's local name and avatar, shown on the menu with their points. Kept on the device only (no account yet); the name defaults to ԽԱՂԱՑՈՂ.
 _Avoid_: account, user (there's no login)
 
+**Daily tasks** (ԱՌԱՋԱԴՐԱՆՔՆԵՐ):
+Three small goals a day (win games, win in few guesses, use a Hint or Darts), picked at random each local day. A finished task is claimed with ՍՏԱՆԱԼ for 20–60 coins; new ones come at midnight.
+_Avoid_: quests, missions, achievements (those would be permanent)
+
 **Settings** (ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ):
 The Settings tab: the dark theme and haptics (both remembered), how to play, about, the profile, and resetting progress (coins, points, streak, items and the current game; the profile and settings stay). Saving progress and feedback are coming soon.
 

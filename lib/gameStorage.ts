@@ -3,6 +3,7 @@ import { LetterState } from '../constants/theme';
 import { WIN_FLOW_CONFIG } from '../constants/winFlow';
 import { Profile } from '../constants/profile';
 import { normalizeProfile } from './profile';
+import type { DailyTasks } from './tasks';
 import { tokenizeArmenianWord } from './tokenizeArmenian';
 
 // All the win-flow's own persisted state (coins, streak, the "pending win"
@@ -27,6 +28,7 @@ const KEYS = {
   adRewards: 'wordle:adRewards',
   darkMode: 'wordle:darkMode',
   haptics: 'wordle:haptics',
+  tasks: 'wordle:tasks',
 } as const;
 
 export type Streak = { current: number; best: number };
@@ -137,6 +139,7 @@ type AtomicChanges = {
   round?: SavedRound | null;
   inventory?: Inventory;
   adRewards?: AdRewards;
+  tasks?: DailyTasks; // a claim (coins + the claim) or a Hint/Darts use that moves a task
 };
 export async function saveAtomically(changes: AtomicChanges): Promise<void> {
   const entries = (Object.keys(changes) as (keyof AtomicChanges)[]).map((key): [string, string] => [
@@ -195,6 +198,11 @@ export const setProfile = (profile: Profile) => setJSON(KEYS.profile, profile);
 
 // Settings: the dark theme (off by default) and haptics (on by default), as
 // separate keys so changing one never overwrites the other.
+// Today's tasks (lib/tasks.ts); App turns a missing or earlier day's record
+// into fresh tasks through tasksForDay.
+export const getTasks = () => getJSON<DailyTasks | null>(KEYS.tasks, null);
+export const setTasks = (tasks: DailyTasks) => setJSON(KEYS.tasks, tasks);
+
 export const getDarkMode = () => getJSON<boolean>(KEYS.darkMode, false);
 export const setDarkMode = (on: boolean) => setJSON(KEYS.darkMode, on);
 export const getHapticsOn = () => getJSON<boolean>(KEYS.haptics, true);

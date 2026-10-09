@@ -1,9 +1,10 @@
 import { memo, ReactNode, useEffect, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BookIcon, GearIcon, HouseIcon, PodiumIcon, ShopCartIcon } from './TabIcons';
 import {
   FONTS,
+  INVALID_COLOR,
   TAB_ACTIVATE_MS,
   TAB_BAR_HEIGHT,
   TAB_ICON_ACTIVE_SCALE,
@@ -46,7 +47,11 @@ const icon = (tab: TabId): ReactNode => {
 // 0→1 value per tab on the native driver (transform/opacity only), built
 // once; reduced motion sets them at once. Labels stay mounted only while
 // shown (the active tab's, and the old one's until it has faded).
-function TabBar({ active, onSelect }: { active: TabId; onSelect: (tab: TabId) => void }) {
+export type TabBadges = Partial<Record<TabId, boolean>>;
+const NO_BADGES: TabBadges = {};
+
+// `badges`: a red dot on a tab's icon (e.g. Tasks while a reward waits).
+function TabBar({ active, onSelect, badges = NO_BADGES }: { active: TabId; onSelect: (tab: TabId) => void; badges?: TabBadges }) {
   const { color, textColor, reduceMotion } = useTheme();
   const insets = useSafeAreaInsets();
   const [values] = useState(() => Object.fromEntries(TABS.map((t) => [t, new Animated.Value(t === active ? 1 : 0)])) as Record<TabId, Animated.Value>);
@@ -133,6 +138,7 @@ function TabBar({ active, onSelect }: { active: TabId; onSelect: (tab: TabId) =>
             />
             <Animated.View style={{ transform: [{ translateY: nodes[tab].raise }, { scale: nodes[tab].iconScale }] }}>
               {icon(tab)}
+              {badges[tab] && <View testID={`tab-badge-${tab}`} style={styles.badge} />}
             </Animated.View>
             {labelled.includes(tab) && (
               <Animated.Text
@@ -175,6 +181,19 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderBottomWidth: 4,
+  },
+  // A red notification dot on the icon's top-right corner (the power-ups'
+  // count-badge red, with a white ring).
+  badge: {
+    position: 'absolute',
+    top: -3,
+    right: -5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: INVALID_COLOR,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   label: {
     position: 'absolute',
