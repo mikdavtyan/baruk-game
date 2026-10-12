@@ -157,7 +157,7 @@ function BoardMiniMap({ guesses }: { guesses: { states: LetterState[] }[] }) {
 const RANK_TINTS: Record<number, string> = { 1: '#F4B21F', 2: '#C7CBD1', 3: '#C58245' };
 // The player's own rank circle when outside the tinted top 3.
 const UNRANKED_CIRCLE = 'rgba(255,255,255,0.08)';
-const UNRANKED_TEXT = '#BDB6AA';
+const UNRANKED_TEXT = '#B9A6D3';
 const LOSS_RIBBON_HEIGHT = 40;
 
 function LeaderboardRow({ rank, name, points, isPlayer }: { rank: number; name: string; points: number; isPlayer: boolean }) {
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   statPillText: {
     fontSize: 10,
     fontFamily: FONTS.body,
-    color: '#D8D2C6',
+    color: '#D9C8EC',
   },
   streakPlusWrap: {
     position: 'absolute',
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: FONTS.title,
     fontWeight: '700',
-    color: '#4A9D5B',
+    color: '#2FBF7A',
   },
   leaderTitle: {
     fontSize: 16,

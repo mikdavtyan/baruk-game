@@ -1,5 +1,6 @@
 import { createRef, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFonts } from 'expo-font';
+import ScreenGlow from './components/ScreenGlow';
 import {
   Animated,
   BackHandler,
@@ -1256,6 +1257,7 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
         style={[styles.container, { backgroundColor: color('background') }]}
         edges={['top', 'bottom', 'left', 'right']}
       >
+        <ScreenGlow />
         <Header
           ref={headerCoinRef}
           score={points}

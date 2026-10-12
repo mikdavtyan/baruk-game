@@ -1,5 +1,6 @@
 import { memo, useState } from 'react';
 import { Animated, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import ScreenGlow from './ScreenGlow';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Avatar from './Avatar';
 import Button3D from './Button3D';
@@ -63,6 +64,7 @@ function MenuScreen({
 
   return (
     <Animated.View testID="menu" style={[styles.screen, { backgroundColor: color('background') }]}>
+      <ScreenGlow />
     {/* Behind everything, across the whole screen (outside the safe area). */}
     <MenuBackground paused={backgroundPaused} />
     <AnimatedSafeAreaView style={styles.screen} edges={EDGES}>

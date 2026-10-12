@@ -106,7 +106,7 @@ describe('submitting', () => {
     const { borderWidth, borderColor } = StyleSheet.flatten(v.props.style);
     return { borderWidth, borderColor: String(borderColor).replace(/\s/g, '') };
   };
-  const ACTIVE = { borderWidth: 3, borderColor: 'rgba(31,35,40,1)' }; // lightTheme.tileActiveBorder #1F2328
+  const ACTIVE = { borderWidth: 3, borderColor: 'rgba(122,84,112,1)' }; // lightTheme.tileActiveBorder #7A5470
 
   it("keeps the tile's active, filled look until its own flip reaches 90°", () => {
     render({ letter: 'ա', state: 'filled', isCurrentRow: true, ghostLetter: null, revealDelay: 300 });

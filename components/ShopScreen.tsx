@@ -1,5 +1,6 @@
 import { memo, ReactNode, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import ScreenGlow from './ScreenGlow';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import BowIcon from './BowIcon';
@@ -113,6 +114,7 @@ function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onW
       edges={onBack ? PAGE_EDGES : TAB_EDGES}
       accessibilityElementsHidden={!visible}
     >
+      <ScreenGlow />
       {/* Same height and the same IconButton as the game's own header, so the
           back arrow lines up with the header's buttons. */}
       <View style={styles.header}>

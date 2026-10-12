@@ -1,10 +1,11 @@
-import { memo } from 'react';
+import { memo, useRef } from 'react';
+import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SymbolView, SymbolViewProps } from 'expo-symbols';
 import IconButton from './IconButton';
 import ThemeToggleIcon from './ThemeToggleIcon';
 import { ThemeTokens } from '../constants/theme';
-import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
+import { useThemeSnapshot, useToggleThemeFrom } from '../lib/ThemeContext';
 
 // The small leaf components that read the theme SNAPSHOT (useThemeSnapshot) —
 // values that can't animate (icon tints, the status bar) and so switch once,
@@ -33,14 +34,18 @@ export const ThemedIconButton = memo(function ThemedIconButton({
   return <IconButton icon={icon} label={label} color={theme[token]} onPress={onPress} />;
 });
 
-// The header's moon/sun button, which toggles the theme.
+// The header's moon/sun button, which toggles the theme (the new one spreads
+// from this button).
 export const ThemeToggleButton = memo(function ThemeToggleButton() {
-  const { toggleTheme } = useTheme();
   const { theme, isDark } = useThemeSnapshot();
+  const ref = useRef<View>(null);
+  const toggle = useToggleThemeFrom(ref);
   return (
-    <IconButton label="Toggle dark mode" color={theme.headerIconColor} onPress={toggleTheme}>
-      <ThemeToggleIcon isDark={isDark} color={theme.headerIconColor} />
-    </IconButton>
+    <View ref={ref} collapsable={false}>
+      <IconButton label="Toggle dark mode" color={theme.headerIconColor} onPress={toggle}>
+        <ThemeToggleIcon isDark={isDark} color={theme.headerIconColor} />
+      </IconButton>
+    </View>
   );
 });
 

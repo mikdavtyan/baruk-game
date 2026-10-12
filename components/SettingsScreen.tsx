@@ -1,12 +1,13 @@
-import { memo, ReactNode, useEffect, useState } from 'react';
+import { memo, ReactNode, RefObject, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import ScreenGlow from './ScreenGlow';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Avatar from './Avatar';
 import { ThemedSymbol } from './ThemedSnapshot';
 import Toast from './Toast';
 import { Profile } from '../constants/profile';
 import { FONTS, SETTINGS_SWITCH_MS } from '../constants/theme';
-import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
+import { useTheme, useThemeSnapshot, useToggleThemeFrom } from '../lib/ThemeContext';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 // The tab bar below owns the bottom safe area.
@@ -32,7 +33,17 @@ type Props = {
 // A game-style on/off switch: the track crossfades from the neutral key color
 // to the correct green and the knob slides (native driver; reduced motion:
 // at once). An accessible switch with its Armenian label.
-function SettingsSwitch({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
+function SettingsSwitch({
+  label,
+  on,
+  onToggle,
+  trackRef,
+}: {
+  label: string;
+  on: boolean;
+  onToggle: () => void;
+  trackRef?: RefObject<View | null>;
+}) {
   const { color, reduceMotion } = useTheme();
   const [value] = useState(() => new Animated.Value(on ? 1 : 0));
   const [knobX] = useState(() =>
@@ -63,8 +74,8 @@ function SettingsSwitch({ label, on, onToggle }: { label: string; on: boolean; o
       style={styles.row}
     >
       <RowLabel text={label} />
-      <View style={styles.switchTrack}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.switchFill, { backgroundColor: color('keyBackground') }]} />
+      <View ref={trackRef} collapsable={false} style={styles.switchTrack}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.switchFill, { backgroundColor: color('raised') }]} />
         <Animated.View style={[StyleSheet.absoluteFill, styles.switchFill, { backgroundColor: color('correct'), opacity: value }]} />
         <Animated.View style={[styles.knob, { transform: [{ translateX: knobX }] }]} />
       </View>
@@ -72,12 +83,13 @@ function SettingsSwitch({ label, on, onToggle }: { label: string; on: boolean; o
   );
 }
 
-// The dark-theme switch reads the theme snapshot (it flips at the fade's
-// midpoint), so it's its own leaf: a theme change re-renders only it.
+// The dark-theme switch reads the theme snapshot, so it's its own leaf: a
+// theme change re-renders only it. The new theme spreads from its track.
 const DarkModeSwitch = memo(function DarkModeSwitch() {
-  const { toggleTheme } = useTheme();
   const { isDark } = useThemeSnapshot();
-  return <SettingsSwitch label="ՄՈՒԳ ԹԵՄԱ" on={isDark} onToggle={toggleTheme} />;
+  const trackRef = useRef<View>(null);
+  const toggle = useToggleThemeFrom(trackRef);
+  return <SettingsSwitch label="ՄՈՒԳ ԹԵՄԱ" on={isDark} onToggle={toggle} trackRef={trackRef} />;
 });
 
 function RowLabel({ text, danger }: { text: string; danger?: boolean }) {
@@ -154,7 +166,7 @@ function SettingsScreen({
   );
   const divider = <Animated.View style={[styles.divider, { backgroundColor: color('popupBorder') }]} />;
   const soonTag = (
-    <Animated.View style={[styles.soonTag, { backgroundColor: color('keyBackground') }]}>
+    <Animated.View style={[styles.soonTag, { backgroundColor: color('raised') }]}>
       <Animated.Text style={[styles.soonText, { color: textColor('textMuted') }]}>{COMING_SOON}</Animated.Text>
     </Animated.View>
   );
@@ -165,6 +177,7 @@ function SettingsScreen({
       edges={EDGES}
       accessibilityElementsHidden={!visible}
     >
+      <ScreenGlow />
       <View style={styles.header}>
         <Animated.Text style={[styles.title, { color: textColor('headerValueColor') }]} numberOfLines={1} adjustsFontSizeToFit>
           ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ

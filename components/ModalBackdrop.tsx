@@ -28,6 +28,6 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   tint: {
-    backgroundColor: 'rgba(8,8,10,0.6)',
+    backgroundColor: 'rgba(8,2,18,0.6)',
   },
 });

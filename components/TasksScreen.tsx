@@ -1,5 +1,6 @@
 import { memo, useRef, useState } from 'react';
 import { Animated, ScrollView, StyleSheet, View } from 'react-native';
+import ScreenGlow from './ScreenGlow';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Button3D from './Button3D';
 import Coin from './Coin';
@@ -69,6 +70,7 @@ function TasksScreen({ visible, tasks, coins, onClaim }: Props) {
         edges={EDGES}
         accessibilityElementsHidden={!visible}
       >
+        <ScreenGlow />
         <View style={styles.header}>
           <View style={styles.headerSide} />
           <Animated.Text style={[styles.title, { color: textColor('headerValueColor') }]} numberOfLines={1} adjustsFontSizeToFit>
@@ -106,7 +108,7 @@ function TasksScreen({ visible, tasks, coins, onClaim }: Props) {
                 </View>
                 <View style={styles.cardBottom}>
                   <View style={styles.progressWrap}>
-                    <Animated.View style={[styles.progressTrack, { backgroundColor: color('keyBackground') }]}>
+                    <Animated.View style={[styles.progressTrack, { backgroundColor: color('raised') }]}>
                       <Animated.View
                         style={[
                           styles.progressFill,

@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     fontSize: 15,
     lineHeight: 20,
-    color: '#D8D2C6',
+    color: '#D9C8EC',
   },
   streakPill: {
     marginTop: 12,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   streakPillText: {
     fontFamily: FONTS.body,
     fontSize: 12,
-    color: '#EFEAE0',
+    color: '#F3E9FF',
     letterSpacing: 0.3,
   },
   sentence: {
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     fontSize: 15,
     lineHeight: 20,
-    color: '#D8D2C6',
+    color: '#D9C8EC',
   },
   buttons: {
     gap: 12,
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   declineText: {
     fontFamily: FONTS.body,
     fontSize: 15,
-    color: '#BDB6AA',
+    color: '#B9A6D3',
   },
   dimmedText: {
     opacity: 0.5,

@@ -13,7 +13,11 @@ export type LetterState = 'empty' | 'filled' | 'correct' | 'present' | 'absent' 
 
 export type ThemeTokens = {
   background: string;
+  // The soft radial glow at the top of every screen (ScreenBackground.tsx).
+  backgroundGlow: string;
   surface: string;
+  // Chips and inner fills on a surface (progress tracks, the tab bar's plate).
+  raised: string;
   border: string;
   text: string;
   textMuted: string;
@@ -56,6 +60,9 @@ export type ThemeTokens = {
   // plus its own 3D bottom edge, same idea as keyEdge.
   submitOn: string;
   submitOnEdge: string;
+  // Pomegranate: the brand accent (badges, the streak chip, highlights).
+  accent: string;
+  accentEdge: string;
   // The end-of-round result card (see ResultModal.tsx) — a dark,
   // gradient-filled card in BOTH themes, plus a 3D bottom edge like the
   // game's keys/buttons. The gradient itself can't run through `color()`
@@ -104,114 +111,121 @@ export function darken(hex: string, factor = 0.71): string {
   return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
 }
 
-const lightCorrect = '#4A9D5B';
-const lightPresent = '#E8A33D';
-const lightAbsent = '#878580';
-const lightPrimaryBackground = '#1F2328';
+// The "apricot" (light) and "pomegranate night" (dark) palettes of the 2026-10
+// redesign (.scratch/redesign/spec.md). `present` runs a touch deeper than the
+// spec's swatch (#F29A12 / #F5A524) so the white letter on a scored tile stays
+// readable, about as much as on `correct`.
+const lightCorrect = '#27AE68';
+const lightPresent = '#E08B12';
+const lightText = '#2B1638';
 
 export const lightTheme: ThemeTokens = {
-  background: '#F7F5F0',
+  background: '#FFF1E2',
+  backgroundGlow: '#FFD9B8',
   surface: '#FFFFFF',
-  border: '#DDD9D0',
-  text: '#1F2328',
-  textMuted: '#6B6963',
+  raised: '#FFE6CC',
+  border: '#F0D2B4',
+  text: lightText,
+  textMuted: '#8B6B84',
   correct: lightCorrect,
   present: lightPresent,
-  absent: lightAbsent,
-  keyBackground: '#E6E3DC',
-  keyText: '#1F2328',
-  keyEdge: '#DDD9D0', // = border — already the right "slightly darker than keyBackground" neutral
-  correctEdge: darken(lightCorrect),
-  presentEdge: darken(lightPresent),
-  absentEdge: darken(lightAbsent),
-  tileBorder: '#DDD9D0', // = border, unchanged from the app's existing default tile border
-  tileActiveBorder: '#1F2328', // = text, unchanged from the app's existing active-cell border
-  typedLetter: '#1F2328', // = text, unchanged
-  headerIconColor: '#1F2328', // = text, unchanged
-  headerValueColor: '#1F2328', // = text, unchanged
-  pill: '#E6E3DC', // = keyBackground, unchanged
-  pillText: '#1F2328', // = text, unchanged
-  primaryBackground: lightPrimaryBackground,
-  primaryText: '#FFFFFF',
-  submitOn: lightPrimaryBackground, // light keeps its existing submit-ready look
-  submitOnEdge: darken(lightPrimaryBackground), // light had no 3D edge before, this is new
-  cardGradientStart: '#34312C',
-  cardGradientEnd: '#2A2724',
-  cardBorder: 'rgba(255,255,255,0.06)',
-  cardEdge: '#1A1816',
-  cardText: '#FFFFFF',
-  cardTextMuted: '#BDB6AA',
-  cardTileFill: '#3A3631',
-  cardTileBorder: '#4A4640',
+  absent: '#A897B3',
+  keyBackground: '#FFFFFF',
+  keyText: lightText,
+  keyEdge: '#E8C6A6',
+  correctEdge: '#16774A',
+  presentEdge: '#A86509',
+  absentEdge: '#7B6A87',
+  tileBorder: '#EBC9A8',
+  tileActiveBorder: '#7A5470',
+  typedLetter: lightText,
+  headerIconColor: lightText,
+  headerValueColor: lightText,
+  pill: '#FFFFFF',
+  pillText: lightText,
+  primaryBackground: lightText,
+  primaryText: '#FFF1E2',
+  submitOn: lightCorrect,
+  submitOnEdge: '#16774A',
+  accent: '#DD3452',
+  accentEdge: '#9A1C35',
+  // The result cards stay a deep plum in the light theme too (their art and
+  // light text are drawn for a dark card), like a candy box on the apricot.
+  cardGradientStart: '#3A2050',
+  cardGradientEnd: '#2B1638',
+  cardBorder: 'rgba(255,255,255,0.08)',
+  cardEdge: '#1A0C26',
+  cardText: '#FFF4EA',
+  cardTextMuted: '#CDB8D8',
+  cardTileFill: '#44295C',
+  cardTileBorder: '#573A72',
   popupSurface: '#FFFFFF', // = surface
-  popupBorder: '#DDD9D0', // = border
-  popupEdge: '#DDD9D0', // = keyEdge
-  popupText: '#1F2328', // = text
-  popupTextMuted: '#6B6963', // = textMuted
-  popupDivider: '#E6E3DC', // = keyBackground
-  popupBadgeBg: '#1F2328', // = text
+  popupBorder: '#F0D2B4', // = border
+  popupEdge: '#E8C6A6', // = keyEdge
+  popupText: lightText,
+  popupTextMuted: '#8B6B84',
+  popupDivider: '#F7E3CF',
+  popupBadgeBg: lightText,
   popupBadgeText: '#FFFFFF',
-  popupTileFill: '#F7F5F0', // = background
-  popupTileBorder: '#DDD9D0', // = border
-  popupTileText: '#1F2328', // = typedLetter
-  coinShadow: 'rgba(110,60,0,0.35)',
+  popupTileFill: '#FFE6CC', // = raised
+  popupTileBorder: '#F0D2B4',
+  popupTileText: lightText,
+  coinShadow: 'rgba(120,60,20,0.35)',
 };
 
-// Every value below (except where noted) is from the chat-provided dark
-// palette: keyBackground/keyText are a light chip that stays constant
-// whether a key has been used or not, while absent is its own dark charcoal
-// — clearly different from both. Tile.tsx reads the same `absent` token, so
-// the gameboard's wrong-letter tiles automatically match the keyboard's
-// wrong-letter keys.
-const darkCorrect = '#70B400';
-const darkPresent = '#D6A500';
-const darkAbsent = '#3B3B3B';
+const darkCorrect = '#2FBF7A';
+const darkPresent = '#E9961C';
+const darkText = '#F7EEFF';
 
 export const darkTheme: ThemeTokens = {
-  background: '#2A2A2A',
-  surface: '#1C1F22',
-  border: '#33373B',
-  text: '#EDEDED',
-  textMuted: '#807F87',
+  background: '#170B26',
+  backgroundGlow: '#2A1142',
+  surface: '#25133A',
+  raised: '#33204B',
+  border: '#45305F',
+  text: darkText,
+  textMuted: '#A994C6',
   correct: darkCorrect,
   present: darkPresent,
-  absent: darkAbsent,
-  keyBackground: '#6A6D6E',
-  keyText: '#FFFFFF',
-  keyEdge: '#C0BCCC',
-  correctEdge: darken(darkCorrect), // = #4F8000, matches the chat-provided submit-on-edge exactly
-  presentEdge: darken(darkPresent),
-  absentEdge: darken(darkAbsent),
-  tileBorder: '#807F87',
-  tileActiveBorder: '#FFFFFF',
-  typedLetter: '#FFFFFF',
-  headerIconColor: '#807F87',
-  headerValueColor: '#807F87',
-  pill: '#2F3138',
-  pillText: '#FFFFFF',
-  primaryBackground: '#EDEDED',
-  primaryText: '#121416',
+  absent: '#45355A',
+  keyBackground: '#4A3766',
+  keyText: darkText,
+  keyEdge: '#2B1D3F',
+  correctEdge: '#1A7A4C',
+  presentEdge: '#A5680B',
+  absentEdge: '#2C2140',
+  tileBorder: '#5A4478',
+  tileActiveBorder: '#C9B3EA',
+  typedLetter: darkText,
+  headerIconColor: darkText,
+  headerValueColor: darkText,
+  pill: '#25133A',
+  pillText: darkText,
+  primaryBackground: darkText,
+  primaryText: '#170B26',
   submitOn: darkCorrect,
-  submitOnEdge: darken(darkCorrect),
-  cardGradientStart: '#252A2F',
-  cardGradientEnd: '#1D2125',
-  cardBorder: 'rgba(255,255,255,0.06)',
-  cardEdge: '#0A0B0C',
-  cardText: '#EDEDED', // = text, unchanged
-  cardTextMuted: '#807F87', // = textMuted, unchanged
-  cardTileFill: '#16191C',
-  cardTileBorder: '#33383D',
-  popupSurface: '#1C1F22', // = surface
-  popupBorder: '#33373B', // = border
-  popupEdge: '#0A0B0C', // = cardEdge
-  popupText: '#EDEDED', // = text
-  popupTextMuted: '#9A99A1', // a step lighter than textMuted, for body text on the panel
-  popupDivider: '#2A2E33',
-  popupBadgeBg: '#EDEDED', // = primaryBackground
-  popupBadgeText: '#121416', // = primaryText
-  popupTileFill: '#16191C', // = cardTileFill
-  popupTileBorder: '#33383D', // = cardTileBorder
-  popupTileText: '#FFFFFF', // = typedLetter
+  submitOnEdge: '#1A7A4C',
+  accent: '#E8405F',
+  accentEdge: '#93203A',
+  cardGradientStart: '#2E1A47',
+  cardGradientEnd: '#25133A',
+  cardBorder: 'rgba(255,255,255,0.08)',
+  cardEdge: '#0E0718',
+  cardText: darkText,
+  cardTextMuted: '#A994C6',
+  cardTileFill: '#33204B',
+  cardTileBorder: '#45305F',
+  popupSurface: '#25133A', // = surface
+  popupBorder: '#45305F', // = border
+  popupEdge: '#0E0718',
+  popupText: darkText,
+  popupTextMuted: '#B9A6D3', // a step lighter than textMuted, for body text on the panel
+  popupDivider: '#36234E',
+  popupBadgeBg: darkText,
+  popupBadgeText: '#170B26',
+  popupTileFill: '#33204B', // = raised
+  popupTileBorder: '#45305F',
+  popupTileText: darkText,
   coinShadow: 'rgba(0,0,0,0.55)',
 };
 
@@ -309,16 +323,9 @@ export const ROW_SHAKE_DURATION_MS = 260;
 // becomes the active one (see Tile.tsx).
 export const TILE_SHINE_DURATION_MS = 450;
 
-// The light/dark switch (lib/ThemeContext.tsx): every themed color fades in
-// place over this long, eased in-out; the plain `theme` snapshot flips at the
-// midpoint. Kept short on purpose — see docs/adr/0004.
-export const THEME_FADE_MS = 300;
-// Text colors fade on the native driver too (true), so a theme toggle does no
-// JS work per frame. If a device shows text NOT changing color with it (native
-// text color isn't confirmed to repaint on Android), set this to false: then
-// text colors switch once, at the fade's midpoint, while backgrounds still fade
-// natively. Every letter ends in the right color either way.
-export const TEXT_COLOR_NATIVE = true;
+// The light/dark switch (lib/ThemeContext.tsx, ThemeRevealOverlay.tsx): the
+// new theme spreads in a growing circle from the pressed control, ease-out.
+export const THEME_REVEAL_MS = 650;
 
 // Short game toasts (e.g. "no hint left") over the top of the board.
 export const TOAST_FADE_MS = 180;

@@ -1,43 +1,49 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing } from 'react-native';
-import { darkTheme, lightTheme, TEXT_COLOR_NATIVE, THEME_FADE_MS, ThemeTokens } from '../constants/theme';
+import { createContext, ReactNode, RefObject, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Animated, StyleSheet, View } from 'react-native';
+import ThemeRevealOverlay, { RevealOrigin } from '../components/ThemeRevealOverlay';
+import { darkTheme, lightTheme, ThemeTokens } from '../constants/theme';
+import { captureView, ViewImage } from './captureView';
+import { measureWindow } from './measureWindow';
 
 // lightTheme/darkTheme (constants/theme.ts) are the design tokens. A theme
-// toggle fades every themed color in place (docs/adr/0004), with NO JS work per
-// frame (docs/adr/0005):
+// switch is a circle reveal (docs/adr/0006): the old look is snapshotted,
+// the theme switches INSTANTLY underneath, and a growing circular hole in the
+// snapshot (Skia + Reanimated, on the UI thread) uncovers the new one from
+// the control that was pressed. No JS work per frame, no color fade:
 // - `color(key)` (View colors) and `textColor(key)` (Text colors) are one
-//   shared interpolation per token of `progress`, which animates on the NATIVE
-//   driver. With TEXT_COLOR_NATIVE false, text colors instead come from
-//   `textProgress`, set once at the midpoint (a single switch, no per-frame work).
-// - Everything that can't animate (icon tints, the status bar, gradients,
-//   PNGs, text shadows…) reads the plain `theme`/`isDark` snapshot, which flips
-//   once, at the fade's midpoint.
-// Two contexts, so that midpoint flip re-renders only the snapshot's readers:
+//   shared interpolation per token of `progress`, a native-driven value that
+//   is only ever SET (0 = light, 1 = dark), so a switch re-renders nothing.
+// - Everything that can't take an Animated color (icon tints, the status bar,
+//   gradients, text shadows…) reads the plain `theme`/`isDark` snapshot.
+// Two contexts, so the snapshot's flip re-renders only its readers:
 // `useTheme()` is the stable part (color, textColor, toggleTheme,
-// reduceMotion, currentTheme — never changes on a toggle); `useThemeSnapshot()`
+// reduceMotion, currentTheme — never changes on a switch); `useThemeSnapshot()`
 // is `{ theme, isDark }`. Read the snapshot only in small leaf components.
-// The fade runs as two halves — ease-in to 0.5, ease-out to the end, which
-// together are exactly Easing.inOut(Easing.quad) — and the snapshot flips in
-// the callback between them, not on a timer. Taps mid-fade are ignored;
-// reduced motion switches instantly. Nothing is remounted.
+// Taps on a theme control mid-reveal are ignored; reduced motion, or a
+// snapshot that can't be taken, switches instantly. Nothing is remounted.
 
 export type ColorFn = (key: keyof ThemeTokens) => Animated.AnimatedInterpolation<string>;
 
 type ThemeColorsValue = {
-  toggleTheme: () => void;
+  // `origin` (window coordinates) is where the new theme spreads from — the
+  // pressed control's center; null → the screen's center.
+  toggleTheme: (origin?: RevealOrigin | null) => void;
   color: ColorFn; // View colors (native driver)
-  textColor: ColorFn; // Text colors (native driver, or a midpoint switch — TEXT_COLOR_NATIVE)
+  textColor: ColorFn; // Text colors (native driver)
+  // 0 = light, 1 = dark — set at a switch, never animated. For things that
+  // switch by opacity rather than color (ScreenGlow's two gradients).
+  darkness: Animated.Value;
   reduceMotion: boolean;
   // The current snapshot WITHOUT subscribing to it — for render-time logic
   // that runs anyway for another reason (e.g. a key's own state-change fade).
   currentTheme: () => ThemeTokens;
-  // Sets the theme at once, without a fade and without reporting it to
+  // Sets the theme at once, without a reveal and without reporting it to
   // `onDarkChange` — for restoring the saved choice before the first render.
   setDarkInstant: (dark: boolean) => void;
 };
 
 type ThemeSnapshotValue = {
-  theme: ThemeTokens; // plain snapshot — flips at the fade's midpoint
+  theme: ThemeTokens; // plain snapshot
   isDark: boolean; // flips with `theme`
 };
 
@@ -55,20 +61,25 @@ function interpolations(progress: Animated.Value) {
   return nodes;
 }
 
-// Defaults to light. Only the header's moon/sun button flips it.
-// `onDarkChange` hears every theme change a player makes (the header's toggle,
-// Settings' switch), at the moment the snapshot flips — App saves it.
+type Reveal = { id: number; image: ViewImage; origin: RevealOrigin | null; dark: boolean };
+
+// Defaults to light. `onDarkChange` hears every theme change a player makes
+// (the header's toggle, Settings' switch), at the moment the theme switches
+// under the reveal — App saves it.
 export function ThemeProvider({ children, onDarkChange }: { children: ReactNode; onDarkChange?: (dark: boolean) => void }) {
   const [isDark, setIsDark] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
-  const [progress] = useState(() => new Animated.Value(0)); // 0 = light, 1 = dark — native-driven
-  const [textProgress] = useState(() => new Animated.Value(0)); // only used with TEXT_COLOR_NATIVE false
-  const [viewNodes] = useState(() => interpolations(progress));
-  const [textNodes] = useState(() => (TEXT_COLOR_NATIVE ? viewNodes : interpolations(textProgress)));
-  // Where the current/last fade is heading (1 = dark), and whether one runs.
-  const targetRef = useRef(0);
+  const [progress] = useState(() => new Animated.Value(0)); // 0 = light, 1 = dark — set, never animated
+  const [nodes] = useState(() => interpolations(progress));
+  const [reveal, setReveal] = useState<Reveal | null>(null);
+  // Where the current/last switch is heading (true = dark), and whether a
+  // reveal runs (from the tap until the circle has fully opened).
+  const targetRef = useRef(false);
   const busyRef = useRef(false);
   const snapshotRef = useRef<ThemeTokens>(lightTheme);
+  const rootRef = useRef<View>(null);
+  const revealIdRef = useRef(0);
+  const revealRef = useRef<Reveal | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -86,78 +97,125 @@ export function ThemeProvider({ children, onDarkChange }: { children: ReactNode;
   useLayoutEffect(() => {
     onDarkChangeRef.current = onDarkChange;
   });
-  const flipSnapshot = (dark: boolean) => {
-    snapshotRef.current = dark ? darkTheme : lightTheme;
-    setIsDark(dark);
-    onDarkChangeRef.current?.(dark);
-  };
 
-  const toggleTheme = useCallback(() => {
-    if (busyRef.current) return;
-    const to = targetRef.current === 1 ? 0 : 1;
-    targetRef.current = to;
-    if (reduceMotion) {
-      progress.setValue(to);
-      textProgress.setValue(to);
-      flipSnapshot(to === 1);
-      return;
-    }
-    busyRef.current = true;
-    const half = (toValue: number, easing: (t: number) => number) =>
-      Animated.timing(progress, { toValue, duration: THEME_FADE_MS / 2, easing, useNativeDriver: true });
-    half(0.5, Easing.in(Easing.quad)).start(() => {
-      if (!TEXT_COLOR_NATIVE) textProgress.setValue(to); // text colors' one switch
-      flipSnapshot(to === 1); // the snapshot's one switch, mid-fade
-      half(to, Easing.out(Easing.quad)).start(() => {
-        // Pin the end state, so the JS side of the native-driven value never
-        // lags behind what's on screen (a later re-render reads it).
-        progress.setValue(to);
-        textProgress.setValue(to);
-        busyRef.current = false;
-      });
-    });
-  }, [reduceMotion, progress, textProgress]);
+  // The switch itself: every native color at once, then the snapshot.
+  const apply = useCallback(
+    (dark: boolean) => {
+      progress.setValue(dark ? 1 : 0);
+      snapshotRef.current = dark ? darkTheme : lightTheme;
+      setIsDark(dark);
+    },
+    [progress],
+  );
+  const applyByPlayer = useCallback(
+    (dark: boolean) => {
+      apply(dark);
+      onDarkChangeRef.current?.(dark);
+    },
+    [apply],
+  );
 
-  const color = useCallback<ColorFn>((key) => viewNodes[key], [viewNodes]);
-  const textColor = useCallback<ColorFn>((key) => textNodes[key], [textNodes]);
+  const toggleTheme = useCallback(
+    (origin?: RevealOrigin | null) => {
+      if (busyRef.current) return;
+      const dark = !targetRef.current;
+      targetRef.current = dark;
+      if (reduceMotion) {
+        applyByPlayer(dark);
+        return;
+      }
+      busyRef.current = true;
+      captureView(rootRef)
+        .catch(() => null)
+        .then((image) => {
+          if (!image) {
+            applyByPlayer(dark);
+            busyRef.current = false;
+            return;
+          }
+          revealIdRef.current += 1;
+          const next = { id: revealIdRef.current, image, origin: origin ?? null, dark };
+          revealRef.current = next;
+          setReveal(next);
+        });
+    },
+    [reduceMotion, applyByPlayer],
+  );
+
+  // The overlay shows the old look over everything: switch underneath.
+  const handleCovered = useCallback(() => {
+    const r = revealRef.current;
+    if (r) applyByPlayer(r.dark);
+  }, [applyByPlayer]);
+  const handleRevealDone = useCallback(() => {
+    revealRef.current?.image.dispose?.();
+    revealRef.current = null;
+    setReveal(null);
+    busyRef.current = false;
+  }, []);
+
+  const color = useCallback<ColorFn>((key) => nodes[key], [nodes]);
   const currentTheme = useCallback(() => snapshotRef.current, []);
   const setDarkInstant = useCallback(
     (dark: boolean) => {
       if (busyRef.current) return;
-      const to = dark ? 1 : 0;
-      targetRef.current = to;
-      progress.setValue(to);
-      textProgress.setValue(to);
-      snapshotRef.current = dark ? darkTheme : lightTheme;
-      setIsDark(dark);
+      targetRef.current = dark;
+      apply(dark);
     },
-    [progress, textProgress],
+    [apply],
   );
 
   const colors = useMemo<ThemeColorsValue>(
-    () => ({ toggleTheme, color, textColor, reduceMotion, currentTheme, setDarkInstant }),
-    [toggleTheme, color, textColor, reduceMotion, currentTheme, setDarkInstant],
+    () => ({ toggleTheme, color, textColor: color, darkness: progress, reduceMotion, currentTheme, setDarkInstant }),
+    [toggleTheme, color, progress, reduceMotion, currentTheme, setDarkInstant],
   );
   const snapshot = useMemo<ThemeSnapshotValue>(() => ({ theme: isDark ? darkTheme : lightTheme, isDark }), [isDark]);
   return (
     <ThemeColorsContext.Provider value={colors}>
-      <ThemeSnapshotContext.Provider value={snapshot}>{children}</ThemeSnapshotContext.Provider>
+      <ThemeSnapshotContext.Provider value={snapshot}>
+        {/* The snapshot's source: everything the app draws. */}
+        <View ref={rootRef} collapsable={false} style={styles.root}>
+          {children}
+        </View>
+        {reveal && (
+          <ThemeRevealOverlay
+            key={reveal.id}
+            image={reveal.image}
+            origin={reveal.origin}
+            onCovered={handleCovered}
+            onDone={handleRevealDone}
+          />
+        )}
+      </ThemeSnapshotContext.Provider>
     </ThemeColorsContext.Provider>
   );
 }
 
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});
+
 // The stable part — color/textColor/toggleTheme/reduceMotion/currentTheme. A
-// theme toggle never re-renders its readers.
+// theme switch never re-renders its readers.
 export function useTheme(): ThemeColorsValue {
   const ctx = useContext(ThemeColorsContext);
   if (!ctx) throw new Error('useTheme must be used within a ThemeProvider');
   return ctx;
 }
 
-// The `{ theme, isDark }` snapshot — its readers re-render at every toggle's
-// midpoint, so keep them small leaf components.
+// The `{ theme, isDark }` snapshot — its readers re-render at every switch, so
+// keep them small leaf components.
 export function useThemeSnapshot(): ThemeSnapshotValue {
   const ctx = useContext(ThemeSnapshotContext);
   if (!ctx) throw new Error('useThemeSnapshot must be used within a ThemeProvider');
   return ctx;
+}
+
+// A theme control's press handler: the reveal spreads from the center of the
+// view `ref` points at (measured at the tap), or the screen's center.
+export function useToggleThemeFrom(ref: RefObject<View | null>): () => void {
+  const { toggleTheme } = useTheme();
+  return useCallback(() => {
+    measureWindow(ref).then((r) => toggleTheme(r ? { x: r.x + r.width / 2, y: r.y + r.height / 2 } : null));
+  }, [ref, toggleTheme]);
 }
