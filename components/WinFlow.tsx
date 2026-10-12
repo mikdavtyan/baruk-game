@@ -31,6 +31,7 @@ import { measureWindow } from '../lib/measureWindow';
 import { showRewardedAd } from '../lib/rewardedAd';
 import { buildEmojiGrid, buildShareText, shareBonusAvailable } from '../lib/shareText';
 import { useTheme } from '../lib/ThemeContext';
+import { useModalRise } from '../lib/useModalRise';
 
 type SubmittedGuess = { tokens: string[]; states: LetterState[] };
 type Point = { x: number; y: number };
@@ -108,6 +109,8 @@ function WinFlow({
   const [rewardScale] = useState(() => new Animated.Value(1));
   const [resultOpacity] = useState(() => new Animated.Value(resume?.step === 'result' ? 1 : 0));
   const [resultScale] = useState(() => new Animated.Value(1));
+  const rewardRise = useModalRise();
+  const resultRise = useModalRise();
   const [coinFlight, setCoinFlight] = useState<{ origin: Point; target: Point; amount: number } | null>(null);
   const [shareBadgeVisible, setShareBadgeVisible] = useState(true);
   const [streakGrew, setStreakGrew] = useState(false);
@@ -194,16 +197,19 @@ function WinFlow({
       setStep('reward');
       setShowReward(true);
 
-      // Mounted now — measure its praise slot and pile one frame later, then glide.
-      requestAnimationFrame(async () => {
-        const [slotRect, pileMeasuredRect] = await Promise.all([
-          measureWindow(rewardPraiseSlotRef),
-          measureWindow(pileMeasureRef),
-        ]);
-        if (cancelled) return;
-        if (slotRect) setPraiseFlipTo({ x: slotRect.x + slotRect.width / 2, y: slotRect.y + slotRect.height / 2 });
-        if (pileMeasuredRect) setPileRect(pileMeasuredRect);
-      });
+      // It springs up from below; once it has landed, measure its praise slot
+      // and pile (one frame later), then the praise word glides into the slot.
+      rewardRise.play(reduceMotion, () =>
+        requestAnimationFrame(async () => {
+          const [slotRect, pileMeasuredRect] = await Promise.all([
+            measureWindow(rewardPraiseSlotRef),
+            measureWindow(pileMeasureRef),
+          ]);
+          if (cancelled) return;
+          if (slotRect) setPraiseFlipTo({ x: slotRect.x + slotRect.width / 2, y: slotRect.y + slotRect.height / 2 });
+          if (pileMeasuredRect) setPileRect(pileMeasuredRect);
+        }),
+      );
 
       Animated.timing(overlayOpacity, {
         toValue: 1,
@@ -298,6 +304,7 @@ function WinFlow({
         setShowReward(false);
         setStep('result');
         setShowResult(true);
+        resultRise.play(reduceMotion);
         resultOpacity.setValue(0);
         Animated.timing(resultOpacity, {
           toValue: 1,
@@ -454,6 +461,7 @@ function WinFlow({
                   goes false right after this same fade finishes) — never
                   lingers into the result modal (A3). */}
               {praiseText && praiseFrom && <PraiseWord text={praiseText} from={praiseFrom} flipTo={praiseFlipTo} />}
+              <Animated.View style={[styles.fill, { transform: [{ translateY: rewardRise.translateY }] }]}>
               <RewardModal
                 praiseSlotRef={rewardPraiseSlotRef}
                 onPraiseSlotLayout={() => {}}
@@ -466,12 +474,16 @@ function WinFlow({
                 onNext={handleRewardNext}
                 disabled={isTransitioning || !!coinFlight}
               />
+              </Animated.View>
             </Animated.View>
           )}
 
           {showResult && pending && (
             <Animated.View
-              style={[styles.fill, { opacity: resultOpacity, transform: [{ scale: resultScale }] }]}
+              style={[
+                styles.fill,
+                { opacity: resultOpacity, transform: [{ translateY: resultRise.translateY }, { scale: resultScale }] },
+              ]}
               pointerEvents={step === 'result' ? 'auto' : 'none'}
             >
               <ResultModal

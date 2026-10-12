@@ -41,14 +41,23 @@ export const PRAISE_WORDS: [string, string][] = [
 ];
 
 export const CELEBRATION_START_DELAY_MS = 300; // after the winning row's last flip
-export const CELEBRATION_TILE_JUMP_MS = 280;
-export const CELEBRATION_TILE_JUMP_STAGGER_MS = 100;
-export const CELEBRATION_TILE_JUMP_HEIGHT = 18;
+// The winning row's wave: each tile jumps (up, a small squash on landing,
+// settle) CELEBRATION_TILE_JUMP_STAGGER_MS after the one to its left.
+export const CELEBRATION_TILE_JUMP_MS = 600;
+export const CELEBRATION_TILE_JUMP_STAGGER_MS = 90;
+export const CELEBRATION_TILE_JUMP_HEIGHT = 24;
 export const PRAISE_POP_DURATION_MS = 450;
 export const CONFETTI_DURATION_MS = 2400;
 export const CONFETTI_PIECE_COUNT = 140;
 export const REWARD_MODAL_DELAY_MS = 1600; // after the praise word pops
 export const PRAISE_FLIP_DURATION_MS = 400;
+// The praise word's gold → pomegranate shine: one native loop translating a
+// wide gradient behind the word's mask.
+export const PRAISE_SHINE_MS = 3000;
+// The reward/result/second-chance modals spring up from the bottom.
+export const MODAL_RISE_FRICTION = 7;
+export const MODAL_RISE_TENSION = 45;
+export const MODAL_RISE_FROM = 0.75; // share of the window height it starts below
 
 export const RIBBON_ENTER_DURATION_MS = 350;
 export const COIN_PILE_BOUNCE_MS = 150;
@@ -62,7 +71,16 @@ export const COIN_FLIGHT_PIECES = 7;
 export const COIN_FLIGHT_STAGGER_MS = 40;
 export const COIN_FLIGHT_DURATION_MS = 420;
 
-export const RESULT_TILE_FLIP_STAGGER_MS = 80;
+// Win result: the answer's tiles pop in one by one.
+export const RESULT_TILE_POP_DELAY_MS = 150;
+export const RESULT_TILE_POP_STAGGER_MS = 80;
+// Loss result: the answer's tiles flip one by one (LOSS_REVEAL_STAGGER_MS
+// apart), then gently settle — they drop a little and dim.
+export const LOSS_REVEAL_STAGGER_MS = 160;
+export const LOSS_SETTLE_DELAY_MS = 200; // after the last flip
+export const LOSS_SETTLE_MS = 700;
+export const LOSS_SETTLE_DROP = 4; // px
+export const LOSS_SETTLE_OPACITY = 0.72;
 export const RESULT_SECTION_STAGGER_MS = 60;
 export const RESULT_SECTION_RISE_PX = 16;
 

@@ -24,3 +24,11 @@ jest.mock('@shopify/react-native-skia', () => {
     Skia: { Path: { Make: () => ({ addCircle: () => {} }) } },
   };
 });
+
+// MaskedView (the praise word's shine) is native; tests render its children.
+jest.mock('@react-native-masked-view/masked-view', () => {
+  const { View } = require('react-native');
+  return function MaskedView({ children, style }: { children: unknown; style: unknown }) {
+    return require('react').createElement(View, { style }, children);
+  };
+});

@@ -30,6 +30,7 @@ import { measureWindow } from '../lib/measureWindow';
 import { showRewardedAd } from '../lib/rewardedAd';
 import { buildEmojiGrid, buildShareText, shareBonusAvailable } from '../lib/shareText';
 import { useTheme } from '../lib/ThemeContext';
+import { useModalRise } from '../lib/useModalRise';
 
 type SubmittedGuess = { tokens: string[]; states: LetterState[] };
 type Point = { x: number; y: number };
@@ -117,6 +118,7 @@ function LossFlow({
   const [overlayOpacity] = useState(() => new Animated.Value(resume ? 1 : 0));
   const [contentOpacity] = useState(() => new Animated.Value(1));
   const [contentScale] = useState(() => new Animated.Value(1));
+  const contentRise = useModalRise();
   const [headerPillRect, setHeaderPillRect] = useState<Rect | null>(null);
   const [pillValue, setPillValue] = useState(coins);
   const [pillScale] = useState(() => new Animated.Value(1));
@@ -175,6 +177,7 @@ function LossFlow({
     contentOpacity.setValue(1);
     contentScale.setValue(1);
     setStep(next);
+    contentRise.play(reduceMotion); // springs up from below
     Animated.timing(overlayOpacity, {
       toValue: 1,
       duration: reduceMotion ? 150 : 400,
@@ -509,7 +512,12 @@ function LossFlow({
           <ModalBackdrop opacity={overlayOpacity} />
 
           {step === 'secondChance' && (
-            <Animated.View style={[styles.fill, { opacity: contentOpacity, transform: [{ scale: contentScale }] }]}>
+            <Animated.View
+              style={[
+                styles.fill,
+                { opacity: contentOpacity, transform: [{ translateY: contentRise.translateY }, { scale: contentScale }] },
+              ]}
+            >
               <SecondChanceModal
                 {...shownSecondChance}
                 coinButtonRef={coinButtonRef}
@@ -525,7 +533,12 @@ function LossFlow({
           )}
 
           {step === 'lossResult' && (
-            <Animated.View style={[styles.fill, { opacity: contentOpacity, transform: [{ scale: contentScale }] }]}>
+            <Animated.View
+              style={[
+                styles.fill,
+                { opacity: contentOpacity, transform: [{ translateY: contentRise.translateY }, { scale: contentScale }] },
+              ]}
+            >
               <ResultModal
                 variant="loss"
                 secretWordTokens={frozenWordTokens}

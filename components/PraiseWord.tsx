@@ -96,7 +96,7 @@ export default function PraiseWord({ text, from, flipTo }: Props) {
       <Sparkle x={screenCenterX - approxWidth / 2 - 16} y={svgHeight * 0.12} delay={0} size={9} />
       <Sparkle x={screenCenterX + approxWidth / 2 + 4} y={svgHeight * 0.5} delay={450} size={7} />
       <Sparkle x={screenCenterX - 5} y={-6} delay={900} size={8} />
-      <OutlinedWord text={text} />
+      <OutlinedWord text={text} shine />
     </Animated.View>
   );
 }
