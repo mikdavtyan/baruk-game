@@ -3,6 +3,8 @@ import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import FortuneWheelIcon from './FortuneWheelIcon';
 import {
   FONTS,
+  WHEEL_BADGE_BOB,
+  WHEEL_BADGE_BOB_MS,
   WHEEL_BUTTON_SIZE,
   WHEEL_IDLE_INTERVAL_MS,
   WHEEL_OVERSHOOT_TURNS,
@@ -11,12 +13,13 @@ import {
 } from '../constants/theme';
 import { useTheme } from '../lib/ThemeContext';
 import { useAppActive } from '../lib/useAppActive';
+import { useLoopWhile } from '../lib/useLoopWhile';
 
 // ՊՏՏԻ՛Ր — the ՛ is U+055B, the Armenian emphasis mark.
 export const WHEEL_BADGE_TEXT = 'ՊՏՏԻ՛Ր';
 
 // Home's fortune wheel button (ԲԱԽՏԻ ԱՆԻՎ): the wheel icon with a green
-// ՊՏՏԻ՛Ր badge under it; a tap opens the wheel page. It idles with a spin
+// pomegranate ՊՏՏԻ՛Ր badge under it, bobbing gently; a tap opens the wheel page. It idles with a spin
 // every WHEEL_IDLE_INTERVAL_MS — one quick full turn with an ease-out that
 // overshoots a little, then a small settle back, like a real wheel stopping.
 // Only the wheel body turns: its shadow, highlight and pointer stay still
@@ -57,6 +60,20 @@ function WheelButton({ onPress, paused }: { onPress: () => void; paused: boolean
     };
   }, [running, turn]);
 
+  const [bob] = useState(() => new Animated.Value(0));
+  const [bobY] = useState(() => bob.interpolate({ inputRange: [0, 1], outputRange: [0, -WHEEL_BADGE_BOB] }));
+  useLoopWhile(
+    running,
+    () =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(bob, { toValue: 1, duration: WHEEL_BADGE_BOB_MS / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          Animated.timing(bob, { toValue: 0, duration: WHEEL_BADGE_BOB_MS / 2, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        ]),
+      ),
+    () => bob.setValue(0),
+  );
+
   return (
     <Pressable
       onPress={onPress}
@@ -76,8 +93,7 @@ function WheelButton({ onPress, paused }: { onPress: () => void; paused: boolean
           <FortuneWheelIcon size={WHEEL_BUTTON_SIZE} layer="top" />
         </View>
       </View>
-      {/* Styled like the coin pill's green "+" badge. */}
-      <Animated.View style={[styles.badge, { backgroundColor: color('correct') }]}>
+      <Animated.View style={[styles.badge, { backgroundColor: color('accent'), transform: [{ translateY: bobY }] }]}>
         <Animated.Text style={styles.badgeText} allowFontScaling={false}>
           {WHEEL_BADGE_TEXT}
         </Animated.Text>
@@ -109,6 +125,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.title,
     fontSize: 11,
     letterSpacing: 0.5,
-    color: '#FFFFFF', // fixed white on the green badge, like the "+"
+    color: '#FFFFFF', // fixed white on the pomegranate badge
   },
 });

@@ -231,3 +231,22 @@ describe('the first-launch rules popup', () => {
     expect(rulesOpen()).toBe(false);
   });
 });
+
+describe('the streak chip', () => {
+  const chip = () => menu(root).find((n: any) => n.props.testID === 'streak-chip' && typeof n.type === 'string');
+  const chipText = () => textsIn(chip()).join(' ');
+  const flat = (style: any) => Object.assign({}, ...[].concat(style).flat(Infinity).filter(Boolean));
+
+  it('shows the current streak under the logo', async () => {
+    await AsyncStorage.setItem('wordle:streak', JSON.stringify({ current: 7, best: 9 }));
+    await renderApp();
+    expect(chipText()).toBe('7 ՕՐ ԱՆԸՆԴՄԵՋ');
+    expect(flat(chip().props.style).opacity).not.toBe(0);
+  });
+
+  it('is invisible at 0, keeping its place', async () => {
+    await renderApp();
+    expect(flat(chip().props.style).opacity).toBe(0);
+    expect(chip().props.accessibilityElementsHidden).toBe(true);
+  });
+});

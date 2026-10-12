@@ -267,7 +267,14 @@ export const NEUTRAL_TILE_TEXT = '#1F2328';
 // added, not a working weight scale today.
 export const FONT_FAMILY = 'GHEAGrapalat-Bold';
 
+// Noto Serif Armenian Black (OFL, assets/fonts/NotoSerifArmenian-Black.ttf):
+// the display face — Home's logo tiles, page titles and praise words only.
+// Ascent 1.068em + descent 0.292em.
+export const DISPLAY_FONT_FAMILY = 'NotoSerifArmenian-Black';
+export const DISPLAY_LINE_HEIGHT_EM = 1.36;
+
 export const FONTS = {
+  display: DISPLAY_FONT_FAMILY,
   tile: FONT_FAMILY, // board tiles & keyboard keys — nominally 700
   title: FONT_FAMILY, // buttons, headers, modal titles — nominally 600 (renders as 700, the only weight bundled)
   body: FONT_FAMILY, // body/message text — nominally 400–500 (renders as 700, the only weight bundled)
@@ -451,10 +458,37 @@ export const TAB_SLIDE_MS = 240; // the content slide between tabs
 // (WHEEL_SETTLE_MS) — like a real wheel stopping.
 export const WHEEL_IDLE_INTERVAL_MS = 5500;
 export const WHEEL_SPIN_MS = 900;
-export const WHEEL_OVERSHOOT_TURNS = 0.035;
+export const WHEEL_OVERSHOOT_TURNS = 0.083; // ~30°
 export const WHEEL_SETTLE_MS = 380;
 export const WHEEL_BUTTON_SIZE = 64;
 
 // The Settings tab's on/off switches: the knob slide and the track's fade
 // to green (native driver).
 export const SETTINGS_SWITCH_MS = 160;
+// The badge under the wheel bobs up and down (one native loop).
+export const WHEEL_BADGE_BOB_MS = 1600;
+export const WHEEL_BADGE_BOB = 3; // px
+
+// Home (MenuScreen.tsx). The first time Home appears per launch the logo
+// tiles drop in with a spring, one after another, the tagline fades in and
+// the cards rise in; after that the logo floats in a gentle staggered wave.
+export const HOME_LOGO_DROP_STAGGER_MS = 90;
+export const HOME_LOGO_FLOAT_MS = 4000; // one float wave
+export const HOME_LOGO_FLOAT_LIFT = 6; // px at the top of the wave
+export const HOME_LOGO_FLOAT_PHASE = 0.045; // each tile's lag, as a share of the wave
+export const HOME_TAGLINE_DELAY_MS = 700;
+export const HOME_TAGLINE_MS = 800;
+export const HOME_CARD_RISE_DELAY_MS = 900; // the first card; each next one HOME_CARD_RISE_STAGGER_MS later
+export const HOME_CARD_RISE_STAGGER_MS = 120;
+// The rosette behind Home: one full turn every HOME_ROSETTE_TURN_MS.
+export const HOME_ROSETTE_TURN_MS = 90000;
+export const HOME_ROSETTE_SIZE = 520;
+export const HOME_ROSETTE_OPACITY = 0.13;
+// The streak chip's flame flicker, and the number's pop when the streak grew.
+export const STREAK_FLICKER_MS = 1200;
+export const STREAK_COUNT_STEP_MS = 140;
+export const STREAK_POP_SCALE = 1.4;
+// ԴԱՍԱԿԱՆ's shine sweep and its play arrow's nudge.
+export const HOME_SHINE_INTERVAL_MS = 3800;
+export const HOME_PLAY_NUDGE_MS = 2200;
+export const HOME_PLAY_NUDGE = 4; // px

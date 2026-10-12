@@ -50,6 +50,7 @@ import {
   HINT_SPARKS_MS,
   WORD_LENGTH,
   LetterState,
+  DISPLAY_FONT_FAMILY,
   FONT_FAMILY,
 } from './constants/theme';
 import { AD_REWARD_COINS, ItemPack } from './constants/shop';
@@ -200,6 +201,7 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
   const { color, reduceMotion, setDarkInstant } = useTheme();
   const [fontsLoaded, fontError] = useFonts({
     [FONT_FAMILY]: require('./assets/fonts/GHEAGrapalat-Bold.otf'),
+    [DISPLAY_FONT_FAMILY]: require('./assets/fonts/NotoSerifArmenian-Black.ttf'),
   });
   // The persisted shuffled word bag (lib/wordBag.ts); the current secret
   // word is its current entry. Loaded together with any pending end-of-round
@@ -1166,6 +1168,7 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
           onOpenWheel={wheelPage.open}
           onOpenProfile={onOpenProfile}
           backgroundPaused={homeHidden}
+          streak={streak}
         />
       ),
       shop: (
@@ -1206,6 +1209,7 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
       onOpenProfile,
       activeTab,
       homeHidden,
+      streak,
       tasks,
       onClaimTask,
       hapticsOn,
