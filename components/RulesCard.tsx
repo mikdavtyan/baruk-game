@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { Animated, Easing, LayoutChangeEvent, Platform, StyleProp, StyleSheet, TextStyle, View } from 'react-native';
-import { SymbolView } from 'expo-symbols';
 import BowIcon from './BowIcon';
+import HintIcon from './HintIcon';
 import Tile from './Tile';
 import { FONTS, KEY_EDGE_HEIGHT, LetterState, RULES_TILE_REVEAL_STAGGER_MS, TILE_FLIP_DURATION_MS } from '../constants/theme';
 import { letterLabel } from '../lib/letterDisplay';
@@ -228,7 +228,6 @@ function RulesText({
 
 export default function RulesCard({ revealTrigger, visible }: Props) {
   const { color, textColor, reduceMotion } = useTheme();
-  const { theme } = useThemeSnapshot();
   const [revealedCount, setRevealedCount] = useState(reduceMotion ? EXAMPLES.length : 0);
 
   // Snaps straight back to neutral — no animation to disable first, since
@@ -278,11 +277,7 @@ export default function RulesCard({ revealTrigger, visible }: Props) {
           <View key={i} style={styles.hintRow}>
             <StaticBadge>
               {row.icon === 'search' ? (
-                <SymbolView
-                  name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
-                  size={20}
-                  tintColor={theme.keyText}
-                />
+                <HintIcon size={22} />
               ) : (
                 <BowIcon size={20} volleyId={0} shotCount={0} />
               )}

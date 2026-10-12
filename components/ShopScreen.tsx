@@ -2,8 +2,8 @@ import { memo, ReactNode, useRef, useState } from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ScreenGlow from './ScreenGlow';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SymbolView } from 'expo-symbols';
 import BowIcon from './BowIcon';
+import HintIcon from './HintIcon';
 import Coin from './Coin';
 import IconButton from './IconButton';
 import PlayIcon from './PlayIcon';
@@ -87,7 +87,7 @@ function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onW
 
   const itemIcon = (item: keyof Inventory) =>
     item === 'hint' ? (
-      <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }} size={ITEM_ICON_SIZE} tintColor={theme.keyText} />
+      <HintIcon size={ITEM_ICON_SIZE} />
     ) : (
       <BowIcon size={ITEM_ICON_SIZE} volleyId={0} shotCount={0} />
     );
