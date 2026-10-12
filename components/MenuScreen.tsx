@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Avatar from './Avatar';
 import Button3D from './Button3D';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
@@ -23,6 +23,7 @@ import {
   HOME_PLAY_NUDGE,
   HOME_PLAY_NUDGE_MS,
   HOME_SHINE_INTERVAL_MS,
+  TAB_BAR_SPACE,
 } from '../constants/theme';
 import { useTheme } from '../lib/ThemeContext';
 import { useAppActive } from '../lib/useAppActive';
@@ -77,6 +78,7 @@ function MenuScreen({
   const appActive = useAppActive();
   const running = !backgroundPaused && appActive && !reduceMotion;
   const { width: windowWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const cardWidth = Math.min(windowWidth - CARD_SIDE_MARGIN * 2, CARD_MAX_WIDTH);
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const showComingSoon = () => setToast((t) => ({ id: (t?.id ?? 0) + 1, message: COMING_SOON }));
@@ -143,7 +145,7 @@ function MenuScreen({
           <WheelButton onPress={onOpenWheel} paused={backgroundPaused} />
         </RiseIn>
 
-        <View style={styles.content}>
+        <View style={[styles.content, { paddingBottom: TAB_BAR_SPACE + insets.bottom }]}>
           <View style={styles.hero}>
             <HomeLogo intro={intro} running={running} />
             <View style={styles.streak}>
@@ -154,6 +156,7 @@ function MenuScreen({
           <RiseIn play={intro} delay={HOME_CARD_RISE_DELAY_MS}>
             <View testID="menu-classic" style={styles.card}>
               <Button3D
+                pressScale
                 width={cardWidth}
                 height={CLASSIC_HEIGHT}
                 borderRadius={26}
@@ -191,6 +194,7 @@ function MenuScreen({
           <RiseIn play={intro} delay={HOME_CARD_RISE_DELAY_MS + HOME_CARD_RISE_STAGGER_MS}>
             <View testID="menu-word-of-day" style={styles.card}>
               <Button3D
+                pressScale
                 width={cardWidth}
                 height={DAILY_HEIGHT}
                 borderRadius={22}

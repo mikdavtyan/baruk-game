@@ -1,12 +1,14 @@
 import { memo, ReactNode, RefObject, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import ScreenGlow from './ScreenGlow';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Avatar from './Avatar';
 import { ThemedSymbol } from './ThemedSnapshot';
 import Toast from './Toast';
 import { Profile } from '../constants/profile';
-import { FONTS, SETTINGS_SWITCH_MS } from '../constants/theme';
+import PressScale from './PressScale';
+import TabEnter from './TabEnter';
+import { FONTS, TAB_BAR_SPACE } from '../constants/theme';
 import { useTheme, useThemeSnapshot, useToggleThemeFrom } from '../lib/ThemeContext';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
@@ -31,8 +33,8 @@ type Props = {
 };
 
 // A game-style on/off switch: the track crossfades from the neutral key color
-// to the correct green and the knob slides (native driver; reduced motion:
-// at once). An accessible switch with its Armenian label.
+// to the correct green and the knob springs across (native driver; reduced
+// motion: at once). An accessible switch with its Armenian label.
 function SettingsSwitch({
   label,
   on,
@@ -54,12 +56,7 @@ function SettingsSwitch({
       value.setValue(on ? 1 : 0);
       return;
     }
-    const slide = Animated.timing(value, {
-      toValue: on ? 1 : 0,
-      duration: SETTINGS_SWITCH_MS,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    });
+    const slide = Animated.spring(value, { toValue: on ? 1 : 0, friction: 6, tension: 160, useNativeDriver: true });
     slide.start();
     return () => slide.stop();
   }, [on, reduceMotion, value]);
@@ -121,15 +118,15 @@ function Row({
   right?: ReactNode;
 }) {
   return (
-    <Pressable
+    <PressScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [styles.row, dimmed && styles.dimmed, pressed && styles.pressed]}
+      style={[styles.row, dimmed && styles.dimmed]}
     >
       <RowLabel text={label} danger={danger} />
       {right ?? <ThemedSymbol name={CHEVRON} size={16} token="textMuted" />}
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -148,11 +145,12 @@ function SettingsScreen({
   onResetProgress,
 }: Props) {
   const { color, textColor } = useTheme();
+  const insets = useSafeAreaInsets();
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const comingSoon = () => setToast((t) => ({ id: (t?.id ?? 0) + 1, message: COMING_SOON }));
 
-  const section = (title: string, rows: ReactNode) => (
-    <>
+  const section = (index: number, title: string, rows: ReactNode) => (
+    <TabEnter visible={visible} index={index}>
       <Animated.Text style={[styles.sectionTitle, { color: textColor('textMuted') }]}>{title}</Animated.Text>
       <Animated.View
         style={[
@@ -162,7 +160,7 @@ function SettingsScreen({
       >
         {rows}
       </Animated.View>
-    </>
+    </TabEnter>
   );
   const divider = <Animated.View style={[styles.divider, { backgroundColor: color('popupBorder') }]} />;
   const soonTag = (
@@ -183,9 +181,14 @@ function SettingsScreen({
           ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ
         </Animated.Text>
       </View>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {section('ՏԵՍՔ', <DarkModeSwitch />)}
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: TAB_BAR_SPACE + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {section(0, 'ՏԵՍՔ', <DarkModeSwitch />)}
         {section(
+          1,
           'ԽԱՂ',
           <>
             <SettingsSwitch label="ԹՐԹՌՈՑ" on={hapticsOn} onToggle={onToggleHaptics} />
@@ -194,6 +197,7 @@ function SettingsScreen({
           </>,
         )}
         {section(
+          2,
           'ՀԱՇԻՎ',
           <>
             <Row
@@ -215,6 +219,7 @@ function SettingsScreen({
           </>,
         )}
         {section(
+          3,
           'ԱՅԼ',
           <>
             <Row label="ԱՌԱՋԱՐԿՆԵՐ ԵՎ ԿԱՐԾԻՔՆԵՐ" onPress={comingSoon} dimmed right={soonTag} />
@@ -243,7 +248,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontFamily: FONTS.title,
+    fontFamily: FONTS.display,
     fontWeight: '700',
     letterSpacing: 20 * 0.08,
   },
@@ -278,9 +283,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.title,
     fontSize: 15,
     letterSpacing: 0.4,
-  },
-  pressed: {
-    opacity: 0.6,
   },
   dimmed: {
     opacity: 0.55,

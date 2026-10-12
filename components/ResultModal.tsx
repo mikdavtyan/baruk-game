@@ -308,6 +308,7 @@ export default function ResultModal({
                 </Animated.View>
               )}
               <Button3D
+                pressScale
                 width={56}
                 height={56}
                 borderRadius={28}
@@ -330,6 +331,7 @@ export default function ResultModal({
             </View>
             <View style={styles.nextButtonWrap}>
               <Button3D
+                pressScale
                 width="100%"
                 height={56}
                 borderRadius={16}

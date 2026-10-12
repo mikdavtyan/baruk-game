@@ -440,17 +440,40 @@ export const MENU_BG_TILES: MenuBackgroundTile[] = [
 export const MENU_BG_TILE_CORNER_RATIO = 0.24;
 export const MENU_BG_TILE_BORDER = 2;
 
-// The main screen's tab bar (TabBar.tsx / MainTabs.tsx). The active tab's
-// cell rises on a plate, its icon grows and its name fades + scales in;
-// switching slides the content toward the new tab. All native driver.
-export const TAB_BAR_HEIGHT = 62; // plus the bottom safe-area inset
-export const TAB_ICON_SIZE = 28;
-export const TAB_ICON_ACTIVE_SCALE = 1.3;
-export const TAB_RAISE = 16; // px the active cell's icon and plate rise above the bar's center
-export const TAB_PLATE_SIZE = 58;
+// The main screen's floating tab bar (TabBar.tsx / MainTabs.tsx): inset from
+// the screen edges, a raised bubble springing between the tabs; the active
+// tab's icon lifts, grows and wiggles, its name appears under it. Switching
+// slides the content toward the new tab. All native driver.
+export const TAB_BAR_HEIGHT = 68;
+export const TAB_BAR_INSET = 14; // px from the screen's sides and bottom (plus the bottom safe area)
+export const TAB_BAR_RADIUS = 26;
+export const TAB_BUBBLE_INSET = 7; // px between the bar's edge and the bubble
+export const TAB_ICON_SIZE = 30;
+export const TAB_ICON_ACTIVE_SCALE = 1.12;
+export const TAB_ICON_LIFT = 9; // px the active icon rises (its name appears under it)
+export const TAB_INACTIVE_OPACITY = 0.62; // inactive icons look a little washed out
 export const TAB_LABEL_START_SCALE = 0.6;
-export const TAB_ACTIVATE_MS = 220; // the raise/grow/label of the new tab, and the old one settling back
+export const TAB_ACTIVATE_MS = 260; // the lift/label of the new tab, and the old one settling back
+export const TAB_WIGGLE_MS = 500;
 export const TAB_SLIDE_MS = 240; // the content slide between tabs
+export const TAB_BADGE_PULSE_MS = 1800;
+// Room a tab's content keeps free at its bottom for the floating bar (plus
+// the bottom safe area).
+export const TAB_BAR_SPACE = TAB_BAR_HEIGHT + TAB_BAR_INSET + 12;
+
+// A tab's cards rise in, one after another, each time the tab is shown.
+export const TAB_ENTER_STAGGER_MS = 70;
+export const TAB_ENTER_DISTANCE = 26;
+// Tasks' progress bars fill (scaleX) when the tab is shown, and a shimmer of
+// stripes slides along the fill.
+export const TASK_BAR_FILL_MS = 900;
+export const TASK_BAR_FILL_DELAY_MS = 200;
+export const TASK_STRIPES_MS = 1000;
+export const TASK_CLAIM_PULSE_MS = 1600;
+
+// The press feeling of big buttons and cards (PressScale.tsx).
+export const PRESS_SCALE = 0.96;
+export const PRESS_SCALE_IN_MS = 90;
 
 // Home's fortune wheel button (WheelButton.tsx): every WHEEL_IDLE_INTERVAL_MS
 // it spins once — a quick full turn with an ease-out (WHEEL_SPIN_MS) that
@@ -462,9 +485,6 @@ export const WHEEL_OVERSHOOT_TURNS = 0.083; // ~30°
 export const WHEEL_SETTLE_MS = 380;
 export const WHEEL_BUTTON_SIZE = 64;
 
-// The Settings tab's on/off switches: the knob slide and the track's fade
-// to green (native driver).
-export const SETTINGS_SWITCH_MS = 160;
 // The badge under the wheel bobs up and down (one native loop).
 export const WHEEL_BADGE_BOB_MS = 1600;
 export const WHEEL_BADGE_BOB = 3; // px

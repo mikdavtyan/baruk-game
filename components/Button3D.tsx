@@ -1,5 +1,6 @@
 import { forwardRef, ReactNode, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { usePressScale } from './PressScale';
 import { KEY_EDGE_HEIGHT, KEY_PRESS_DURATION_MS, KEY_PRESS_MOVE_DISTANCE } from '../constants/theme';
 
 type AnimatableColor = string | Animated.AnimatedInterpolation<string>;
@@ -30,6 +31,8 @@ type Props = {
   // 1 = pressed), driven by the owner. Accessibility then lives on the owner.
   touchless?: boolean;
   pressProgress?: Animated.Value;
+  // Big buttons and cards also shrink a little while pressed (PressScale.tsx).
+  pressScale?: boolean;
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -68,11 +71,13 @@ export default forwardRef<View, Props>(function Button3D(
     accessibilityState,
     touchless = false,
     pressProgress: externalPress,
+    pressScale = false,
   },
   ref,
 ) {
   const ownPress = useRef(new Animated.Value(0)).current;
   const pressProgress = externalPress ?? ownPress;
+  const press = usePressScale();
 
   const handlePressIn = () => {
     Animated.timing(pressProgress, {
@@ -81,6 +86,7 @@ export default forwardRef<View, Props>(function Button3D(
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
+    if (pressScale) press.onPressIn();
     onPressIn?.();
   };
   const handlePressOut = () => {
@@ -90,6 +96,7 @@ export default forwardRef<View, Props>(function Button3D(
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
+    if (pressScale) press.onPressOut();
     onPressOut?.();
   };
 
@@ -120,7 +127,9 @@ export default forwardRef<View, Props>(function Button3D(
   }
 
   return (
-    <Animated.View style={[{ width, height, borderRadius, backgroundColor: edgeColor }, style]}>
+    <Animated.View
+      style={[{ width, height, borderRadius, backgroundColor: edgeColor }, style, pressScale && { transform: [{ scale: press.scale }] }]}
+    >
       <AnimatedPressable
         ref={ref}
         disabled={disabled}

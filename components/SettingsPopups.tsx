@@ -47,6 +47,7 @@ export const ResetConfirmModal = memo(function ResetConfirmModal({
         </Animated.Text>
         <View style={styles.buttons}>
           <Button3D
+            pressScale
             height={BUTTON_HEIGHT}
             borderRadius={14}
             faceColor={DANGER_FACE}
@@ -58,6 +59,7 @@ export const ResetConfirmModal = memo(function ResetConfirmModal({
             <Animated.Text style={styles.dangerText}>ԶՐՈՅԱՑՆԵԼ</Animated.Text>
           </Button3D>
           <Button3D
+            pressScale
             height={BUTTON_HEIGHT}
             borderRadius={14}
             faceColor={color('keyBackground')}

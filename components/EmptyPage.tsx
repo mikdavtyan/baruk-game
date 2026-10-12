@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   title: {
     flex: 2,
     fontSize: 20,
-    fontFamily: FONTS.title,
+    fontFamily: FONTS.display,
     fontWeight: '700',
     letterSpacing: 20 * 0.08,
     textAlign: 'center',

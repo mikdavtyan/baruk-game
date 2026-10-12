@@ -271,6 +271,7 @@ export default function SecondChanceModal({
       <View style={[styles.buttons, { width: buttonWidth }]}>
         <Enter visible={stage >= STAGE.ad} reduceMotion={reduceMotion}>
           <Button3D
+            pressScale
             width={buttonWidth}
             height={BUTTON_HEIGHT}
             borderRadius={16}
@@ -310,6 +311,7 @@ export default function SecondChanceModal({
         <Enter visible={stage >= STAGE.coin} reduceMotion={reduceMotion}>
           <View style={!canAffordCoinRetry && styles.dimmed}>
             <Button3D
+              pressScale
               ref={coinButtonRef}
               width={buttonWidth}
               height={BUTTON_HEIGHT}
