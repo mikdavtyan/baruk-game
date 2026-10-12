@@ -68,6 +68,7 @@ import {
   getRound,
   getDarkMode,
   getHapticsOn,
+  getSoundsOn,
   getTasks,
   getProfile,
   getRulesSeen,
@@ -81,6 +82,7 @@ import {
   resetProgress,
   setDarkMode,
   setHapticsOn,
+  setSoundsOn,
   setTasks,
   setProfile,
   setRulesSeen,
@@ -91,7 +93,8 @@ import { DEFAULT_PROFILE, Profile } from './constants/profile';
 import { normalizeProfile } from './lib/profile';
 import { computeKeyStates } from './lib/keyboardStates';
 import { useStableCallback } from './lib/useStableCallback';
-import { setHapticsEnabled, triggerHintLandingHaptic, triggerWarningHaptic } from './lib/haptics';
+import { setHapticsEnabled, triggerHintLandingHaptic, triggerLossHaptic } from './lib/haptics';
+import { loadSounds, playRowFlipSounds, playSound, setSoundsEnabled } from './lib/sounds';
 import { measureWindow } from './lib/measureWindow';
 import { ThemeProvider, useTheme } from './lib/ThemeContext';
 import { adsLeftToday, localDayKey, nextAdRewards as nextAdRewardsFor } from './lib/shop';
@@ -382,6 +385,8 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
   // The Settings tab: the haptics switch (saved; lib/haptics.ts checks the
   // flag), the about popup and the reset confirmation.
   const [hapticsOn, setHapticsOnState] = useState(true);
+  // …and the sounds switch (lib/sounds.ts, wordle:sounds).
+  const [soundsOn, setSoundsOnState] = useState(true);
   // Daily tasks (wordle:tasks, lib/tasks.ts): today's 3, moved by play and
   // claimed on the Tasks tab. `todayTasks()` rolls the record over to a new
   // day (after midnight) whenever it's read for a change.
@@ -413,6 +418,12 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
     setHapticsOnState(next);
     setHapticsEnabled(next);
     setHapticsOn(next);
+  };
+  const handleToggleSounds = () => {
+    const next = !soundsOn;
+    setSoundsOnState(next);
+    setSoundsEnabled(next);
+    setSoundsOn(next);
   };
   const handleConfirmReset = async () => {
     await resetProgress();
@@ -579,6 +590,7 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
     // rather than disappearing or being replaced by a new random one.
     setHintGhosts((prev) => prev.filter((g) => states[g.index] !== 'correct'));
     setPhase('revealing');
+    playRowFlipSounds();
 
     // Win/loss (and with it the row pulse/shake) is applied once the last
     // tile has finished flipping and the keyboard colors have updated.
@@ -597,7 +609,7 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
         setResultRowIndex(nextSubmitted.length - 1);
         setLossShakeRowIndex(nextSubmitted.length - 1);
         if (!reduceMotion) {
-          triggerWarningHaptic();
+          triggerLossHaptic(); // a soft bump
         }
         setTimeout(() => setLossShakeRowIndex(null), LOSS_SHAKE_DURATION_MS);
       } else {
@@ -614,6 +626,7 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
   const handleClearInvalidGuess = () => {
     if (phase !== 'playing') return;
     setInvalidShakeRowIndex(submittedGuesses.length);
+    playSound('invalid');
     setTimeout(() => setInvalidShakeRowIndex(null), ROW_SHAKE_DURATION_MS);
     setGuess(initialGuess());
   };
@@ -635,9 +648,10 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
       getProfile(),
       getDarkMode(),
       getHapticsOn(),
+      getSoundsOn(),
       getTasks(),
     ]).then(
-      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory, savedAdRewards, savedProfile, darkMode, haptics, savedTasks]) => {
+      ([bag, win, loss, round, savedCoins, savedPoints, savedStreak, rulesSeen, savedInventory, savedAdRewards, savedProfile, darkMode, haptics, sounds, savedTasks]) => {
         setProfileState(savedProfile);
         // Today's tasks: a missing or earlier day's record becomes fresh ones (saved).
         const todaysTasks = tasksForDay(savedTasks, localDayKey(new Date()));
@@ -648,6 +662,9 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
         setDarkInstant(darkMode);
         setHapticsEnabled(haptics);
         setHapticsOnState(haptics);
+        setSoundsEnabled(sounds);
+        setSoundsOnState(sounds);
+        loadSounds(); // every player created (preloaded) before the first tap
         setInventory(savedInventory);
         setAdRewards(savedAdRewards);
         setRulesSeenState(rulesSeen);
@@ -1086,6 +1103,7 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
   const onOpenRules = useStableCallback(handleOpenRules);
   const onOpenClassic = useStableCallback(handleOpenClassic);
   const onSelectTab = useStableCallback((tab: TabId) => {
+    if (tab !== activeTab) playSound('tab');
     setActiveTab(tab);
     // Opening Tasks after midnight shows (and saves) the new day's tasks.
     if (tab === 'tasks') {
@@ -1102,6 +1120,7 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
   const onOpenProfile = useStableCallback(() => setProfileOpen(true));
   const onCloseProfile = useStableCallback(handleCloseProfile);
   const onToggleHaptics = useStableCallback(handleToggleHaptics);
+  const onToggleSounds = useStableCallback(handleToggleSounds);
   const onOpenAbout = useStableCallback(() => setAboutOpen(true));
   const onCloseAbout = useStableCallback(() => setAboutOpen(false));
   const onOpenReset = useStableCallback(() => setResetOpen(true));
@@ -1191,6 +1210,8 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
           profile={profile}
           hapticsOn={hapticsOn}
           onToggleHaptics={onToggleHaptics}
+          soundsOn={soundsOn}
+          onToggleSounds={onToggleSounds}
           onOpenRules={onOpenRules}
           onOpenAbout={onOpenAbout}
           onOpenProfile={onOpenProfile}
@@ -1214,6 +1235,8 @@ function AppInner({ onProgressReset }: { onProgressReset: () => void }) {
       onClaimTask,
       hapticsOn,
       onToggleHaptics,
+      soundsOn,
+      onToggleSounds,
       onOpenRules,
       onOpenAbout,
       onOpenReset,

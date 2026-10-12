@@ -18,6 +18,7 @@ import {
 import { measureWindow, WindowRect } from '../lib/measureWindow';
 import { DailyTasks, isClaimable } from '../lib/tasks';
 import { useTheme } from '../lib/ThemeContext';
+import { playSound } from '../lib/sounds';
 import { useLoopWhile } from '../lib/useLoopWhile';
 import TabEnter from './TabEnter';
 
@@ -149,6 +150,7 @@ function TasksScreen({ visible, tasks, coins, onClaim }: Props) {
     const from = coins;
     try {
       await onClaim(id);
+      playSound('claim');
       const [buttonRect, balanceRect] = await Promise.all([
         measureWindow({ current: buttonRefs.current[id] ?? null }),
         measureWindow(balanceRef),

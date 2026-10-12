@@ -26,6 +26,8 @@ type Props = {
   profile: Profile;
   hapticsOn: boolean;
   onToggleHaptics: () => void;
+  soundsOn: boolean;
+  onToggleSounds: () => void;
   onOpenRules: () => void;
   onOpenAbout: () => void;
   onOpenProfile: () => void;
@@ -139,6 +141,8 @@ function SettingsScreen({
   profile,
   hapticsOn,
   onToggleHaptics,
+  soundsOn,
+  onToggleSounds,
   onOpenRules,
   onOpenAbout,
   onOpenProfile,
@@ -192,6 +196,8 @@ function SettingsScreen({
           'ԽԱՂ',
           <>
             <SettingsSwitch label="ԹՐԹՌՈՑ" on={hapticsOn} onToggle={onToggleHaptics} />
+            {divider}
+            <SettingsSwitch label="ՁԱՅՆԵՐ" on={soundsOn} onToggle={onToggleSounds} />
             {divider}
             <Row label="ԻՆՉՊԵ՞Ս ԽԱՂԱԼ" onPress={onOpenRules} />
           </>,

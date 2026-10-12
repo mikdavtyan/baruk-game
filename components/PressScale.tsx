@@ -1,24 +1,28 @@
 import { ReactNode, useState } from 'react';
 import { Animated, Easing, Pressable, PressableProps, StyleProp, ViewStyle } from 'react-native';
 import { PRESS_SCALE, PRESS_SCALE_IN_MS } from '../constants/theme';
+import { playSound } from '../lib/sounds';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 // The press feeling of big buttons and cards: they shrink a little
-// (PRESS_SCALE) while pressed and spring back on release — native driver.
+// (PRESS_SCALE) while pressed, with a soft pop sound, and spring back on
+// release — native driver.
 // `usePressScale` gives the value and the handlers (Button3D uses it);
 // `PressScale` is a Pressable that does it itself. Not for small text links,
 // and never for the keyboard.
 export function usePressScale() {
   const [scale] = useState(() => new Animated.Value(1));
   const [handlers] = useState(() => ({
-    onPressIn: () =>
+    onPressIn: () => {
+      playSound('button');
       Animated.timing(scale, {
         toValue: PRESS_SCALE,
         duration: PRESS_SCALE_IN_MS,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
-      }).start(),
+      }).start();
+    },
     onPressOut: () => Animated.spring(scale, { toValue: 1, friction: 4, tension: 220, useNativeDriver: true }).start(),
   }));
   return { scale, ...handlers };

@@ -32,3 +32,9 @@ jest.mock('@react-native-masked-view/masked-view', () => {
     return require('react').createElement(View, { style }, children);
   };
 });
+
+// expo-audio is native: tests get silent players.
+jest.mock('expo-audio', () => ({
+  createAudioPlayer: jest.fn(() => ({ volume: 1, play: jest.fn(), seekTo: jest.fn(() => Promise.resolve()), remove: jest.fn() })),
+  setAudioModeAsync: jest.fn(() => Promise.resolve()),
+}));

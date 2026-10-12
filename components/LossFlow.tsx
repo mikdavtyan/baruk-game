@@ -1,6 +1,7 @@
 import { memo, RefObject, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { triggerLightImpact } from '../lib/haptics';
+import { playSound } from '../lib/sounds';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
 import CoinFlight from './CoinFlight';
 import ModalBackdrop from './ModalBackdrop';
@@ -255,6 +256,7 @@ function LossFlow({
     const toResult = retriesUsedRef.current >= WIN_FLOW_CONFIG.maxLossRetries;
     const run = async () => {
       setStep('lossMoment');
+      playSound('lose');
       const saved = toResult
         ? persistLossResult(points, streak, bestStreak, key, grid, guesses, secretWordTokens)
         : setPendingLoss({

@@ -1,6 +1,7 @@
 import { memo, RefObject, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Share, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { triggerLightImpact } from '../lib/haptics';
+import { triggerLightImpact, triggerWinHaptic } from '../lib/haptics';
+import { playSound } from '../lib/sounds';
 import CoinPillContent, { coinPillStyles } from './CoinPillContent';
 import CoinFlight from './CoinFlight';
 import ModalBackdrop from './ModalBackdrop';
@@ -173,6 +174,8 @@ function WinFlow({
       await new Promise((r) => setTimeout(r, reduceMotion ? 0 : CELEBRATION_START_DELAY_MS));
       if (cancelled) return;
       setStep('celebrating');
+      playSound('win');
+      triggerWinHaptic();
 
       const boardRect = await measureWindow(boardAreaRef);
       if (cancelled) return;
