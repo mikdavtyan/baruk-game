@@ -225,6 +225,7 @@ export default function RewardModal({
           <Animated.View style={{ opacity: buttonsAnim, transform: [{ translateY: buttonsTranslateY }] }}>
             <View style={styles.adButtonWrap}>
               <Button3D
+                pressScale
                 width="100%"
                 height={56}
                 borderRadius={16}
@@ -263,6 +264,7 @@ export default function RewardModal({
 
           <Animated.View style={{ opacity: buttonsAnim2, transform: [{ translateY: buttonsTranslateY2 }] }}>
             <Button3D
+              pressScale
               width="100%"
               height={56}
               borderRadius={16}

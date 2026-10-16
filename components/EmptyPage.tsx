@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
+import ScreenGlow from './ScreenGlow';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedIconButton } from './ThemedSnapshot';
 import { FONTS } from '../constants/theme';
@@ -23,6 +24,7 @@ function EmptyPage({ title, onBack, visible }: { title: string; onBack?: () => v
       edges={onBack ? PAGE_EDGES : TAB_EDGES}
       accessibilityElementsHidden={!visible}
     >
+      <ScreenGlow />
       <View style={styles.header}>
         <View style={styles.side}>
           {onBack && <ThemedIconButton icon={BACK_ICON} label="Հետ" token="headerIconColor" onPress={onBack} />}
@@ -56,7 +58,7 @@ const styles = StyleSheet.create({
   title: {
     flex: 2,
     fontSize: 20,
-    fontFamily: FONTS.title,
+    fontFamily: FONTS.display,
     fontWeight: '700',
     letterSpacing: 20 * 0.08,
     textAlign: 'center',

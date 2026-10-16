@@ -7,6 +7,7 @@ import {
   LetterState,
 } from '../constants/theme';
 import { triggerKeyHaptic } from '../lib/haptics';
+import { playSound } from '../lib/sounds';
 import { KeyStates } from '../lib/keyboardStates';
 import { letterLabel } from '../lib/letterDisplay';
 
@@ -183,6 +184,7 @@ function Keyboard({ keyStates, onKeyPress, onBackspace, dartsHitTokens = NO_TOKE
   };
   const deleteOnce = () => {
     triggerKeyHaptic();
+    playSound('key');
     onBackspace();
   };
   const handleTouchStart = (e: GestureResponderEvent) => {
@@ -208,6 +210,7 @@ function Keyboard({ keyStates, onKeyPress, onBackspace, dartsHitTokens = NO_TOKE
         tick(BACKSPACE_REPEAT_DELAY_MS);
       } else {
         triggerKeyHaptic();
+        playSound('key');
         onKeyPress(key);
       }
     }

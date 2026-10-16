@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet } from 'react-native';
 import Coin from './Coin';
+import { playSound } from '../lib/sounds';
 import { COIN_FLIGHT_DURATION_MS, COIN_FLIGHT_PIECES, COIN_FLIGHT_STAGGER_MS } from '../constants/winFlow';
 
 type Point = { x: number; y: number };
@@ -100,6 +101,7 @@ export default function CoinFlight({ origin, target, amount, pieceCount, onDepar
 
   const handleArrive = () => {
     arrivedRef.current += 1;
+    playSound('coin');
     onArrival();
     if (arrivedRef.current >= count) onAllDone();
   };

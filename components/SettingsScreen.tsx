@@ -1,12 +1,15 @@
-import { memo, ReactNode, useEffect, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { memo, ReactNode, RefObject, useEffect, useRef, useState } from 'react';
+import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import ScreenGlow from './ScreenGlow';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Avatar from './Avatar';
 import { ThemedSymbol } from './ThemedSnapshot';
 import Toast from './Toast';
 import { Profile } from '../constants/profile';
-import { FONTS, SETTINGS_SWITCH_MS } from '../constants/theme';
-import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
+import PressScale from './PressScale';
+import TabEnter from './TabEnter';
+import { FONTS, TAB_BAR_SPACE } from '../constants/theme';
+import { useTheme, useThemeSnapshot, useToggleThemeFrom } from '../lib/ThemeContext';
 
 const AnimatedSafeAreaView = Animated.createAnimatedComponent(SafeAreaView);
 // The tab bar below owns the bottom safe area.
@@ -23,6 +26,8 @@ type Props = {
   profile: Profile;
   hapticsOn: boolean;
   onToggleHaptics: () => void;
+  soundsOn: boolean;
+  onToggleSounds: () => void;
   onOpenRules: () => void;
   onOpenAbout: () => void;
   onOpenProfile: () => void;
@@ -30,9 +35,19 @@ type Props = {
 };
 
 // A game-style on/off switch: the track crossfades from the neutral key color
-// to the correct green and the knob slides (native driver; reduced motion:
-// at once). An accessible switch with its Armenian label.
-function SettingsSwitch({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
+// to the correct green and the knob springs across (native driver; reduced
+// motion: at once). An accessible switch with its Armenian label.
+function SettingsSwitch({
+  label,
+  on,
+  onToggle,
+  trackRef,
+}: {
+  label: string;
+  on: boolean;
+  onToggle: () => void;
+  trackRef?: RefObject<View | null>;
+}) {
   const { color, reduceMotion } = useTheme();
   const [value] = useState(() => new Animated.Value(on ? 1 : 0));
   const [knobX] = useState(() =>
@@ -43,12 +58,7 @@ function SettingsSwitch({ label, on, onToggle }: { label: string; on: boolean; o
       value.setValue(on ? 1 : 0);
       return;
     }
-    const slide = Animated.timing(value, {
-      toValue: on ? 1 : 0,
-      duration: SETTINGS_SWITCH_MS,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    });
+    const slide = Animated.spring(value, { toValue: on ? 1 : 0, friction: 6, tension: 160, useNativeDriver: true });
     slide.start();
     return () => slide.stop();
   }, [on, reduceMotion, value]);
@@ -63,8 +73,8 @@ function SettingsSwitch({ label, on, onToggle }: { label: string; on: boolean; o
       style={styles.row}
     >
       <RowLabel text={label} />
-      <View style={styles.switchTrack}>
-        <Animated.View style={[StyleSheet.absoluteFill, styles.switchFill, { backgroundColor: color('keyBackground') }]} />
+      <View ref={trackRef} collapsable={false} style={styles.switchTrack}>
+        <Animated.View style={[StyleSheet.absoluteFill, styles.switchFill, { backgroundColor: color('raised') }]} />
         <Animated.View style={[StyleSheet.absoluteFill, styles.switchFill, { backgroundColor: color('correct'), opacity: value }]} />
         <Animated.View style={[styles.knob, { transform: [{ translateX: knobX }] }]} />
       </View>
@@ -72,12 +82,13 @@ function SettingsSwitch({ label, on, onToggle }: { label: string; on: boolean; o
   );
 }
 
-// The dark-theme switch reads the theme snapshot (it flips at the fade's
-// midpoint), so it's its own leaf: a theme change re-renders only it.
+// The dark-theme switch reads the theme snapshot, so it's its own leaf: a
+// theme change re-renders only it. The new theme spreads from its track.
 const DarkModeSwitch = memo(function DarkModeSwitch() {
-  const { toggleTheme } = useTheme();
   const { isDark } = useThemeSnapshot();
-  return <SettingsSwitch label="ՄՈՒԳ ԹԵՄԱ" on={isDark} onToggle={toggleTheme} />;
+  const trackRef = useRef<View>(null);
+  const toggle = useToggleThemeFrom(trackRef);
+  return <SettingsSwitch label="ՄՈՒԳ ԹԵՄԱ" on={isDark} onToggle={toggle} trackRef={trackRef} />;
 });
 
 function RowLabel({ text, danger }: { text: string; danger?: boolean }) {
@@ -109,15 +120,15 @@ function Row({
   right?: ReactNode;
 }) {
   return (
-    <Pressable
+    <PressScale
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={({ pressed }) => [styles.row, dimmed && styles.dimmed, pressed && styles.pressed]}
+      style={[styles.row, dimmed && styles.dimmed]}
     >
       <RowLabel text={label} danger={danger} />
       {right ?? <ThemedSymbol name={CHEVRON} size={16} token="textMuted" />}
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -130,17 +141,20 @@ function SettingsScreen({
   profile,
   hapticsOn,
   onToggleHaptics,
+  soundsOn,
+  onToggleSounds,
   onOpenRules,
   onOpenAbout,
   onOpenProfile,
   onResetProgress,
 }: Props) {
   const { color, textColor } = useTheme();
+  const insets = useSafeAreaInsets();
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const comingSoon = () => setToast((t) => ({ id: (t?.id ?? 0) + 1, message: COMING_SOON }));
 
-  const section = (title: string, rows: ReactNode) => (
-    <>
+  const section = (index: number, title: string, rows: ReactNode) => (
+    <TabEnter visible={visible} index={index}>
       <Animated.Text style={[styles.sectionTitle, { color: textColor('textMuted') }]}>{title}</Animated.Text>
       <Animated.View
         style={[
@@ -150,11 +164,11 @@ function SettingsScreen({
       >
         {rows}
       </Animated.View>
-    </>
+    </TabEnter>
   );
   const divider = <Animated.View style={[styles.divider, { backgroundColor: color('popupBorder') }]} />;
   const soonTag = (
-    <Animated.View style={[styles.soonTag, { backgroundColor: color('keyBackground') }]}>
+    <Animated.View style={[styles.soonTag, { backgroundColor: color('raised') }]}>
       <Animated.Text style={[styles.soonText, { color: textColor('textMuted') }]}>{COMING_SOON}</Animated.Text>
     </Animated.View>
   );
@@ -165,22 +179,31 @@ function SettingsScreen({
       edges={EDGES}
       accessibilityElementsHidden={!visible}
     >
+      <ScreenGlow />
       <View style={styles.header}>
         <Animated.Text style={[styles.title, { color: textColor('headerValueColor') }]} numberOfLines={1} adjustsFontSizeToFit>
           ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ
         </Animated.Text>
       </View>
-      <ScrollView style={styles.screen} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {section('ՏԵՍՔ', <DarkModeSwitch />)}
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: TAB_BAR_SPACE + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {section(0, 'ՏԵՍՔ', <DarkModeSwitch />)}
         {section(
+          1,
           'ԽԱՂ',
           <>
             <SettingsSwitch label="ԹՐԹՌՈՑ" on={hapticsOn} onToggle={onToggleHaptics} />
+            {divider}
+            <SettingsSwitch label="ՁԱՅՆԵՐ" on={soundsOn} onToggle={onToggleSounds} />
             {divider}
             <Row label="ԻՆՉՊԵ՞Ս ԽԱՂԱԼ" onPress={onOpenRules} />
           </>,
         )}
         {section(
+          2,
           'ՀԱՇԻՎ',
           <>
             <Row
@@ -202,6 +225,7 @@ function SettingsScreen({
           </>,
         )}
         {section(
+          3,
           'ԱՅԼ',
           <>
             <Row label="ԱՌԱՋԱՐԿՆԵՐ ԵՎ ԿԱՐԾԻՔՆԵՐ" onPress={comingSoon} dimmed right={soonTag} />
@@ -230,7 +254,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontFamily: FONTS.title,
+    fontFamily: FONTS.display,
     fontWeight: '700',
     letterSpacing: 20 * 0.08,
   },
@@ -265,9 +289,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.title,
     fontSize: 15,
     letterSpacing: 0.4,
-  },
-  pressed: {
-    opacity: 0.6,
   },
   dimmed: {
     opacity: 0.55,

@@ -271,6 +271,7 @@ export default function SecondChanceModal({
       <View style={[styles.buttons, { width: buttonWidth }]}>
         <Enter visible={stage >= STAGE.ad} reduceMotion={reduceMotion}>
           <Button3D
+            pressScale
             width={buttonWidth}
             height={BUTTON_HEIGHT}
             borderRadius={16}
@@ -310,6 +311,7 @@ export default function SecondChanceModal({
         <Enter visible={stage >= STAGE.coin} reduceMotion={reduceMotion}>
           <View style={!canAffordCoinRetry && styles.dimmed}>
             <Button3D
+              pressScale
               ref={coinButtonRef}
               width={buttonWidth}
               height={BUTTON_HEIGHT}
@@ -421,7 +423,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     fontSize: 15,
     lineHeight: 20,
-    color: '#D8D2C6',
+    color: '#D9C8EC',
   },
   streakPill: {
     marginTop: 12,
@@ -433,7 +435,7 @@ const styles = StyleSheet.create({
   streakPillText: {
     fontFamily: FONTS.body,
     fontSize: 12,
-    color: '#EFEAE0',
+    color: '#F3E9FF',
     letterSpacing: 0.3,
   },
   sentence: {
@@ -443,7 +445,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     fontSize: 15,
     lineHeight: 20,
-    color: '#D8D2C6',
+    color: '#D9C8EC',
   },
   buttons: {
     gap: 12,
@@ -527,7 +529,7 @@ const styles = StyleSheet.create({
   declineText: {
     fontFamily: FONTS.body,
     fontSize: 15,
-    color: '#BDB6AA',
+    color: '#B9A6D3',
   },
   dimmedText: {
     opacity: 0.5,

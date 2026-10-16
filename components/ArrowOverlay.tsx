@@ -1,5 +1,6 @@
 import { memo, useEffect, useState } from 'react';
-import { Animated, Easing, Image, Platform, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, View } from 'react-native';
+import { ArrowArt } from './ArcheryArt';
 import {
   ARROW_FLIGHT_DURATION_MS,
   ARROW_LAUNCH_GROW_MS,
@@ -12,10 +13,9 @@ import {
 } from '../constants/theme';
 import { useThemeSnapshot } from '../lib/ThemeContext';
 
-const arrowLight = require('../assets/icons/arrow-light.png');
-const arrowDark = require('../assets/icons/arrow-dark.png');
-// The source sprite's own aspect ratio (see chat) — the arrow's rendered
-// height follows from ARROW_VISUAL_LENGTH so it never looks stretched.
+// The drawn arrow's aspect ratio (ArrowArt's 237 × 92 box, tip at the right
+// edge) — the arrow's rendered height follows from ARROW_VISUAL_LENGTH so it
+// never looks stretched.
 const ARROW_ASPECT = 92 / 237;
 const ARROW_VISUAL_HEIGHT = ARROW_VISUAL_LENGTH * ARROW_ASPECT;
 
@@ -137,13 +137,11 @@ function FlyingArrow({
   target,
   side,
   delayMs,
-  source,
 }: {
   origin: Point;
   target: Point;
   side: 1 | -1;
   delayMs: number;
-  source: ReturnType<typeof require>;
 }) {
   const [grow] = useState(() => new Animated.Value(0)); // 0.5x/opacity 0 -> full, first ARROW_LAUNCH_GROW_MS
   const [flight] = useState(() => new Animated.Value(0)); // 0 -> 1 across the curve
@@ -224,11 +222,7 @@ function FlyingArrow({
         },
       ]}
     >
-      <Image
-        source={source}
-        resizeMode="contain"
-        style={{ width: ARROW_VISUAL_LENGTH, height: ARROW_VISUAL_HEIGHT }}
-      />
+      <ArrowArt width={ARROW_VISUAL_LENGTH} height={ARROW_VISUAL_HEIGHT} />
     </Animated.View>
   );
 }
@@ -239,10 +233,10 @@ function FlyingArrow({
 // Positions are resolved by App.tsx at the moment Darts fires (measuring the
 // real bow button and keyboard positions), not computed here.
 function ArrowOverlay({ volleyId, origin, targets }: Props) {
-  const { isDark, theme } = useThemeSnapshot();
+  // Only the impact dots are themed; the drawn arrow has fixed colors.
+  const { theme } = useThemeSnapshot();
   if (!origin || targets.length === 0) return null;
 
-  const arrowSource = isDark ? arrowDark : arrowLight;
   const dotColor = theme.present;
 
   return (
@@ -257,7 +251,6 @@ function ArrowOverlay({ volleyId, origin, targets }: Props) {
             target={{ x: t.x, y: t.y }}
             side={side}
             delayMs={delayMs}
-            source={arrowSource}
           />
         );
       })}

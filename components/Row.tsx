@@ -1,6 +1,7 @@
 import { memo, RefObject, useEffect, useState } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
 import Tile, { GhostKind } from './Tile';
+import { useTheme } from '../lib/ThemeContext';
 import { LetterState, TILE_REVEAL_STAGGER_MS, WORD_LENGTH } from '../constants/theme';
 import {
   CELEBRATION_TILE_JUMP_HEIGHT,
@@ -53,30 +54,34 @@ function Row({
   cellRefs,
   hintLanding = null,
 }: Props) {
+  const { reduceMotion } = useTheme();
   const [shakeX] = useState(() => new Animated.Value(0));
-  // The winning row's own tiles jump one after another — not a whole-row
-  // pulse — so each tile gets its own translateY, staggered.
+  // The winning row's own tiles jump in a wave — up, a small squash on
+  // landing, settle — one after another, each its own 0→1 value driving
+  // translateY and scale (keyframes through interpolate, native driver).
   const [jumps] = useState(() => Array.from({ length: WORD_LENGTH }, () => new Animated.Value(0)));
+  const [jumpNodes] = useState(() =>
+    jumps.map((jump) => ({
+      translateY: jump.interpolate({
+        inputRange: [0, 0.3, 0.6, 1],
+        outputRange: [0, -CELEBRATION_TILE_JUMP_HEIGHT, 4, 0],
+      }),
+      scaleX: jump.interpolate({ inputRange: [0, 0.3, 0.6, 1], outputRange: [1, 1.08, 1.04, 1] }),
+      scaleY: jump.interpolate({ inputRange: [0, 0.3, 0.6, 1], outputRange: [1, 1.08, 0.94, 1] }),
+    })),
+  );
 
   useEffect(() => {
-    if (!celebrate) return;
+    if (!celebrate || reduceMotion) return;
     Animated.stagger(
       CELEBRATION_TILE_JUMP_STAGGER_MS,
       jumps.map((jump) =>
-        Animated.sequence([
-          Animated.timing(jump, {
-            toValue: 1,
-            duration: CELEBRATION_TILE_JUMP_MS / 2,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(jump, {
-            toValue: 0,
-            duration: CELEBRATION_TILE_JUMP_MS / 2,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          }),
-        ]),
+        Animated.timing(jump, {
+          toValue: 1,
+          duration: CELEBRATION_TILE_JUMP_MS,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
       ),
     ).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,12 +117,12 @@ function Row({
   return (
     <Animated.View style={[styles.row, { transform: [{ translateX: shakeX }] }]}>
       {cells.map((i) => {
-        const translateY = jumps[i].interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, -CELEBRATION_TILE_JUMP_HEIGHT],
-        });
+        const jump = jumpNodes[i];
         return (
-          <Animated.View key={i} style={{ transform: [{ translateY }] }}>
+          <Animated.View
+            key={i}
+            style={{ transform: [{ translateY: jump.translateY }, { scaleX: jump.scaleX }, { scaleY: jump.scaleY }] }}
+          >
             <Tile
               letter={letters[i] ?? ''}
               state={states[i] ?? 'empty'}

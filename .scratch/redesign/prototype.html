@@ -1,0 +1,564 @@
+<title>Baruk Motion Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Armenian:wght@500;700;800;900&family=Noto+Serif+Armenian:wght@800;900&family=Outfit:wght@500;700;800&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --ground:#170B26;--ground2:#2A1142;--surface:#25133A;--raised:#33204B;--line:#45305F;
+  --text:#F7EEFF;--muted:#A994C6;--faint:#6E5A8A;
+  --correct:#2FBF7A;--correctE:#1A7A4C;--present:#F5A524;--presentE:#A5680B;
+  --absent:#45355A;--absentE:#2C2140;--key:#4A3766;--keyE:#2B1D3F;--keyT:#F7EEFF;
+  --accent:#E8405F;--accentE:#93203A;--gold:#FFD166;--goldE:#C48A1A;
+  --glow:rgba(232,64,95,.35);--tileLine:#5A4478;--tileActive:#C9B3EA;
+  --shadow:0 18px 50px rgba(5,0,15,.55);
+  --page:#0E0718;--pageText:#E9DDF8;--pageMuted:#9B88B6;
+  --sans:"Noto Sans Armenian","Outfit",system-ui,sans-serif;
+  --serif:"Noto Serif Armenian","Noto Sans Armenian",Georgia,serif;
+  --latin:"Outfit","Noto Sans Armenian",system-ui,sans-serif;
+  --spring:cubic-bezier(.34,1.56,.64,1);
+  --out:cubic-bezier(.22,1,.36,1);
+}
+@supports (transition-timing-function:linear(0,1)){
+  :root{--spring:linear(0,0.009,0.035 2.1%,0.141,0.281 6.7%,0.723 12.9%,0.938 16.7%,1.017,1.077,1.121,1.149 24.3%,1.159,1.163,1.161,1.154 29.9%,1.129 32.8%,1.051 39.6%,1.017 43.1%,0.991,0.977 51%,0.974 53.8%,0.975 57.1%,0.997 69.8%,1.003 76.9%,1.004 83.8%,1)}
+}
+.light{
+  color-scheme:light;
+  --ground:#FFF1E2;--ground2:#FFD9B8;--surface:#FFFFFF;--raised:#FFE6CC;--line:#F0D2B4;
+  --text:#2B1638;--muted:#8B6B84;--faint:#C8A894;
+  --correct:#27AE68;--correctE:#16774A;--present:#F29A12;--presentE:#A86509;
+  --absent:#A897B3;--absentE:#7B6A87;--key:#FFFFFF;--keyE:#E8C6A6;--keyT:#2B1638;
+  --accent:#DD3452;--accentE:#9A1C35;--gold:#FFC33D;--goldE:#C2850F;
+  --glow:rgba(242,154,18,.35);--tileLine:#EBC9A8;--tileActive:#7A5470;
+  --shadow:0 18px 50px rgba(120,60,20,.22);
+}
+html,body{height:100%}
+body{background:var(--page);color:var(--pageText);font-family:var(--latin);padding-inline:16px;padding-block:16px;box-sizing:border-box;overflow-x:hidden}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--page:#F6EDE4;--pageText:#2B1638;--pageMuted:#7D6577}}
+:root[data-theme="light"]{--page:#F6EDE4;--pageText:#2B1638;--pageMuted:#7D6577}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+.stage{min-height:100%;display:flex;gap:40px;align-items:center;justify-content:center;flex-wrap:wrap}
+.notes{max-width:330px;font-size:15px;line-height:1.55}
+.notes h1{font-family:var(--latin);font-weight:800;font-size:34px;letter-spacing:-.02em;line-height:1.05;margin:0 0 10px;text-wrap:balance}
+.notes h1 span{color:var(--accent)}
+.notes p{color:var(--pageMuted);margin:0 0 18px}
+.notes h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--pageMuted);margin:22px 0 10px;font-weight:700}
+.notes ol{margin:0;padding-left:20px;display:grid;gap:7px}
+.notes li::marker{color:var(--accent);font-weight:800}
+.notes .demo{margin-top:20px;background:var(--accent);color:#fff;font-weight:700;padding:12px 18px;border-radius:14px;box-shadow:0 4px 0 var(--accentE);transition:transform .15s var(--spring)}
+.notes .demo:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accentE)}
+@media (max-width:820px){.notes{order:2;max-width:430px}}
+
+/* ---------- phone ---------- */
+.phone{position:relative;width:min(400px,100%);height:min(840px,calc(100dvh - 32px));min-height:640px;border-radius:44px;overflow:hidden;background:var(--ground);color:var(--text);font-family:var(--sans);box-shadow:var(--shadow),0 0 0 10px #05020a,0 0 0 11px #2a2236;isolation:isolate;transition:background-color .5s}
+@media (max-width:480px){.phone{border-radius:28px;box-shadow:var(--shadow);height:calc(100dvh - 32px)}}
+.bg{position:absolute;inset:0;z-index:-1;overflow:hidden;background:radial-gradient(120% 70% at 50% -10%,var(--ground2),transparent 70%)}
+.orn{position:absolute;width:520px;height:520px;left:50%;top:-140px;margin-left:-260px;opacity:.13;animation:spin 90s linear infinite;color:var(--gold)}
+.drift{position:absolute;bottom:-60px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:900;color:#fff;animation:drift linear infinite}
+@keyframes drift{from{transform:translateY(0) rotate(var(--r0))}to{transform:translateY(-980px) rotate(var(--r1))}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.screen{position:absolute;inset:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;justify-content:space-between;padding:22px 20px 6px}
+.me{display:flex;align-items:center;gap:10px;text-align:left}
+.avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(145deg,#FF7A8A,var(--accent));display:grid;place-items:center;font-weight:800;color:#fff;font-size:18px;box-shadow:0 0 0 3px var(--surface),0 0 0 5px var(--accent)}
+.me b{display:block;font-size:15px}
+.me small{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.04em}
+.pill{display:flex;align-items:center;gap:7px;background:var(--surface);padding:6px 6px 6px 14px;border-radius:99px;font-family:var(--latin);font-weight:800;font-size:16px;box-shadow:inset 0 0 0 1.5px var(--line);font-variant-numeric:tabular-nums}
+.pill.bump{animation:bump .35s var(--spring)}
+@keyframes bump{40%{transform:scale(1.14)}}
+.coin{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFF3B0,var(--gold) 45%,var(--goldE));box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),0 1px 0 var(--goldE);display:grid;place-items:center;font-size:12px;font-weight:900;color:#8A5A00;font-family:var(--serif)}
+.coin::after{content:"Բ"}
+.plus{width:24px;height:24px;border-radius:50%;background:var(--correct);color:#fff;display:grid;place-items:center;font-weight:900;font-size:16px;line-height:1}
+
+/* ---------- tabs ---------- */
+.tabs{position:relative;flex:1;overflow:hidden}
+.tab{position:absolute;inset:0;padding:8px 20px 110px;overflow-y:auto;scrollbar-width:none;transition:transform .55s var(--out),opacity .4s}
+.tab::-webkit-scrollbar{display:none}
+.tab.left{transform:translateX(-34%);opacity:0;pointer-events:none}
+.tab.right{transform:translateX(34%);opacity:0;pointer-events:none}
+.tabbar{position:absolute;left:14px;right:14px;bottom:14px;height:72px;border-radius:26px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:inset 0 0 0 1.5px var(--line),0 10px 30px rgba(0,0,0,.25);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;z-index:5;transition:transform .5s var(--out)}
+.tabbar.away{transform:translateY(130%)}
+.blob{position:absolute;top:8px;bottom:8px;width:calc((100% - 16px)/5);left:8px;border-radius:20px;background:var(--raised);box-shadow:inset 0 -3px 0 rgba(0,0,0,.12);transition:transform .6s var(--spring)}
+.tb{position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.tb svg{width:30px;height:30px;transition:transform .5s var(--spring),filter .3s;filter:saturate(.35) opacity(.7)}
+.tb span{font-size:9.5px;font-weight:800;letter-spacing:.03em;height:0;opacity:0;transform:scale(.6);transition:all .4s var(--spring);color:var(--text)}
+.tb.on svg{transform:translateY(-3px) scale(1.12);filter:none}
+.tb.on span{height:12px;opacity:1;transform:none}
+.tb.on svg.wiggle{animation:wig .5s var(--spring)}
+@keyframes wig{30%{transform:translateY(-6px) scale(1.2) rotate(-10deg)}60%{transform:translateY(-3px) scale(1.1) rotate(6deg)}}
+.dot{position:absolute;top:12px;right:calc(50% - 20px);width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2.5px var(--surface);animation:ping 1.8s infinite}
+@keyframes ping{0%{box-shadow:0 0 0 2.5px var(--surface),0 0 0 2.5px var(--accent)}70%,100%{box-shadow:0 0 0 2.5px var(--surface),0 0 0 10px transparent}}
+
+/* ---------- home ---------- */
+.hero{display:flex;flex-direction:column;align-items:center;margin:30px 0 26px}
+.title{display:flex;gap:7px}
+.title .t{width:54px;height:60px;font-size:30px;border-radius:14px;animation:drop .9s var(--spring) both,breathe 4s ease-in-out infinite;animation-delay:calc(var(--i)*.09s),calc(1s + var(--i)*.18s)}
+.title .t:nth-child(even){margin-top:14px}
+@keyframes drop{from{transform:translateY(-140px) rotate(-14deg) scale(.6);opacity:0}}
+@keyframes breathe{50%{transform:translateY(-6px)}}
+.tag{margin-top:16px;font-size:12px;letter-spacing:.32em;color:var(--muted);font-weight:800;animation:fade .8s .7s both}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}}
+.streak{display:inline-flex;align-items:center;gap:6px;margin-top:14px;padding:6px 14px 6px 10px;border-radius:99px;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);font-weight:800;font-size:13px;animation:fade .8s .85s both}
+.flame{width:18px;height:18px;animation:flick 1.2s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes flick{25%{transform:scale(1.08,.94) rotate(-4deg)}50%{transform:scale(.95,1.08)}75%{transform:scale(1.05,.97) rotate(4deg)}}
+
+.play{position:relative;width:100%;display:flex;align-items:center;gap:16px;padding:20px;border-radius:26px;background:linear-gradient(160deg,#41D88F,var(--correct));color:#fff;text-align:left;box-shadow:0 6px 0 var(--correctE),0 16px 34px color-mix(in srgb,var(--correct) 40%,transparent);overflow:hidden;animation:rise .8s 1s var(--spring) both;transition:transform .2s var(--spring),box-shadow .2s}
+.play:active{transform:translateY(4px) scale(.98);box-shadow:0 2px 0 var(--correctE)}
+.play::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.45) 50%,transparent 65%);transform:translateX(-100%);animation:shine 4.5s 2.4s infinite}
+@keyframes shine{0%{transform:translateX(-100%)}25%,100%{transform:translateX(100%)}}
+@keyframes rise{from{transform:translateY(40px) scale(.9);opacity:0}}
+.pico{width:58px;height:58px;border-radius:18px;background:rgba(255,255,255,.22);display:grid;place-items:center;flex:none}
+.pico svg{width:26px;height:26px;margin-left:4px;animation:nudge 2.2s ease-in-out infinite}
+@keyframes nudge{50%{transform:translateX(4px)}}
+.play b{display:block;font-size:22px;font-weight:900;letter-spacing:.04em}
+.play small{font-size:12px;font-weight:700;opacity:.85;letter-spacing:.08em}
+.daily{width:100%;margin-top:14px;display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:22px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);text-align:left;animation:rise .8s 1.12s var(--spring) both}
+.daily .lock{width:44px;height:44px;border-radius:14px;background:var(--raised);display:grid;place-items:center;font-size:20px}
+.daily b{display:block;font-size:15px;font-weight:800}
+.daily small{color:var(--muted);font-weight:700;font-size:12px;font-family:var(--latin);font-variant-numeric:tabular-nums}
+.wheel{position:absolute;right:18px;top:78px;width:62px;height:62px;animation:rise .8s 1.25s var(--spring) both}
+.wheel svg{width:100%;height:100%}
+.wheel .spinw{transform-origin:32px 32px;animation:wspin 6s var(--out) infinite}
+@keyframes wspin{0%,70%{transform:rotate(0)}92%{transform:rotate(390deg)}100%{transform:rotate(360deg)}}
+.wheel em{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-style:normal;font-size:9px;font-weight:900;padding:2px 7px;border-radius:99px;white-space:nowrap;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translateX(-50%) translateY(-3px)}}
+
+/* ---------- tiles ---------- */
+.t{display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:900;color:#fff;border-radius:12px;user-select:none}
+.c{background:var(--correct);box-shadow:inset 0 -4px 0 var(--correctE)}
+.p{background:var(--present);box-shadow:inset 0 -4px 0 var(--presentE)}
+.a{background:var(--absent);box-shadow:inset 0 -4px 0 var(--absentE)}
+
+/* ---------- other tabs ---------- */
+.h{font-family:var(--serif);font-weight:900;font-size:26px;margin:14px 0 4px;letter-spacing:.02em}
+.sub{color:var(--muted);font-size:13px;font-weight:700;margin:0 0 18px}
+.card{background:var(--surface);border-radius:22px;padding:16px;box-shadow:inset 0 0 0 1.5px var(--line)}
+.enter > *{animation:rise .7s var(--spring) both;animation-delay:calc(var(--i,0)*.07s + .05s)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.item{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:18px 12px 14px;transition:transform .2s var(--spring)}
+.item:active{transform:scale(.95)}
+.item .ic{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;font-size:28px;background:var(--raised)}
+.item b{font-size:14px}
+.price{display:flex;align-items:center;gap:6px;background:var(--raised);padding:5px 12px 5px 6px;border-radius:99px;font-family:var(--latin);font-weight:800;font-size:14px}
+.price .coin{width:20px;height:20px;font-size:10px}
+.save{font-size:10px;font-weight:900;color:#fff;background:var(--correct);padding:2px 8px;border-radius:99px;margin-top:-4px}
+.task{display:grid;grid-template-columns:1fr auto;gap:10px 12px;align-items:center;margin-bottom:12px}
+.task b{font-size:14px;line-height:1.35}
+.rew{display:flex;align-items:center;gap:5px;font-family:var(--latin);font-weight:800;color:var(--gold)}
+.rew .coin{width:20px;height:20px;font-size:10px}
+.bar{grid-column:1/-1;height:12px;border-radius:99px;background:var(--raised);overflow:hidden;position:relative}
+.bar i{position:absolute;inset:0;width:0;border-radius:99px;background:linear-gradient(90deg,var(--correct),#5BE3A2);transition:width 1.1s var(--out)}
+.bar i::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(-45deg,rgba(255,255,255,.18) 0 8px,transparent 8px 16px);animation:stripes 1s linear infinite}
+@keyframes stripes{to{background-position:22.6px 0}}
+.claim{grid-column:1/-1;background:var(--correct);color:#fff;font-weight:900;padding:11px;border-radius:14px;box-shadow:0 4px 0 var(--correctE);letter-spacing:.06em;animation:pulse 1.6s infinite;transition:transform .15s}
+.claim:active{transform:translateY(3px);box-shadow:0 1px 0 var(--correctE)}
+.claim[disabled]{animation:none;background:var(--raised);color:var(--muted);box-shadow:none}
+@keyframes pulse{50%{box-shadow:0 4px 0 var(--correctE),0 0 0 6px color-mix(in srgb,var(--correct) 25%,transparent)}}
+.podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;height:210px;margin:18px 0 18px}
+.pod{width:86px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.pod .avatar{width:48px;height:48px;animation:pop .6s var(--spring) both}
+.pod .col{width:100%;border-radius:18px 18px 8px 8px;display:flex;justify-content:center;padding-top:10px;font-family:var(--latin);font-weight:800;font-size:26px;color:#fff;transform-origin:bottom;animation:grow .9s var(--spring) both}
+@keyframes grow{from{transform:scaleY(0)}}
+@keyframes pop{from{transform:scale(0)}}
+.row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1.5px solid var(--line);font-weight:700}
+.row .n{width:22px;color:var(--muted);font-family:var(--latin)}
+.row .avatar{width:34px;height:34px;font-size:14px;box-shadow:none}
+.row em{margin-left:auto;font-style:normal;font-family:var(--latin);font-weight:800}
+.row.me2{background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:14px;border:0;padding:10px 10px}
+.set{display:flex;align-items:center;justify-content:space-between;padding:14px 4px;border-bottom:1.5px solid var(--line);font-weight:800;font-size:14px}
+.set:last-child{border:0}
+.sw{width:54px;height:32px;border-radius:99px;background:var(--raised);position:relative;transition:background-color .35s;box-shadow:inset 0 0 0 1.5px var(--line)}
+.sw::after{content:"";position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.25);transition:transform .45s var(--spring),width .2s}
+.sw:active::after{width:30px}
+.sw[aria-checked="true"]{background:var(--correct)}
+.sw[aria-checked="true"]::after{transform:translateX(22px)}
+.sw[aria-checked="true"]:active::after{transform:translateX(16px)}
+
+/* ---------- game ---------- */
+.game{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--ground);z-index:10;clip-path:circle(0 at var(--ox,50%) var(--oy,50%));transition:clip-path .7s var(--out),background-color .5s;visibility:hidden}
+.game.open{clip-path:circle(150% at var(--ox,50%) var(--oy,50%));visibility:visible}
+.game.closing{visibility:visible}
+.ghead{display:flex;align-items:center;justify-content:space-between;padding:22px 16px 4px}
+.back{width:44px;height:44px;border-radius:14px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--line);display:grid;place-items:center;transition:transform .2s var(--spring)}
+.back:active{transform:scale(.9)}
+.gtitle{font-family:var(--serif);font-weight:900;font-size:19px;letter-spacing:.08em}
+.boardwrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:6px 0}
+.board{display:grid;gap:7px}
+.brow{display:grid;grid-template-columns:repeat(5,var(--ts));gap:7px}
+.brow.shake{animation:shake .45s}
+@keyframes shake{20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+.cell{width:var(--ts);height:var(--ts);border-radius:13px;font-size:calc(var(--ts)*.48);box-shadow:inset 0 0 0 2px var(--tileLine);color:var(--text);transition:box-shadow .25s}
+.brow.active .cell{box-shadow:inset 0 0 0 2px color-mix(in srgb,var(--tileActive) 45%,transparent)}
+.brow.active .cell.cur{box-shadow:inset 0 0 0 2.5px var(--tileActive),0 0 18px var(--glow);animation:caret 1.3s ease-in-out infinite}
+@keyframes caret{50%{box-shadow:inset 0 0 0 2.5px color-mix(in srgb,var(--tileActive) 50%,transparent),0 0 6px transparent}}
+.cell.filled{box-shadow:inset 0 0 0 2.5px var(--tileActive)!important;animation:typed .28s var(--spring)!important}
+@keyframes typed{0%{transform:scale(.7)}60%{transform:scale(1.12)}}
+.cell.flip{animation:flip .52s ease-in-out both!important}
+@keyframes flip{0%{transform:perspective(400px) rotateX(0)}50%{transform:perspective(400px) rotateX(-90deg)}100%{transform:perspective(400px) rotateX(0)}}
+.cell.c,.cell.p,.cell.a{color:#fff}
+.cell.c{box-shadow:inset 0 -4px 0 var(--correctE)!important}
+.cell.p{box-shadow:inset 0 -4px 0 var(--presentE)!important}
+.cell.a{box-shadow:inset 0 -4px 0 var(--absentE)!important}
+.cell.jump{animation:jump .6s var(--spring) both!important}
+@keyframes jump{30%{transform:translateY(-24px) scale(1.08)}60%{transform:translateY(4px) scale(.96,1.04)}}
+.cell.sweep{animation:sweep .5s var(--spring) both!important}
+@keyframes sweep{from{transform:scale(0) rotate(-20deg);opacity:0}}
+.powers{display:flex;justify-content:center;gap:12px;padding:4px 0 10px}
+.pw{display:flex;align-items:center;gap:8px;background:var(--surface);padding:8px 14px 8px 8px;border-radius:16px;box-shadow:inset 0 0 0 1.5px var(--line),0 3px 0 var(--keyE);font-weight:800;font-size:13px;transition:transform .15s var(--spring)}
+.pw:active{transform:translateY(3px)}
+.pw i{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-style:normal;font-size:16px}
+.pw sup{background:var(--accent);color:#fff;border-radius:99px;font-size:10px;padding:1px 6px;font-family:var(--latin)}
+.kb{padding:2px 6px 18px;display:grid;gap:7px;touch-action:manipulation}
+.kr{display:flex;justify-content:center;gap:4px}
+.k{flex:1;max-width:36px;height:46px;border-radius:10px;background:var(--key);color:var(--keyT);font-family:var(--serif);font-weight:900;font-size:16px;box-shadow:0 3px 0 var(--keyE);display:grid;place-items:center;transition:background-color .35s,color .2s,transform .08s,box-shadow .08s;position:relative;overflow:hidden}
+.k:active,.k.down{transform:translateY(3px);box-shadow:0 0 0 var(--keyE)}
+.k.c{background:var(--correct);color:#fff;box-shadow:0 3px 0 var(--correctE)}
+.k.p{background:var(--present);color:#fff;box-shadow:0 3px 0 var(--presentE)}
+.k.a{background:var(--absent);color:color-mix(in srgb,#fff 55%,var(--absent));box-shadow:0 3px 0 var(--absentE)}
+.k.wide{max-width:none;flex:1.6;font-family:var(--sans);font-size:13px;letter-spacing:.04em}
+.k.enter{background:var(--accent);color:#fff;box-shadow:0 3px 0 var(--accentE)}
+.k.enter.ready{animation:ready 1.2s infinite}
+@keyframes ready{50%{transform:scale(1.04)}}
+.k .rip{position:absolute;width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.5);transform:scale(0);animation:rip .5s var(--out) forwards;pointer-events:none}
+@keyframes rip{to{transform:scale(8);opacity:0}}
+.toast{position:absolute;top:84px;left:50%;transform:translate(-50%,-20px) scale(.9);opacity:0;background:var(--text);color:var(--ground);padding:10px 18px;border-radius:14px;font-weight:800;font-size:14px;transition:all .35s var(--spring);z-index:30;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0) scale(1)}
+
+/* ---------- win sheet ---------- */
+.veil{position:absolute;inset:0;background:rgba(8,2,18,.55);opacity:0;pointer-events:none;transition:opacity .4s;z-index:20}
+.veil.show{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:12px;right:12px;bottom:12px;border-radius:32px;background:var(--surface);padding:26px 20px 20px;text-align:center;transform:translateY(115%);transition:transform .7s var(--spring);z-index:21;box-shadow:0 -10px 40px rgba(0,0,0,.35)}
+.sheet.show{transform:none}
+.praise{font-family:var(--serif);font-weight:900;font-size:34px;letter-spacing:.04em;background:linear-gradient(90deg,var(--gold),var(--accent),var(--gold));background-size:200%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:grad 3s linear infinite}
+@keyframes grad{to{background-position:200% 0}}
+.sheet .word{display:flex;justify-content:center;gap:6px;margin:16px 0 6px}
+.sheet .word .t{width:44px;height:48px;font-size:22px}
+.sheet .show .t{animation:pop .5s var(--spring) both;animation-delay:calc(.35s + var(--i)*.07s)}
+.meaning{color:var(--muted);font-weight:700;font-size:13px;margin-bottom:16px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.stats div{background:var(--raised);border-radius:16px;padding:10px 4px}
+.stats b{display:block;font-family:var(--latin);font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.stats small{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.06em}
+.next{width:100%;background:var(--correct);color:#fff;font-weight:900;font-size:16px;padding:16px;border-radius:18px;box-shadow:0 5px 0 var(--correctE);letter-spacing:.06em;transition:transform .15s}
+.next:active{transform:translateY(4px);box-shadow:0 1px 0 var(--correctE)}
+.fly{position:absolute;z-index:40;pointer-events:none;width:26px;height:26px}
+#fx{position:absolute;inset:0;pointer-events:none;z-index:35;width:100%;height:100%}
+
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.12s!important}
+  .orn,.drift{animation:none!important}
+}
+</style>
+
+<div class="stage">
+  <section class="notes" aria-label="About this prototype">
+    <h1>Baruk, <span>in motion</span></h1>
+    <p>A clickable sketch of a full redesign. It's a deep pomegranate night with chunky candy tiles, and something moves on every screen. Tap around like it's the real app.</p>
+    <h2>Try this</h2>
+    <ol>
+      <li>Watch Home load, then tap the green <b>ԴԱՍԱԿԱՆ</b> card</li>
+      <li>Type a word on the keyboard and press <b>ԸՆԴՈՒՆԵԼ</b></li>
+      <li>Guess the word to see the win moment. Or press the button below</li>
+      <li>Switch tabs and watch the bar's bubble spring</li>
+      <li>In Tasks, claim a reward and watch the coins fly</li>
+      <li>In Settings, flip the theme switch</li>
+    </ol>
+    <button class="demo" id="demoBtn">Play the demo for me</button>
+    <h2>In the real app</h2>
+    <p>Everything here maps to React Native transforms, opacity and colors on the native thread, so it stays smooth on iOS and on mid-range Android.</p>
+  </section>
+
+  <div class="phone" id="phone">
+    <div class="bg" aria-hidden="true">
+      <svg class="orn" viewBox="-100 -100 200 200"><g fill="none" stroke="currentColor" stroke-width="2.2" id="ornG"></g></svg>
+      <div id="drifts"></div>
+    </div>
+
+    <div class="screen">
+      <header class="top">
+        <button class="me" aria-label="Profile"><div class="avatar">Մ</div><div><b>Մարիամ</b><small>1 240 ՄԻԱՎՈՐ</small></div></button>
+        <button class="pill" id="pill" aria-label="Coins"><span id="coins">240</span><span class="coin" style="position:relative"></span><span class="plus">+</span></button>
+      </header>
+      <main class="tabs" id="tabs">
+        <section class="tab right" data-tab="0" aria-label="Shop">
+          <div class="h">ԽԱՆՈՒԹ</div><p class="sub">ՀԶՈՐՈՒԹՅՈՒՆՆԵՐ ԵՎ ՄԵՏԱՂԱԴՐԱՄՆԵՐ</p>
+          <div class="grid2 enter">
+            <button class="card item" style="--i:0"><div class="ic">💡</div><b>ՀՈՒՇՈՒՄ ×1</b><span class="price"><span class="coin"></span>30</span></button>
+            <button class="card item" style="--i:1"><div class="ic">💡</div><b>ՀՈՒՇՈՒՄ ×5</b><span class="save">−20%</span><span class="price"><span class="coin"></span>120</span></button>
+            <button class="card item" style="--i:2"><div class="ic">🏹</div><b>ՆԵՏ ×1</b><span class="price"><span class="coin"></span>40</span></button>
+            <button class="card item" style="--i:3"><div class="ic">🏹</div><b>ՆԵՏ ×5</b><span class="save">−25%</span><span class="price"><span class="coin"></span>150</span></button>
+          </div>
+        </section>
+        <section class="tab right" data-tab="1" aria-label="Tasks">
+          <div class="h">ԱՌԱՋԱԴՐԱՆՔՆԵՐ</div><p class="sub">ԹԱՐՄԱՑՎՈՒՄ ԵՆ ԱՄԵՆ ՕՐ</p>
+          <div class="enter">
+            <div class="card task" style="--i:0"><b>Գուշակիր 3 բառ</b><span class="rew">+20<span class="coin"></span></span><div class="bar"><i data-w="100"></i></div><button class="claim" data-reward="20">ՍՏԱՆԱԼ</button></div>
+            <div class="card task" style="--i:1"><b>Հաղթիր 3 կամ ավելի քիչ փորձով</b><span class="rew">+30<span class="coin"></span></span><div class="bar"><i data-w="50"></i></div></div>
+            <div class="card task" style="--i:2"><b>Օգտագործիր հուշում</b><span class="rew">+10<span class="coin"></span></span><div class="bar"><i data-w="0"></i></div></div>
+          </div>
+        </section>
+        <section class="tab" data-tab="2" aria-label="Home">
+          <button class="wheel" aria-label="Fortune wheel"><svg viewBox="0 0 64 64"><g class="spinw"><circle cx="32" cy="32" r="27" fill="#6B3A0A"/><g id="wedges"></g><circle cx="32" cy="32" r="6" fill="#FFD166" stroke="#6B3A0A" stroke-width="2.5"/></g><path d="M32 2 l6 9 h-12z" fill="#E8405F" stroke="#6B3A0A" stroke-width="2" stroke-linejoin="round"/></svg><em>ՊՏՏԻ՛Ր</em></button>
+          <div class="hero">
+            <div class="title" aria-label="ԲԱՌՈՒԿ">
+              <div class="t c" style="--i:0">Բ</div><div class="t p" style="--i:1">Ա</div><div class="t c" style="--i:2">Ռ</div><div class="t p" style="--i:3;font-size:22px">ՈՒ</div><div class="t c" style="--i:4">Կ</div>
+            </div>
+            <div class="tag">ԲԱՌԵՐԻ ԽԱՂ</div>
+            <div class="streak"><svg class="flame" viewBox="0 0 24 24"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z" fill="currentColor"/></svg>7 ՕՐ ԱՆԸՆԴՄԵՋ</div>
+          </div>
+          <button class="play" id="playBtn"><div class="pico"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z" fill="#fff" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div><div><b>ԴԱՍԱԿԱՆ</b><small>ԽԱՂԱԼ</small></div></button>
+          <button class="daily" id="dailyBtn"><div class="lock">🔒</div><div><b>ՕՐՎԱ ԲԱՌ</b><small id="cd">04:12:33</small></div></button>
+        </section>
+        <section class="tab right" data-tab="3" aria-label="Leaderboard">
+          <div class="h">ԱՌԱՋԱՏԱՐՆԵՐ</div><p class="sub">ԱՅՍ ՇԱԲԱԹ</p>
+          <div class="podium">
+            <div class="pod"><div class="avatar" style="background:#5B8CFF;animation-delay:.5s">Ա</div><div class="col" style="height:110px;background:linear-gradient(#B9C3D6,#8C97AD);animation-delay:.15s">2</div></div>
+            <div class="pod"><div class="avatar" style="background:#FF8A3D;animation-delay:.65s">Լ</div><div class="col" style="height:150px;background:linear-gradient(var(--gold),var(--goldE))">1</div></div>
+            <div class="pod"><div class="avatar" style="background:#A35BFF;animation-delay:.35s">Գ</div><div class="col" style="height:80px;background:linear-gradient(#E7A877,#B26B3A);animation-delay:.25s">3</div></div>
+          </div>
+          <div class="enter">
+            <div class="row" style="--i:3"><span class="n">4</span><div class="avatar" style="background:#2FBF9F">Ն</div>Նարեկ<em>1 980</em></div>
+            <div class="row" style="--i:4"><span class="n">5</span><div class="avatar" style="background:#FF5C8A">Ս</div>Սոնա<em>1 512</em></div>
+            <div class="row me2" style="--i:5"><span class="n">6</span><div class="avatar">Մ</div>Դու<em>1 240</em></div>
+          </div>
+        </section>
+        <section class="tab right" data-tab="4" aria-label="Settings">
+          <div class="h">ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ</div><p class="sub">ՏԵՍՔ ԵՎ ԽԱՂ</p>
+          <div class="card enter">
+            <div class="set" style="--i:0">ՄՈՒԳ ԹԵՄԱ<button class="sw" role="switch" aria-checked="true" id="themeSw" aria-label="Dark theme"></button></div>
+            <div class="set" style="--i:1">ԹՐԹՌՈՑ<button class="sw" role="switch" aria-checked="true" aria-label="Haptics"></button></div>
+            <div class="set" style="--i:2">ՁԱՅՆԵՐ<button class="sw" role="switch" aria-checked="false" aria-label="Sounds"></button></div>
+          </div>
+        </section>
+      </main>
+      <nav class="tabbar" id="tabbar" aria-label="Tabs">
+        <div class="blob" id="blob"></div>
+      </nav>
+    </div>
+
+    <section class="game" id="game" aria-label="Classic game">
+      <div class="ghead">
+        <button class="back" id="backBtn" aria-label="Back"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div class="gtitle">ԴԱՍԱԿԱՆ</div>
+        <div class="pill" id="pill2"><span id="coins2">240</span><span class="coin"></span></div>
+      </div>
+      <div class="boardwrap" id="boardwrap"><div class="board" id="board"></div></div>
+      <div class="powers">
+        <button class="pw" id="hintBtn"><i style="background:color-mix(in srgb,var(--gold) 25%,transparent)">💡</i>ՀՈՒՇՈՒՄ<sup>3</sup></button>
+        <button class="pw"><i style="background:color-mix(in srgb,var(--accent) 22%,transparent)">🏹</i>ՆԵՏ<sup>2</sup></button>
+      </div>
+      <div class="kb" id="kb"></div>
+    </section>
+
+    <div class="toast" id="toast"></div>
+    <div class="veil" id="veil"></div>
+    <section class="sheet" id="sheet" aria-label="Round won">
+      <div class="praise" id="praise">ՀԻԱՆԱԼԻ</div>
+      <div class="word" id="winWord"></div>
+      <div class="meaning">ԲԱՐԵՎ — ողջույնի խոսք</div>
+      <div class="stats"><div><b id="sCoins">+0</b><small>ՄԵՏԱՂԱԴՐԱՄ</small></div><div><b id="sTries">3/6</b><small>ՓՈՐՁ</small></div><div><b>8🔥</b><small>ՇԱՐՔ</small></div></div>
+      <button class="next" id="nextBtn">ՀԱՋՈՐԴ ԲԱՌԸ</button>
+    </section>
+    <canvas id="fx"></canvas>
+  </div>
+</div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const phone=$('#phone');
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep=ms=>new Promise(r=>setTimeout(r,RM?Math.min(ms,30):ms));
+const L={'է':'Է','թ':'Թ','փ':'Փ','ձ':'Ձ','ջ':'Ջ','ր':'Ր','չ':'Չ','ճ':'Ճ','ժ':'Ժ','ք':'Ք','ո':'Ո','ե':'Ե','ռ':'Ռ','տ':'Տ','ու':'ՈՒ','ի':'Ի','օ':'Օ','պ':'Պ','խ':'Խ','ա':'Ա','ս':'Ս','դ':'Դ','ֆ':'Ֆ','գ':'Գ','հ':'Հ','յ':'Յ','կ':'Կ','լ':'Լ','ծ':'Ծ','զ':'Զ','ղ':'Ղ','ց':'Ց','վ':'Վ','բ':'Բ','ն':'Ն','մ':'Մ','շ':'Շ','ը':'Ը'};
+const ROWS=[['է','թ','փ','ձ','ջ','ր','չ','ճ','ժ'],['ք','ո','ե','ռ','տ','ու','ի','օ','պ','խ'],['ա','ս','դ','ֆ','գ','հ','յ','կ','լ','ծ'],['զ','ղ','ց','վ','բ','ն','մ','շ','ը']];
+const SECRET=['բ','ա','ր','ե','վ'];
+
+/* ornament: an eight-pointed Armenian-style star rosette */
+(function(){
+  const g=$('#ornG');let d='';
+  for(let i=0;i<8;i++){const a=i*Math.PI/4;d+=`<path transform="rotate(${i*45})" d="M0 -92 C 18 -60 18 -40 0 -22 C -18 -40 -18 -60 0 -92Z"/>`;}
+  g.innerHTML=d+'<circle r="22"/><circle r="60"/><circle r="96" stroke-dasharray="3 7"/>'+[...Array(16)].map((_,i)=>`<circle transform="rotate(${i*22.5})" cy="-60" r="5"/>`).join('');
+  const wedges=$('#wedges'),cols=['#E8405F','#FFD166','#2FBF7A','#5B8CFF','#E8405F','#FFD166','#2FBF7A','#A35BFF'];
+  wedges.innerHTML=cols.map((c,i)=>{const a0=i*45*Math.PI/180,a1=(i+1)*45*Math.PI/180,r=24;return `<path d="M32 32 L${32+r*Math.sin(a0)} ${32-r*Math.cos(a0)} A${r} ${r} 0 0 1 ${32+r*Math.sin(a1)} ${32-r*Math.cos(a1)}Z" fill="${c}"/>`}).join('');
+  const dr=$('#drifts'),letters=['Ա','Բ','Գ','Ե','Կ','Ռ','Ս','Ն','Վ','Մ','Հ','Ի'];
+  dr.innerHTML=letters.map((l,i)=>{const s=26+(i*7)%22,x=(i*37+11)%92,dur=26+(i*5)%18,cls=['c','p',''][i%3];
+    return `<div class="drift ${cls}" style="left:${x}%;width:${s}px;height:${s}px;font-size:${s*.5}px;opacity:${cls?.12:.1};${cls?'':'box-shadow:inset 0 0 0 2px var(--tileLine);color:var(--muted);'}--r0:${(i%2?-1:1)*8}deg;--r1:${(i%2?1:-1)*20}deg;animation-duration:${dur}s;animation-delay:-${(i*3.7)%dur}s">${l}</div>`}).join('');
+})();
+
+/* tab bar */
+const TABS=[{n:'ԽԱՆՈՒԹ',ic:'<path d="M8 18h40l-5 20H14z" fill="#FFB84D" stroke="#6B3A0A" stroke-width="3" stroke-linejoin="round"/><path d="M4 12h7l3 6" fill="none" stroke="#6B3A0A" stroke-width="3" stroke-linecap="round"/><circle cx="19" cy="46" r="4.5" fill="#E8405F" stroke="#6B3A0A" stroke-width="2.5"/><circle cx="38" cy="46" r="4.5" fill="#E8405F" stroke="#6B3A0A" stroke-width="2.5"/><path d="M14 24h29" stroke="#fff" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"/>'},
+ {n:'ԱՌԱՋԱԴՐԱՆՔՆԵՐ',ic:'<rect x="10" y="6" width="34" height="44" rx="7" fill="#7BD3FF" stroke="#6B3A0A" stroke-width="3"/><path d="M18 20l4 4 8-8M18 34l4 4 8-8" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>'},
+ {n:'ԳԼԽԱՎՈՐ',ic:'<path d="M8 26L28 8l20 18v20a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4z" fill="#FF6B81" stroke="#6B3A0A" stroke-width="3" stroke-linejoin="round"/><rect x="22" y="32" width="12" height="18" rx="3" fill="#FFD166" stroke="#6B3A0A" stroke-width="2.5"/><path d="M14 26L28 14" stroke="#fff" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"/>'},
+ {n:'ԱՌԱՋԱՏԱՐՆԵՐ',ic:'<rect x="20" y="14" width="16" height="36" rx="3" fill="#FFD166" stroke="#6B3A0A" stroke-width="3"/><rect x="4" y="26" width="16" height="24" rx="3" fill="#B9C3D6" stroke="#6B3A0A" stroke-width="3"/><rect x="36" y="32" width="16" height="18" rx="3" fill="#E7A877" stroke="#6B3A0A" stroke-width="3"/><path d="M28 4l2.5 5 5 .7-3.7 3.5.9 5-4.7-2.5-4.7 2.5.9-5-3.7-3.5 5-.7z" fill="#E8405F" stroke="#6B3A0A" stroke-width="1.8" stroke-linejoin="round"/>'},
+ {n:'ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ',ic:'<path d="M28 6l5 1 1 6 5 3 6-2 3 4-4 5v6l4 5-3 4-6-2-5 3-1 6-5 1-5-1-1-6-5-3-6 2-3-4 4-5v-6l-4-5 3-4 6 2 5-3 1-6z" fill="#B48CFF" stroke="#6B3A0A" stroke-width="3" stroke-linejoin="round"/><circle cx="28" cy="28" r="8" fill="#FFD166" stroke="#6B3A0A" stroke-width="2.5"/>'}];
+const bar=$('#tabbar');
+TABS.forEach((t,i)=>{const b=document.createElement('button');b.className='tb'+(i===2?' on':'');b.setAttribute('role','tab');b.setAttribute('aria-label',t.n);
+  b.innerHTML=`<svg viewBox="0 0 56 56">${t.ic}</svg><span>${t.n}</span>`+(i===1?'<i class="dot" id="taskDot"></i>':'');
+  b.onclick=()=>goTab(i);bar.appendChild(b)});
+let cur=2;
+function placeBlob(){$('#blob').style.transform=`translateX(${cur*100}%)`}
+placeBlob();
+function goTab(i){
+  if(i===cur){return}
+  const tabs=$$('.tab');
+  tabs.forEach(t=>{const n=+t.dataset.tab;t.classList.toggle('left',n<i);t.classList.toggle('right',n>i)});
+  const sec=tabs[i];sec.scrollTop=0;
+  sec.querySelectorAll('.enter,.podium .col,.podium .avatar').forEach(e=>{e.style.animation='none';e.offsetHeight;e.style.animation=''});
+  sec.querySelectorAll('.enter').forEach(e=>{e.classList.remove('enter');e.offsetHeight;e.classList.add('enter')});
+  if(i===1){sec.querySelectorAll('.bar i').forEach(b=>{b.style.width='0';setTimeout(()=>b.style.width=b.dataset.w+'%',250)})}
+  $$('.tb').forEach((b,n)=>{b.classList.toggle('on',n===i);b.setAttribute('aria-selected',n===i)});
+  const svg=$$('.tb')[i].querySelector('svg');svg.classList.remove('wiggle');svg.offsetHeight;svg.classList.add('wiggle');
+  cur=i;placeBlob();
+}
+
+/* countdown */
+let left=4*3600+12*60+33;
+setInterval(()=>{left=Math.max(0,left-1);const h=String(left/3600|0).padStart(2,'0'),m=String(left%3600/60|0).padStart(2,'0'),s=String(left%60).padStart(2,'0');$('#cd').textContent=`ԲԱՑՎՈՒՄ Է ${h}:${m}:${s}`},1000);
+
+/* toast */
+let tt;function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),1500)}
+$('#dailyBtn').onclick=()=>toast('ՇՈՒՏՈՎ');
+
+/* coins */
+let coins=240;
+function setCoins(v){coins=v;$('#coins').textContent=v;$('#coins2').textContent=v}
+function rectIn(el){const p=phone.getBoundingClientRect(),r=el.getBoundingClientRect();return{x:r.left-p.left+r.width/2,y:r.top-p.top+r.height/2}}
+async function flyCoins(fromEl,toEl,n,amount,pillEl){
+  const a=rectIn(fromEl),b=rectIn(toEl.querySelector('.coin')||toEl);const per=Math.round(amount/n);
+  for(let i=0;i<n;i++){
+    const c=document.createElement('div');c.className='coin fly';phone.appendChild(c);
+    const sx=a.x+(Math.random()-.5)*60,sy=a.y+(Math.random()-.5)*30,mx=(sx+b.x)/2+(Math.random()-.5)*120,my=Math.min(sy,b.y)-60-Math.random()*80;
+    const an=c.animate([{transform:`translate(${sx-13}px,${sy-13}px) scale(0)`},{transform:`translate(${sx-13}px,${sy-13}px) scale(1.2)`,offset:.15},{transform:`translate(${mx-13}px,${my-13}px) scale(1)`,offset:.55},{transform:`translate(${b.x-13}px,${b.y-13}px) scale(.7)`}],{duration:RM?10:750+i*40,easing:'cubic-bezier(.5,0,.6,1)',delay:RM?0:i*70,fill:'forwards'});
+    an.onfinish=()=>{c.remove();setCoins(coins+(i===n-1?amount-per*(n-1):per));const p=pillEl||toEl;p.classList.remove('bump');p.offsetHeight;p.classList.add('bump')};
+  }
+}
+$$('.claim').forEach(btn=>btn.onclick=()=>{if(btn.disabled)return;btn.disabled=true;btn.textContent='ՍՏԱՑՎԱԾ';flyCoins(btn,$('#pill'),8,+btn.dataset.reward);const d=$('#taskDot');d&&d.remove()});
+
+/* theme */
+function toggleTheme(e){
+  const sw=$('#themeSw');const dark=sw.getAttribute('aria-checked')!=='true';
+  const apply=()=>{phone.classList.toggle('light',!dark);sw.setAttribute('aria-checked',dark)};
+  if(!document.startViewTransition||RM){apply();return}
+  const r=e.target.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+  const vt=document.startViewTransition(apply);
+  vt.ready.then(()=>{const R=Math.hypot(Math.max(x,innerWidth-x),Math.max(y,innerHeight-y));
+    document.documentElement.animate({clipPath:[`circle(0 at ${x}px ${y}px)`,`circle(${R}px at ${x}px ${y}px)`]},{duration:650,easing:'cubic-bezier(.22,1,.36,1)',pseudoElement:'::view-transition-new(root)'})});
+}
+$('#themeSw').onclick=toggleTheme;
+$$('.sw:not(#themeSw)').forEach(s=>s.onclick=()=>s.setAttribute('aria-checked',s.getAttribute('aria-checked')!=='true'));
+
+/* ---------- game ---------- */
+const game=$('#game'),board=$('#board'),kb=$('#kb');
+let rows=[],guess=[],row=0,busy=false,done=false,keyState={};
+function buildBoard(sweep){
+  board.innerHTML='';rows=[];
+  for(let r=0;r<6;r++){const br=document.createElement('div');br.className='brow'+(r===0?' active':'');
+    for(let c=0;c<5;c++){const d=document.createElement('div');d.className='t cell'+(sweep?' sweep':'');if(sweep)d.style.animationDelay=(r*5+c)*18+'ms';br.appendChild(d)}
+    board.appendChild(br);rows.push(br)}
+  guess=[];row=0;done=false;updateCursor();sizeBoard();
+}
+function sizeBoard(){const w=$('#boardwrap');const h=w.clientHeight-12,wd=Math.min(phone.clientWidth-60,340);const ts=Math.max(36,Math.min((h-35)/6,(wd-28)/5,62));board.style.setProperty('--ts',ts+'px')}
+addEventListener('resize',sizeBoard);
+function updateCursor(){if(!rows[row])return;[...rows[row].children].forEach((c,i)=>c.classList.toggle('cur',i===guess.length));
+  $('.k.enter')&&$('.k.enter').classList.toggle('ready',guess.length===5)}
+function buildKb(){
+  kb.innerHTML='';
+  ROWS.forEach((r,ri)=>{const kr=document.createElement('div');kr.className='kr';
+    if(ri===3){kr.appendChild(mk('⌫','back','wide'))}
+    r.forEach(l=>kr.appendChild(mk(L[l],l)));
+    if(ri===3){kr.appendChild(mk('ԸՆԴՈՒՆԵԼ','enter','wide enter'))}
+    kb.appendChild(kr)});
+}
+function mk(label,val,cls=''){const b=document.createElement('button');b.className='k '+cls;b.textContent=label;b.dataset.v=val;b.setAttribute('aria-label',label==='⌫'?'Ջնջել':label);
+  if(val==='ու')b.style.fontSize='13px';
+  b.addEventListener('pointerdown',e=>{const r=b.getBoundingClientRect(),s=document.createElement('span');s.className='rip';s.style.left=(e.clientX-r.left-5)+'px';s.style.top=(e.clientY-r.top-5)+'px';b.appendChild(s);setTimeout(()=>s.remove(),500)});
+  b.onclick=()=>press(val);return b}
+function press(v){
+  if(busy||done)return;
+  if(v==='back'){if(!guess.length)return;guess.pop();const c=rows[row].children[guess.length];c.textContent='';c.classList.remove('filled');c.style.fontSize='';updateCursor();return}
+  if(v==='enter'){submit();return}
+  if(guess.length>=5)return;
+  const c=rows[row].children[guess.length];c.textContent=L[v];if(v==='ու')c.style.fontSize='calc(var(--ts)*.34)';
+  c.classList.remove('filled');c.offsetHeight;c.classList.add('filled');guess.push(v);updateCursor();
+}
+function evaluate(g){const res=Array(5).fill('a'),pool={};
+  SECRET.forEach((s,i)=>{if(g[i]===s)res[i]='c';else pool[s]=(pool[s]||0)+1});
+  g.forEach((l,i)=>{if(res[i]!=='c'&&pool[l]){res[i]='p';pool[l]--}});return res}
+async function submit(){
+  if(guess.length<5){const r=rows[row];r.classList.remove('shake');r.offsetHeight;r.classList.add('shake');toast('ՔԻՉ ՏԱՌԵՐ');return}
+  busy=true;const res=evaluate(guess),cells=[...rows[row].children];rows[row].classList.remove('active');cells.forEach(c=>c.classList.remove('cur'));
+  for(let i=0;i<5;i++){const c=cells[i];setTimeout(()=>{c.classList.remove('filled');c.offsetHeight;c.classList.add('flip');setTimeout(()=>c.classList.add(res[i]),RM?0:260)},RM?0:i*260)}
+  await sleep(5*260+300);
+  const rank={a:1,p:2,c:3};
+  guess.forEach((l,i)=>{if((rank[res[i]]||0)>(rank[keyState[l]]||0))keyState[l]=res[i]});
+  $$('.k').forEach((k,n)=>{const s=keyState[k.dataset.v];if(s&&!k.classList.contains(s)){setTimeout(()=>{k.classList.remove('c','p','a');k.classList.add(s);k.animate([{transform:'scale(1)'},{transform:'scale(1.15)'},{transform:'scale(1)'}],{duration:RM?1:300,easing:'ease-out'})},RM?0:(n%10)*25)}});
+  cells.forEach(c=>c.classList.remove('flip'));
+  if(res.every(r=>r==='c')){await win(cells);return}
+  row++;guess=[];
+  if(row>=6){done=true;busy=false;toast('ԲԱՌՆ ԷՐ ԲԱՐԵՎ');setTimeout(newRound,1800);return}
+  rows[row].classList.add('active');updateCursor();busy=false;
+}
+const PRAISE=['ՀԱՆՃԱՐԵՂ','ԱՆՀԱՎԱՏԱԼԻ','ՀԻԱՆԱԼԻ','ՇԱՏ ԼԱՎ','ԼԱՎ','ՓՐԿՎԵՑԻՐ'];
+async function win(cells){
+  done=true;
+  cells.forEach((c,i)=>{setTimeout(()=>{c.classList.add('jump')},RM?0:i*90)});
+  await sleep(700);confetti();
+  await sleep(350);
+  const reward=[60,45,30,25,20,15][row];
+  $('#praise').textContent=PRAISE[row];$('#sTries').textContent=(row+1)+'/6';$('#sCoins').textContent='+0';
+  $('#winWord').innerHTML=SECRET.map((l,i)=>`<div class="t c" style="--i:${i}">${L[l]}</div>`).join('');
+  $('#winWord').classList.remove('show');$('#veil').classList.add('show');$('#sheet').classList.add('show');
+  requestAnimationFrame(()=>$('#winWord').classList.add('show'));
+  await sleep(600);
+  const t0=performance.now(),D=RM?1:900;(function step(t){const k=Math.min(1,(t-t0)/D),e=1-Math.pow(1-k,3);$('#sCoins').textContent='+'+Math.round(reward*e);if(k<1)requestAnimationFrame(step)})(t0);
+  await sleep(950);flyCoins($('#sCoins'),$('#pill2'),7,reward);
+  busy=false;
+}
+function newRound(){keyState={};$$('.k').forEach(k=>k.classList.remove('c','p','a'));buildBoard(true)}
+$('#nextBtn').onclick=()=>{$('#sheet').classList.remove('show');$('#veil').classList.remove('show');setTimeout(newRound,250)};
+$('#hintBtn').onclick=()=>toast('ՀՈՒՇՈՒՄ — ԱՌԱՋԻՆ ՏԱՌԸ Բ');
+
+/* open / close game with a circular reveal from the card */
+function openGame(){
+  const p=rectIn($('#playBtn'));game.style.setProperty('--ox',p.x+'px');game.style.setProperty('--oy',p.y+'px');
+  game.classList.add('open');bar.classList.add('away');requestAnimationFrame(sizeBoard);
+}
+function closeGame(){game.classList.add('closing');game.classList.remove('open');bar.classList.remove('away');setTimeout(()=>game.classList.remove('closing'),700)}
+$('#playBtn').onclick=openGame;$('#backBtn').onclick=closeGame;
+addEventListener('keydown',e=>{if(!game.classList.contains('open'))return;if(e.key==='Enter')press('enter');else if(e.key==='Backspace')press('back')});
+
+/* confetti */
+const fx=$('#fx'),ctx=fx.getContext('2d');
+function confetti(){
+  if(RM)return;const W=fx.width=phone.clientWidth*devicePixelRatio,H=fx.height=phone.clientHeight*devicePixelRatio;ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  const cols=['#2FBF7A','#F5A524','#E8405F','#FFD166','#7BD3FF','#B48CFF'],w=phone.clientWidth,h=phone.clientHeight;
+  const ps=[...Array(140)].map((_,i)=>({x:i%2?-10:w+10,y:h*.55,vx:(i%2?1:-1)*(3+Math.random()*7),vy:-9-Math.random()*9,r:Math.random()*6.28,vr:(Math.random()-.5)*.4,s:5+Math.random()*6,c:cols[i%6]}));
+  let t0=performance.now();
+  (function f(t){ctx.clearRect(0,0,w,h);let alive=false;
+    ps.forEach(p=>{p.vy+=.32;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;if(p.y<h+20)alive=true;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/4,p.s,p.s/2*(1+Math.sin(p.r*3)));ctx.restore()});
+    if(alive&&t-t0<4500)requestAnimationFrame(f);else ctx.clearRect(0,0,w,h)})(t0);
+}
+
+/* demo autoplay */
+async function typeWord(w){for(const l of w){press(l);const k=$$('.k').find(k=>k.dataset.v===l);k&&k.classList.add('down');await sleep(170);k&&k.classList.remove('down');await sleep(60)}await sleep(250);press('enter');await sleep(1900)}
+$('#demoBtn').onclick=async()=>{
+  if(busy)return;
+  if(cur!==2)goTab(2);
+  $('#sheet').classList.remove('show');$('#veil').classList.remove('show');
+  if(!game.classList.contains('open')){openGame();await sleep(800)}
+  if(row>0||guess.length||done){newRound();await sleep(900)}
+  await typeWord(['ս','ա','ր','ե','ր']);
+  await typeWord(['գ','ա','ր','ու','ն']);
+  await typeWord(['բ','ա','ր','ե','վ']);
+};
+
+buildKb();buildBoard(false);
+setTimeout(()=>{$$('.tab[data-tab="1"] .bar i').forEach(b=>b.style.width=b.dataset.w+'%')},400);
+})();
+</script>

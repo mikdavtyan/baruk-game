@@ -28,6 +28,7 @@ const KEYS = {
   adRewards: 'wordle:adRewards',
   darkMode: 'wordle:darkMode',
   haptics: 'wordle:haptics',
+  sounds: 'wordle:sounds',
   tasks: 'wordle:tasks',
 } as const;
 
@@ -196,17 +197,19 @@ export const getRulesSeen = () => getJSON<boolean>(KEYS.rulesSeen, false);
 export const getProfile = async (): Promise<Profile> => normalizeProfile(await getJSON<Partial<Profile> | null>(KEYS.profile, null));
 export const setProfile = (profile: Profile) => setJSON(KEYS.profile, profile);
 
-// Settings: the dark theme (off by default) and haptics (on by default), as
-// separate keys so changing one never overwrites the other.
 // Today's tasks (lib/tasks.ts); App turns a missing or earlier day's record
 // into fresh tasks through tasksForDay.
 export const getTasks = () => getJSON<DailyTasks | null>(KEYS.tasks, null);
 export const setTasks = (tasks: DailyTasks) => setJSON(KEYS.tasks, tasks);
 
+// Settings: the dark theme (off by default), haptics and sounds (on by
+// default), as separate keys so changing one never overwrites another.
 export const getDarkMode = () => getJSON<boolean>(KEYS.darkMode, false);
 export const setDarkMode = (on: boolean) => setJSON(KEYS.darkMode, on);
 export const getHapticsOn = () => getJSON<boolean>(KEYS.haptics, true);
 export const setHapticsOn = (on: boolean) => setJSON(KEYS.haptics, on);
+export const getSoundsOn = () => getJSON<boolean>(KEYS.sounds, true);
+export const setSoundsOn = (on: boolean) => setJSON(KEYS.sounds, on);
 
 // Settings' ԶՐՈՅԱՑՆԵԼ ԱՌԱՋԸՆԹԱՑԸ: the player's progress — coins, points,
 // streak, items, the current game and any end-of-round record — in one

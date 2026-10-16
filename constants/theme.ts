@@ -13,7 +13,11 @@ export type LetterState = 'empty' | 'filled' | 'correct' | 'present' | 'absent' 
 
 export type ThemeTokens = {
   background: string;
+  // The soft radial glow at the top of every screen (ScreenBackground.tsx).
+  backgroundGlow: string;
   surface: string;
+  // Chips and inner fills on a surface (progress tracks, the tab bar's plate).
+  raised: string;
   border: string;
   text: string;
   textMuted: string;
@@ -56,6 +60,9 @@ export type ThemeTokens = {
   // plus its own 3D bottom edge, same idea as keyEdge.
   submitOn: string;
   submitOnEdge: string;
+  // Pomegranate: the brand accent (badges, the streak chip, highlights).
+  accent: string;
+  accentEdge: string;
   // The end-of-round result card (see ResultModal.tsx) — a dark,
   // gradient-filled card in BOTH themes, plus a 3D bottom edge like the
   // game's keys/buttons. The gradient itself can't run through `color()`
@@ -104,114 +111,121 @@ export function darken(hex: string, factor = 0.71): string {
   return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
 }
 
-const lightCorrect = '#4A9D5B';
-const lightPresent = '#E8A33D';
-const lightAbsent = '#878580';
-const lightPrimaryBackground = '#1F2328';
+// The "apricot" (light) and "pomegranate night" (dark) palettes of the 2026-10
+// redesign (.scratch/redesign/spec.md). `present` runs a touch deeper than the
+// spec's swatch (#F29A12 / #F5A524) so the white letter on a scored tile stays
+// readable, about as much as on `correct`.
+const lightCorrect = '#27AE68';
+const lightPresent = '#E08B12';
+const lightText = '#2B1638';
 
 export const lightTheme: ThemeTokens = {
-  background: '#F7F5F0',
+  background: '#FFF1E2',
+  backgroundGlow: '#FFD9B8',
   surface: '#FFFFFF',
-  border: '#DDD9D0',
-  text: '#1F2328',
-  textMuted: '#6B6963',
+  raised: '#FFE6CC',
+  border: '#F0D2B4',
+  text: lightText,
+  textMuted: '#8B6B84',
   correct: lightCorrect,
   present: lightPresent,
-  absent: lightAbsent,
-  keyBackground: '#E6E3DC',
-  keyText: '#1F2328',
-  keyEdge: '#DDD9D0', // = border — already the right "slightly darker than keyBackground" neutral
-  correctEdge: darken(lightCorrect),
-  presentEdge: darken(lightPresent),
-  absentEdge: darken(lightAbsent),
-  tileBorder: '#DDD9D0', // = border, unchanged from the app's existing default tile border
-  tileActiveBorder: '#1F2328', // = text, unchanged from the app's existing active-cell border
-  typedLetter: '#1F2328', // = text, unchanged
-  headerIconColor: '#1F2328', // = text, unchanged
-  headerValueColor: '#1F2328', // = text, unchanged
-  pill: '#E6E3DC', // = keyBackground, unchanged
-  pillText: '#1F2328', // = text, unchanged
-  primaryBackground: lightPrimaryBackground,
-  primaryText: '#FFFFFF',
-  submitOn: lightPrimaryBackground, // light keeps its existing submit-ready look
-  submitOnEdge: darken(lightPrimaryBackground), // light had no 3D edge before, this is new
-  cardGradientStart: '#34312C',
-  cardGradientEnd: '#2A2724',
-  cardBorder: 'rgba(255,255,255,0.06)',
-  cardEdge: '#1A1816',
-  cardText: '#FFFFFF',
-  cardTextMuted: '#BDB6AA',
-  cardTileFill: '#3A3631',
-  cardTileBorder: '#4A4640',
+  absent: '#A897B3',
+  keyBackground: '#FFFFFF',
+  keyText: lightText,
+  keyEdge: '#E8C6A6',
+  correctEdge: '#16774A',
+  presentEdge: '#A86509',
+  absentEdge: '#7B6A87',
+  tileBorder: '#EBC9A8',
+  tileActiveBorder: '#7A5470',
+  typedLetter: lightText,
+  headerIconColor: lightText,
+  headerValueColor: lightText,
+  pill: '#FFFFFF',
+  pillText: lightText,
+  primaryBackground: lightText,
+  primaryText: '#FFF1E2',
+  submitOn: lightCorrect,
+  submitOnEdge: '#16774A',
+  accent: '#DD3452',
+  accentEdge: '#9A1C35',
+  // The result cards stay a deep plum in the light theme too (their art and
+  // light text are drawn for a dark card), like a candy box on the apricot.
+  cardGradientStart: '#3A2050',
+  cardGradientEnd: '#2B1638',
+  cardBorder: 'rgba(255,255,255,0.08)',
+  cardEdge: '#1A0C26',
+  cardText: '#FFF4EA',
+  cardTextMuted: '#CDB8D8',
+  cardTileFill: '#44295C',
+  cardTileBorder: '#573A72',
   popupSurface: '#FFFFFF', // = surface
-  popupBorder: '#DDD9D0', // = border
-  popupEdge: '#DDD9D0', // = keyEdge
-  popupText: '#1F2328', // = text
-  popupTextMuted: '#6B6963', // = textMuted
-  popupDivider: '#E6E3DC', // = keyBackground
-  popupBadgeBg: '#1F2328', // = text
+  popupBorder: '#F0D2B4', // = border
+  popupEdge: '#E8C6A6', // = keyEdge
+  popupText: lightText,
+  popupTextMuted: '#8B6B84',
+  popupDivider: '#F7E3CF',
+  popupBadgeBg: lightText,
   popupBadgeText: '#FFFFFF',
-  popupTileFill: '#F7F5F0', // = background
-  popupTileBorder: '#DDD9D0', // = border
-  popupTileText: '#1F2328', // = typedLetter
-  coinShadow: 'rgba(110,60,0,0.35)',
+  popupTileFill: '#FFE6CC', // = raised
+  popupTileBorder: '#F0D2B4',
+  popupTileText: lightText,
+  coinShadow: 'rgba(120,60,20,0.35)',
 };
 
-// Every value below (except where noted) is from the chat-provided dark
-// palette: keyBackground/keyText are a light chip that stays constant
-// whether a key has been used or not, while absent is its own dark charcoal
-// — clearly different from both. Tile.tsx reads the same `absent` token, so
-// the gameboard's wrong-letter tiles automatically match the keyboard's
-// wrong-letter keys.
-const darkCorrect = '#70B400';
-const darkPresent = '#D6A500';
-const darkAbsent = '#3B3B3B';
+const darkCorrect = '#2FBF7A';
+const darkPresent = '#E9961C';
+const darkText = '#F7EEFF';
 
 export const darkTheme: ThemeTokens = {
-  background: '#2A2A2A',
-  surface: '#1C1F22',
-  border: '#33373B',
-  text: '#EDEDED',
-  textMuted: '#807F87',
+  background: '#170B26',
+  backgroundGlow: '#2A1142',
+  surface: '#25133A',
+  raised: '#33204B',
+  border: '#45305F',
+  text: darkText,
+  textMuted: '#A994C6',
   correct: darkCorrect,
   present: darkPresent,
-  absent: darkAbsent,
-  keyBackground: '#6A6D6E',
-  keyText: '#FFFFFF',
-  keyEdge: '#C0BCCC',
-  correctEdge: darken(darkCorrect), // = #4F8000, matches the chat-provided submit-on-edge exactly
-  presentEdge: darken(darkPresent),
-  absentEdge: darken(darkAbsent),
-  tileBorder: '#807F87',
-  tileActiveBorder: '#FFFFFF',
-  typedLetter: '#FFFFFF',
-  headerIconColor: '#807F87',
-  headerValueColor: '#807F87',
-  pill: '#2F3138',
-  pillText: '#FFFFFF',
-  primaryBackground: '#EDEDED',
-  primaryText: '#121416',
+  absent: '#45355A',
+  keyBackground: '#4A3766',
+  keyText: darkText,
+  keyEdge: '#2B1D3F',
+  correctEdge: '#1A7A4C',
+  presentEdge: '#A5680B',
+  absentEdge: '#2C2140',
+  tileBorder: '#5A4478',
+  tileActiveBorder: '#C9B3EA',
+  typedLetter: darkText,
+  headerIconColor: darkText,
+  headerValueColor: darkText,
+  pill: '#25133A',
+  pillText: darkText,
+  primaryBackground: darkText,
+  primaryText: '#170B26',
   submitOn: darkCorrect,
-  submitOnEdge: darken(darkCorrect),
-  cardGradientStart: '#252A2F',
-  cardGradientEnd: '#1D2125',
-  cardBorder: 'rgba(255,255,255,0.06)',
-  cardEdge: '#0A0B0C',
-  cardText: '#EDEDED', // = text, unchanged
-  cardTextMuted: '#807F87', // = textMuted, unchanged
-  cardTileFill: '#16191C',
-  cardTileBorder: '#33383D',
-  popupSurface: '#1C1F22', // = surface
-  popupBorder: '#33373B', // = border
-  popupEdge: '#0A0B0C', // = cardEdge
-  popupText: '#EDEDED', // = text
-  popupTextMuted: '#9A99A1', // a step lighter than textMuted, for body text on the panel
-  popupDivider: '#2A2E33',
-  popupBadgeBg: '#EDEDED', // = primaryBackground
-  popupBadgeText: '#121416', // = primaryText
-  popupTileFill: '#16191C', // = cardTileFill
-  popupTileBorder: '#33383D', // = cardTileBorder
-  popupTileText: '#FFFFFF', // = typedLetter
+  submitOnEdge: '#1A7A4C',
+  accent: '#E8405F',
+  accentEdge: '#93203A',
+  cardGradientStart: '#2E1A47',
+  cardGradientEnd: '#25133A',
+  cardBorder: 'rgba(255,255,255,0.08)',
+  cardEdge: '#0E0718',
+  cardText: darkText,
+  cardTextMuted: '#A994C6',
+  cardTileFill: '#33204B',
+  cardTileBorder: '#45305F',
+  popupSurface: '#25133A', // = surface
+  popupBorder: '#45305F', // = border
+  popupEdge: '#0E0718',
+  popupText: darkText,
+  popupTextMuted: '#B9A6D3', // a step lighter than textMuted, for body text on the panel
+  popupDivider: '#36234E',
+  popupBadgeBg: darkText,
+  popupBadgeText: '#170B26',
+  popupTileFill: '#33204B', // = raised
+  popupTileBorder: '#45305F',
+  popupTileText: darkText,
   coinShadow: 'rgba(0,0,0,0.55)',
 };
 
@@ -253,7 +267,14 @@ export const NEUTRAL_TILE_TEXT = '#1F2328';
 // added, not a working weight scale today.
 export const FONT_FAMILY = 'GHEAGrapalat-Bold';
 
+// Noto Serif Armenian Black (OFL, assets/fonts/NotoSerifArmenian-Black.ttf):
+// the display face — Home's logo tiles, page titles and praise words only.
+// Ascent 1.068em + descent 0.292em.
+export const DISPLAY_FONT_FAMILY = 'NotoSerifArmenian-Black';
+export const DISPLAY_LINE_HEIGHT_EM = 1.36;
+
 export const FONTS = {
+  display: DISPLAY_FONT_FAMILY,
   tile: FONT_FAMILY, // board tiles & keyboard keys — nominally 700
   title: FONT_FAMILY, // buttons, headers, modal titles — nominally 600 (renders as 700, the only weight bundled)
   body: FONT_FAMILY, // body/message text — nominally 400–500 (renders as 700, the only weight bundled)
@@ -309,16 +330,9 @@ export const ROW_SHAKE_DURATION_MS = 260;
 // becomes the active one (see Tile.tsx).
 export const TILE_SHINE_DURATION_MS = 450;
 
-// The light/dark switch (lib/ThemeContext.tsx): every themed color fades in
-// place over this long, eased in-out; the plain `theme` snapshot flips at the
-// midpoint. Kept short on purpose — see docs/adr/0004.
-export const THEME_FADE_MS = 300;
-// Text colors fade on the native driver too (true), so a theme toggle does no
-// JS work per frame. If a device shows text NOT changing color with it (native
-// text color isn't confirmed to repaint on Android), set this to false: then
-// text colors switch once, at the fade's midpoint, while backgrounds still fade
-// natively. Every letter ends in the right color either way.
-export const TEXT_COLOR_NATIVE = true;
+// The light/dark switch (lib/ThemeContext.tsx, ThemeRevealOverlay.tsx): the
+// new theme spreads in a growing circle from the pressed control, ease-out.
+export const THEME_REVEAL_MS = 650;
 
 // Short game toasts (e.g. "no hint left") over the top of the board.
 export const TOAST_FADE_MS = 180;
@@ -426,17 +440,40 @@ export const MENU_BG_TILES: MenuBackgroundTile[] = [
 export const MENU_BG_TILE_CORNER_RATIO = 0.24;
 export const MENU_BG_TILE_BORDER = 2;
 
-// The main screen's tab bar (TabBar.tsx / MainTabs.tsx). The active tab's
-// cell rises on a plate, its icon grows and its name fades + scales in;
-// switching slides the content toward the new tab. All native driver.
-export const TAB_BAR_HEIGHT = 62; // plus the bottom safe-area inset
-export const TAB_ICON_SIZE = 28;
-export const TAB_ICON_ACTIVE_SCALE = 1.3;
-export const TAB_RAISE = 16; // px the active cell's icon and plate rise above the bar's center
-export const TAB_PLATE_SIZE = 58;
+// The main screen's floating tab bar (TabBar.tsx / MainTabs.tsx): inset from
+// the screen edges, a raised bubble springing between the tabs; the active
+// tab's icon lifts, grows and wiggles, its name appears under it. Switching
+// slides the content toward the new tab. All native driver.
+export const TAB_BAR_HEIGHT = 68;
+export const TAB_BAR_INSET = 14; // px from the screen's sides and bottom (plus the bottom safe area)
+export const TAB_BAR_RADIUS = 26;
+export const TAB_BUBBLE_INSET = 7; // px between the bar's edge and the bubble
+export const TAB_ICON_SIZE = 30;
+export const TAB_ICON_ACTIVE_SCALE = 1.12;
+export const TAB_ICON_LIFT = 9; // px the active icon rises (its name appears under it)
+export const TAB_INACTIVE_OPACITY = 0.62; // inactive icons look a little washed out
 export const TAB_LABEL_START_SCALE = 0.6;
-export const TAB_ACTIVATE_MS = 220; // the raise/grow/label of the new tab, and the old one settling back
+export const TAB_ACTIVATE_MS = 260; // the lift/label of the new tab, and the old one settling back
+export const TAB_WIGGLE_MS = 500;
 export const TAB_SLIDE_MS = 240; // the content slide between tabs
+export const TAB_BADGE_PULSE_MS = 1800;
+// Room a tab's content keeps free at its bottom for the floating bar (plus
+// the bottom safe area).
+export const TAB_BAR_SPACE = TAB_BAR_HEIGHT + TAB_BAR_INSET + 12;
+
+// A tab's cards rise in, one after another, each time the tab is shown.
+export const TAB_ENTER_STAGGER_MS = 70;
+export const TAB_ENTER_DISTANCE = 26;
+// Tasks' progress bars fill (scaleX) when the tab is shown, and a shimmer of
+// stripes slides along the fill.
+export const TASK_BAR_FILL_MS = 900;
+export const TASK_BAR_FILL_DELAY_MS = 200;
+export const TASK_STRIPES_MS = 1000;
+export const TASK_CLAIM_PULSE_MS = 1600;
+
+// The press feeling of big buttons and cards (PressScale.tsx).
+export const PRESS_SCALE = 0.96;
+export const PRESS_SCALE_IN_MS = 90;
 
 // Home's fortune wheel button (WheelButton.tsx): every WHEEL_IDLE_INTERVAL_MS
 // it spins once — a quick full turn with an ease-out (WHEEL_SPIN_MS) that
@@ -444,10 +481,34 @@ export const TAB_SLIDE_MS = 240; // the content slide between tabs
 // (WHEEL_SETTLE_MS) — like a real wheel stopping.
 export const WHEEL_IDLE_INTERVAL_MS = 5500;
 export const WHEEL_SPIN_MS = 900;
-export const WHEEL_OVERSHOOT_TURNS = 0.035;
+export const WHEEL_OVERSHOOT_TURNS = 0.083; // ~30°
 export const WHEEL_SETTLE_MS = 380;
 export const WHEEL_BUTTON_SIZE = 64;
 
-// The Settings tab's on/off switches: the knob slide and the track's fade
-// to green (native driver).
-export const SETTINGS_SWITCH_MS = 160;
+// The badge under the wheel bobs up and down (one native loop).
+export const WHEEL_BADGE_BOB_MS = 1600;
+export const WHEEL_BADGE_BOB = 3; // px
+
+// Home (MenuScreen.tsx). The first time Home appears per launch the logo
+// tiles drop in with a spring, one after another, the tagline fades in and
+// the cards rise in; after that the logo floats in a gentle staggered wave.
+export const HOME_LOGO_DROP_STAGGER_MS = 90;
+export const HOME_LOGO_FLOAT_MS = 4000; // one float wave
+export const HOME_LOGO_FLOAT_LIFT = 6; // px at the top of the wave
+export const HOME_LOGO_FLOAT_PHASE = 0.045; // each tile's lag, as a share of the wave
+export const HOME_TAGLINE_DELAY_MS = 700;
+export const HOME_TAGLINE_MS = 800;
+export const HOME_CARD_RISE_DELAY_MS = 900; // the first card; each next one HOME_CARD_RISE_STAGGER_MS later
+export const HOME_CARD_RISE_STAGGER_MS = 120;
+// The rosette behind Home: one full turn every HOME_ROSETTE_TURN_MS.
+export const HOME_ROSETTE_TURN_MS = 90000;
+export const HOME_ROSETTE_SIZE = 520;
+export const HOME_ROSETTE_OPACITY = 0.13;
+// The streak chip's flame flicker, and the number's pop when the streak grew.
+export const STREAK_FLICKER_MS = 1200;
+export const STREAK_COUNT_STEP_MS = 140;
+export const STREAK_POP_SCALE = 1.4;
+// ԴԱՍԱԿԱՆ's shine sweep and its play arrow's nudge.
+export const HOME_SHINE_INTERVAL_MS = 3800;
+export const HOME_PLAY_NUDGE_MS = 2200;
+export const HOME_PLAY_NUDGE = 4; // px

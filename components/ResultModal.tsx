@@ -9,12 +9,18 @@ import Ribbon from './Ribbon';
 import SmokePuffs from './SmokePuffs';
 import StreakFlameIcon from './StreakFlameIcon';
 import Tile from './Tile';
-import { FONTS, KEY_EDGE_HEIGHT, LetterState, MAX_GUESSES, WORD_LENGTH } from '../constants/theme';
+import { FONTS, KEY_EDGE_HEIGHT, LetterState, MAX_GUESSES, TILE_FLIP_DURATION_MS, WORD_LENGTH } from '../constants/theme';
 import {
   LOSS_RESULT_ROLLDOWN_MS,
   RESULT_SECTION_RISE_PX,
   RESULT_SECTION_STAGGER_MS,
-  RESULT_TILE_FLIP_STAGGER_MS,
+  LOSS_REVEAL_STAGGER_MS,
+  LOSS_SETTLE_DELAY_MS,
+  LOSS_SETTLE_DROP,
+  LOSS_SETTLE_MS,
+  LOSS_SETTLE_OPACITY,
+  RESULT_TILE_POP_DELAY_MS,
+  RESULT_TILE_POP_STAGGER_MS,
 } from '../constants/winFlow';
 import { RankedEntry } from '../lib/leaderboard';
 import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
@@ -56,14 +62,46 @@ function Section({ index, children }: { index: number; children: React.ReactNode
   return <Animated.View style={{ opacity: anim, transform: [{ translateY }] }}>{children}</Animated.View>;
 }
 
-// win: tiles flip to the real 'correct' (green) color, since the word really
-// was solved. loss: the same flip, but to the neutral cream reveal color —
-// this IS the answer, but it isn't a scored guess (see A2/Tile.tsx).
+// The answer's tiles. win: they pop in one by one, already green (the word
+// really was solved). loss: they flip one by one to the neutral cream reveal
+// color (the answer, but not a scored guess — see Tile.tsx), then settle
+// gently: a small drop and a dim, nothing harsh. Native driver; reduced
+// motion: no pop, no settle motion (the end state at once).
 function WordReveal({ tokens, variant }: { tokens: string[]; variant: 'win' | 'loss' }) {
-  const [revealed, setRevealed] = useState(0);
+  const { reduceMotion } = useTheme();
+  const [revealed, setRevealed] = useState(variant === 'win' ? tokens.length : 0);
+  const [pops] = useState(() => tokens.map(() => new Animated.Value(variant === 'win' && !reduceMotion ? 0 : 1)));
+  const [popOpacities] = useState(() =>
+    pops.map((v) => v.interpolate({ inputRange: [0, 0.3], outputRange: [0, 1], extrapolate: 'clamp' })),
+  );
+  const [settle] = useState(() => new Animated.Value(0));
+  const [settleNodes] = useState(() => ({
+    translateY: settle.interpolate({ inputRange: [0, 1], outputRange: [0, LOSS_SETTLE_DROP] }),
+    opacity: settle.interpolate({ inputRange: [0, 1], outputRange: [1, LOSS_SETTLE_OPACITY] }),
+  }));
   useEffect(() => {
+    if (variant === 'win') {
+      if (reduceMotion) return;
+      const pop = Animated.stagger(
+        RESULT_TILE_POP_STAGGER_MS,
+        pops.map((v) => Animated.spring(v, { toValue: 1, friction: 5, tension: 140, useNativeDriver: true })),
+      );
+      const t = setTimeout(() => pop.start(), RESULT_TILE_POP_DELAY_MS);
+      return () => {
+        clearTimeout(t);
+        pop.stop();
+        pops.forEach((v) => v.setValue(1));
+      };
+    }
     const timers = tokens.map((_, i) =>
-      setTimeout(() => setRevealed((n) => Math.max(n, i + 1)), i * RESULT_TILE_FLIP_STAGGER_MS),
+      setTimeout(() => setRevealed((n) => Math.max(n, i + 1)), i * LOSS_REVEAL_STAGGER_MS),
+    );
+    const settleAt = (tokens.length - 1) * LOSS_REVEAL_STAGGER_MS + TILE_FLIP_DURATION_MS + LOSS_SETTLE_DELAY_MS;
+    timers.push(
+      setTimeout(() => {
+        if (reduceMotion) settle.setValue(1);
+        else Animated.timing(settle, { toValue: 1, duration: LOSS_SETTLE_MS, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+      }, settleAt),
     );
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,7 +110,16 @@ function WordReveal({ tokens, variant }: { tokens: string[]; variant: 'win' | 'l
   return (
     <View style={styles.wordRow}>
       {tokens.map((t, i) => (
-        <Tile key={i} letter={t} state={i < revealed ? revealedState : 'filled'} size={44} />
+        <Animated.View
+          key={i}
+          style={
+            variant === 'win'
+              ? { opacity: popOpacities[i], transform: [{ scale: pops[i] }] }
+              : { opacity: settleNodes.opacity, transform: [{ translateY: settleNodes.translateY }] }
+          }
+        >
+          <Tile letter={t} state={i < revealed ? revealedState : 'filled'} size={44} />
+        </Animated.View>
       ))}
     </View>
   );
@@ -157,7 +204,7 @@ function BoardMiniMap({ guesses }: { guesses: { states: LetterState[] }[] }) {
 const RANK_TINTS: Record<number, string> = { 1: '#F4B21F', 2: '#C7CBD1', 3: '#C58245' };
 // The player's own rank circle when outside the tinted top 3.
 const UNRANKED_CIRCLE = 'rgba(255,255,255,0.08)';
-const UNRANKED_TEXT = '#BDB6AA';
+const UNRANKED_TEXT = '#B9A6D3';
 const LOSS_RIBBON_HEIGHT = 40;
 
 function LeaderboardRow({ rank, name, points, isPlayer }: { rank: number; name: string; points: number; isPlayer: boolean }) {
@@ -308,6 +355,7 @@ export default function ResultModal({
                 </Animated.View>
               )}
               <Button3D
+                pressScale
                 width={56}
                 height={56}
                 borderRadius={28}
@@ -330,6 +378,7 @@ export default function ResultModal({
             </View>
             <View style={styles.nextButtonWrap}>
               <Button3D
+                pressScale
                 width="100%"
                 height={56}
                 borderRadius={16}
@@ -447,7 +496,7 @@ const styles = StyleSheet.create({
   statPillText: {
     fontSize: 10,
     fontFamily: FONTS.body,
-    color: '#D8D2C6',
+    color: '#D9C8EC',
   },
   streakPlusWrap: {
     position: 'absolute',
@@ -458,7 +507,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: FONTS.title,
     fontWeight: '700',
-    color: '#4A9D5B',
+    color: '#2FBF7A',
   },
   leaderTitle: {
     fontSize: 16,

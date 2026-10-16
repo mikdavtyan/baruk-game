@@ -5,11 +5,14 @@ Baruk is an offline Armenian word-guessing game: the player has six guesses to f
 ## Screens
 
 **Tab bar**:
-The bar always at the bottom of the main screen, with five tabs: ԽԱՆՈՒԹ (shop), ԱՌԱՋԱԴՐԱՆՔՆԵՐ (tasks), ՄԵՆՅՈՒ (the menu — the center tab, where the app opens), ԱՌԱՋԱՏԱՐՆԵՐ (leaderboard), ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ (settings). The active tab rises and shows its name. Pages (the Classic game, the fortune wheel, the shop over the game) cover it.
+The floating bar near the bottom of the main screen, with five tabs: ԽԱՆՈՒԹ (shop), ԱՌԱՋԱԴՐԱՆՔՆԵՐ (tasks), ՄԵՆՅՈՒ (the menu — the center tab, where the app opens), ԱՌԱՋԱՏԱՐՆԵՐ (leaderboard), ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ (settings). A raised bubble springs to the active tab, whose icon lifts and shows its name. Pages (the Classic game, the fortune wheel, the shop over the game) cover it.
 _Avoid_: bottom bar, navigation bar
 
 **Menu** (ՄԵՆՅՈՒ, home):
-The Home tab, where the app opens: the profile and coins at the top, the fortune wheel button under the coins, the game title and the game cards (ԴԱՍԱԿԱՆ, and ՕՐՎԱ ԲԱՌ coming soon) in the middle. Leaving a game for the menu changes nothing in it.
+The Home tab, where the app opens: the profile and coins at the top, the fortune wheel button under the coins, the logo (five tiles, Բ Ա Ռ ՈՒ Կ) with the tagline ԲԱՌԵՐԻ ԽԱՂ and the **streak chip**, then the game cards (ԴԱՍԱԿԱՆ, and ՕՐՎԱ ԲԱՌ coming soon). The space below the cards is kept free for things to come. Leaving a game for the menu changes nothing in it.
+
+**Streak chip**:
+The pill under the Home logo showing the current streak ("N ՕՐ ԱՆԸՆԴՄԵՋ") with a flame that grows with it (7+ days bigger, 30+ gold and purple). Invisible at 0.
 
 **Fortune wheel** (ԲԱԽՏԻ ԱՆԻՎ):
 A button on the menu (it idly spins, with a ՊՏՏԻ՛Ր badge) that opens its own page. The page is empty for now; prizes are not decided.
@@ -24,7 +27,7 @@ Three small goals a day (win games, win in few guesses, use a Hint or Darts), pi
 _Avoid_: quests, missions, achievements (those would be permanent)
 
 **Settings** (ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ):
-The Settings tab: the dark theme and haptics (both remembered), how to play, about, the profile, and resetting progress (coins, points, streak, items and the current game; the profile and settings stay). Saving progress and feedback are coming soon.
+The Settings tab: the dark theme, haptics (ԹՐԹՌՈՑ) and sounds (ՁԱՅՆԵՐ) (all remembered), how to play, about, the profile, and resetting progress (coins, points, streak, items and the current game; the profile and settings stay). Saving progress and feedback are coming soon.
 
 **Classic** (ԴԱՍԱԿԱՆ):
 The game itself, as a page pushed over the menu. The only game mode; **Word of the day** (ՕՐՎԱ ԲԱՌ) is announced as coming soon and does nothing yet.
@@ -130,3 +133,12 @@ The coins (optionally multiplied by watching an ad), points and streak credited 
 
 **Share bonus**:
 Coins credited once per secret word for sharing a result, on platforms where the share can be confirmed.
+
+## Look and feel
+
+**Theme**:
+The two looks: **pomegranate night** (dark, plum) and **apricot** (light). Switching spreads the new one in a growing circle from the control that was pressed (the Settings switch or the game header's sun/moon).
+_Avoid_: skin, mode (a mode is Classic / Word of the day)
+
+**Sounds**:
+Short game sounds (key taps, flips, coins, tabs, buttons, claims) and a win jingle on kanun and duduk, at a quiet volume, silent when the iPhone's silent switch is on. Turned off with ՁԱՅՆԵՐ in Settings.

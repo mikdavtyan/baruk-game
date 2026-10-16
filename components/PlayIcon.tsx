@@ -1,42 +1,23 @@
-import { StyleSheet, View } from 'react-native';
+import { memo } from 'react';
+import Svg, { Path } from 'react-native-svg';
 
 type Props = {
   size?: number;
   color?: string;
 };
 
-// Small filled "play" triangle for the watch-a-video retry option. Built
-// with a plain border trick — no icon library.
-export default function PlayIcon({ size = 16, color = '#ffffff' }: Props) {
+// Small filled "play" triangle for the watch-a-video options, with soft
+// rounded corners (a same-color round-joined stroke) to match the game-icon
+// family. The triangle's centroid sits on the box center, so it looks
+// centered on a round button.
+const TRIANGLE = 'M21 13 L53 32 L21 51 Z';
+
+function PlayIcon({ size = 16, color = '#ffffff' }: Props) {
   return (
-    <View style={[styles.wrapper, { width: size, height: size }]}>
-      <View
-        style={[
-          styles.triangle,
-          {
-            borderTopWidth: size * 0.55,
-            borderBottomWidth: size * 0.55,
-            borderLeftWidth: size * 0.9,
-            borderLeftColor: color,
-          },
-        ]}
-      />
-    </View>
+    <Svg width={size} height={size} viewBox="0 0 64 64">
+      <Path d={TRIANGLE} fill={color} stroke={color} strokeWidth={9} strokeLinejoin="round" />
+    </Svg>
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  triangle: {
-    width: 0,
-    height: 0,
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent',
-    // Optical centering: a triangle's bounding box isn't visually centered
-    // on its point, so nudge it slightly right of the box center.
-    marginLeft: 2,
-  },
-});
+export default memo(PlayIcon);

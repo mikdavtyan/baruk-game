@@ -1,8 +1,11 @@
 import { memo, ReactNode, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { SymbolView } from 'expo-symbols';
+import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import ScreenGlow from './ScreenGlow';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import PressScale from './PressScale';
+import TabEnter from './TabEnter';
 import BowIcon from './BowIcon';
+import HintIcon from './HintIcon';
 import Coin from './Coin';
 import IconButton from './IconButton';
 import PlayIcon from './PlayIcon';
@@ -17,7 +20,7 @@ import {
   SHOP_ADS_USED_UP_TOAST,
   SHOP_NOT_ENOUGH_COINS_TOAST,
 } from '../constants/shop';
-import { FONTS, HEADER_HEIGHT, KEY_EDGE_HEIGHT } from '../constants/theme';
+import { FONTS, HEADER_HEIGHT, KEY_EDGE_HEIGHT, TAB_BAR_SPACE } from '../constants/theme';
 import type { Inventory } from '../lib/gameStorage';
 import { packDiscountPercent } from '../lib/shop';
 import { useTheme, useThemeSnapshot } from '../lib/ThemeContext';
@@ -55,6 +58,7 @@ const TAB_EDGES = ['top', 'left', 'right'] as const;
 function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onWatchAd }: Props) {
   const { color, textColor } = useTheme();
   const { theme } = useThemeSnapshot();
+  const insets = useSafeAreaInsets();
   const [toast, setToast] = useState<{ id: number; message: string } | null>(null);
   const showToast = (message: string) => setToast((t) => ({ id: (t?.id ?? 0) + 1, message }));
   const [adLoading, setAdLoading] = useState(false);
@@ -86,7 +90,7 @@ function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onW
 
   const itemIcon = (item: keyof Inventory) =>
     item === 'hint' ? (
-      <SymbolView name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }} size={ITEM_ICON_SIZE} tintColor={theme.keyText} />
+      <HintIcon size={ITEM_ICON_SIZE} />
     ) : (
       <BowIcon size={ITEM_ICON_SIZE} volleyId={0} shotCount={0} />
     );
@@ -113,6 +117,7 @@ function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onW
       edges={onBack ? PAGE_EDGES : TAB_EDGES}
       accessibilityElementsHidden={!visible}
     >
+      <ScreenGlow />
       {/* Same height and the same IconButton as the game's own header, so the
           back arrow lines up with the header's buttons. */}
       <View style={styles.header}>
@@ -137,11 +142,16 @@ function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onW
         </View>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        // As a tab, room for the floating tab bar.
+        contentContainerStyle={[styles.scrollContent, !onBack && { paddingBottom: TAB_BAR_SPACE + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         {sectionTitle('ՔՈ ՊԱՇԱՐԸ')}
         <View style={styles.row}>
-          {(['hint', 'darts'] as const).map((item) => (
-            <View key={item} style={styles.half}>
+          {(['hint', 'darts'] as const).map((item, index) => (
+            <TabEnter key={item} visible={visible} index={index} style={styles.half}>
               {card(
                 <View style={styles.ownRow}>
                   <View style={styles.iconBadge}>{itemIcon(item)}</View>
@@ -151,20 +161,20 @@ function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onW
                   </View>
                 </View>,
               )}
-            </View>
+            </TabEnter>
           ))}
         </View>
 
         {sectionTitle('ՀԶՈՐՈՒԹՅՈՒՆՆԵՐ')}
         <View style={[styles.row, styles.wrap]}>
-          {ITEM_PACKS.map((pack) => {
+          {ITEM_PACKS.map((pack, index) => {
             const name = `${pack.quantity} ${ITEM_NAMES[pack.item]}`;
             const discount = packDiscountPercent(pack);
             const affordable = coins >= pack.price;
             return (
-              <Pressable
-                key={`${pack.item}-${pack.quantity}`}
-                style={({ pressed }) => [styles.half, pressed && styles.pressed, !affordable && styles.dimmed]}
+              <TabEnter key={`${pack.item}-${pack.quantity}`} visible={visible} index={index + 2} kind="pop" style={styles.half}>
+              <PressScale
+                style={!affordable && styles.dimmed}
                 onPress={() => handlePack(pack)}
                 accessibilityRole="button"
                 accessibilityLabel={`Գնել ${name}`}
@@ -184,14 +194,16 @@ function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onW
                     <Text style={styles.tagText}>{`-${discount}%`}</Text>
                   </Animated.View>
                 )}
-              </Pressable>
+              </PressScale>
+              </TabEnter>
             );
           })}
         </View>
 
         {sectionTitle('ՄԵՏԱՂԱԴՐԱՄՆԵՐ')}
-        <Pressable
-          style={({ pressed }) => [pressed && styles.pressed, adsLeft <= 0 && styles.dimmed]}
+        <TabEnter visible={visible} index={ITEM_PACKS.length + 2}>
+        <PressScale
+          style={adsLeft <= 0 && styles.dimmed}
           onPress={handleAd}
           accessibilityRole="button"
           accessibilityLabel="Դիտել գովազդ"
@@ -221,7 +233,8 @@ function ShopScreen({ onBack, visible, coins, inventory, adsLeft, onBuyPack, onW
               </View>
             </View>,
           )}
-        </Pressable>
+        </PressScale>
+        </TabEnter>
 
         <View style={[styles.row, styles.coinPacks]}>
           {COIN_PACKS_COMING_SOON.map((amount) => (
@@ -268,7 +281,7 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     fontSize: 20,
-    fontFamily: FONTS.title,
+    fontFamily: FONTS.display,
     fontWeight: '700',
     letterSpacing: 20 * 0.08,
     textAlign: 'center',
@@ -318,9 +331,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderBottomWidth: KEY_EDGE_HEIGHT,
     padding: 12,
-  },
-  pressed: {
-    opacity: 0.7,
   },
   dimmed: {
     opacity: DIMMED_OPACITY,

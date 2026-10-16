@@ -42,3 +42,20 @@ export function triggerWarningHaptic(): void {
   if (!enabled) return;
   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
 }
+
+// A win's celebration: a success notification, then two quick light taps.
+export function triggerWinHaptic(): void {
+  if (!enabled) return;
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  [140, 260].forEach((ms) =>
+    setTimeout(() => {
+      if (enabled) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }, ms),
+  );
+}
+
+// A loss: one soft bump — nothing harsh.
+export function triggerLossHaptic(): void {
+  if (!enabled) return;
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Soft).catch(() => {});
+}

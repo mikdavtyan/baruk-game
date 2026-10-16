@@ -3,6 +3,7 @@ import Button3D from './Button3D';
 import { FONTS, INVALID_COLOR, INVALID_EDGE_COLOR } from '../constants/theme';
 import { GuessValidity } from '../lib/guessValidity';
 import { triggerKeyHaptic } from '../lib/haptics';
+import { playSound } from '../lib/sounds';
 import { useTheme } from '../lib/ThemeContext';
 
 type Props = {
@@ -32,6 +33,7 @@ export default function SubmitButton({ validity, onPress, onClearInvalid }: Prop
   // a haptic for a press that didn't actually submit/clear anything.
   const handlePress = () => {
     triggerKeyHaptic();
+    if (validity === 'valid') playSound('button'); // a clear plays the invalid sound
     if (validity === 'invalid') {
       onClearInvalid();
     } else {

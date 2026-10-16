@@ -1,112 +1,150 @@
-import { memo, useId } from 'react';
-import Svg, { Circle, Defs, G, LinearGradient, Path, RadialGradient, Stop } from 'react-native-svg';
+import { memo } from 'react';
+import Svg, { Circle, ClipPath, Defs, G, LinearGradient, Path, RadialGradient, Stop } from 'react-native-svg';
+import { DEPTH_OFFSET, Highlight, OUTLINE, useSvgIds } from './gameIconArt';
 
-// The fortune wheel (ԲԱԽՏԻ ԱՆԻՎ) game icon, in the coin's family
-// (design-system.md): a darker offset base for depth, a chunky gold rim with a
-// thick rounded outline, 8 cheerful segments, a gold hub and a rounded red
-// pointer on top. Fixed game-art colors, the same in both themes.
+// The fortune wheel (ԲԱԽՏԻ ԱՆԻՎ) game icon — the reference of the icon family
+// (design-system.md): a darker offset base for depth, a glossy gold rim with
+// white studs and a thick rounded outline, 8 cheerful wedges (each shaded
+// darker toward the hub), a gold hub with a pomegranate gem, a glass sheen and
+// a rounded pomegranate pointer on top. Fixed game-art colors, the same in
+// both themes.
 const CX = 32;
 const CY = 33;
+const RIM_RADIUS = 26;
 const SEGMENT_RADIUS = 20;
-const SEGMENT_COLORS = ['#F2564B', '#FFC93C', '#3FA9F5', '#5CC167', '#F2564B', '#FFC93C', '#3FA9F5', '#5CC167'];
-const OUTLINE = '#6B3A0A';
+const STUD_RADIUS = 23;
+// [light (outer edge), deep (toward the hub)] per wedge, alternating warm and cool.
+const SEGMENTS: [string, string][] = [
+  ['#FF6F86', '#D42F4E'], // pomegranate
+  ['#FFE08A', '#F5A524'], // gold
+  ['#5EE3A6', '#22A066'], // green
+  ['#7CC8FF', '#2E86E0'], // sky
+  ['#FF6F86', '#D42F4E'],
+  ['#FFE08A', '#F5A524'],
+  ['#5EE3A6', '#22A066'],
+  ['#7CC8FF', '#2E86E0'],
+];
+const STEP = (Math.PI * 2) / SEGMENTS.length;
+const polar = (r: number, a: number) => `${(CX + r * Math.cos(a)).toFixed(2)} ${(CY + r * Math.sin(a)).toFixed(2)}`;
 
-// One wedge of the wheel, `i` of 8, starting at the top.
+// One wedge of the wheel, `i` of 8, centered on the top for i = 0.
 function wedge(i: number): string {
-  const step = (Math.PI * 2) / SEGMENT_COLORS.length;
-  const a0 = -Math.PI / 2 + i * step - step / 2;
-  const a1 = a0 + step;
-  const x0 = CX + SEGMENT_RADIUS * Math.cos(a0);
-  const y0 = CY + SEGMENT_RADIUS * Math.sin(a0);
-  const x1 = CX + SEGMENT_RADIUS * Math.cos(a1);
-  const y1 = CY + SEGMENT_RADIUS * Math.sin(a1);
-  return `M${CX} ${CY} L${x0.toFixed(2)} ${y0.toFixed(2)} A${SEGMENT_RADIUS} ${SEGMENT_RADIUS} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)} Z`;
+  const a0 = -Math.PI / 2 + i * STEP - STEP / 2;
+  return `M${CX} ${CY} L${polar(SEGMENT_RADIUS, a0)} A${SEGMENT_RADIUS} ${SEGMENT_RADIUS} 0 0 1 ${polar(SEGMENT_RADIUS, a0 + STEP)} Z`;
 }
-const WEDGES = SEGMENT_COLORS.map((_, i) => wedge(i));
-const DIVIDERS = SEGMENT_COLORS.map((_, i) => {
-  const a = -Math.PI / 2 + i * ((Math.PI * 2) / SEGMENT_COLORS.length) - Math.PI / SEGMENT_COLORS.length;
-  return `M${CX} ${CY} L${(CX + SEGMENT_RADIUS * Math.cos(a)).toFixed(2)} ${(CY + SEGMENT_RADIUS * Math.sin(a)).toFixed(2)}`;
-}).join(' ');
+const WEDGES = SEGMENTS.map((_, i) => wedge(i));
+const DIVIDERS = SEGMENTS.map((_, i) => `M${polar(6, -Math.PI / 2 + (i - 0.5) * STEP)} L${polar(SEGMENT_RADIUS, -Math.PI / 2 + (i - 0.5) * STEP)}`).join(' ');
+// 16 studs on the rim: one on each divider, one mid-wedge.
+const STUDS = Array.from({ length: 16 }, (_, i) => {
+  const a = -Math.PI / 2 + (i - 1) * (STEP / 2);
+  return { x: CX + STUD_RADIUS * Math.cos(a), y: CY + STUD_RADIUS * Math.sin(a), big: i % 2 === 1 };
+});
 
 // `layer` draws one part, for Home's spinning wheel button (WheelButton): the
 // `base` (the offset depth disc), the `wheel` (rim, segments, studs, hub — the
-// part that turns) and the `top` (highlight and pointer, which stay still, as
-// on a real wheel). Stacked, they make the whole icon; their viewBox is
-// shifted by 1 so the wheel's center is the view's center (its rotation axis).
+// part that turns) and the `top` (sheen, highlight and pointer, which stay
+// still, as on a real wheel). Stacked, they make the whole icon; their viewBox
+// is shifted by 1 so the wheel's center is the view's center (its rotation
+// axis). Every shading of the turning part is radial around that center, so
+// the wheel looks the same at any angle while it spins.
 export type WheelLayer = 'base' | 'wheel' | 'top';
 
 function FortuneWheelIcon({ size = 28, layer }: { size?: number; layer?: WheelLayer }) {
   const show = (part: WheelLayer) => layer === undefined || layer === part;
-  const uid = useId().replace(/[^a-zA-Z0-9]/g, '_');
-  const id = (name: string) => `${uid}-${name}`;
-  const ref = (name: string) => `url(#${id(name)})`;
+  const { id, ref } = useSvgIds();
   return (
     <Svg width={size} height={size} viewBox={layer ? '0 1 64 64' : '0 0 64 64'}>
       <Defs>
-        <LinearGradient id={id('rim')} x1="0.15" y1="0.1" x2="0.85" y2="0.9">
-          <Stop offset="0" stopColor="#FFF1A6" />
-          <Stop offset="0.5" stopColor="#F7C23A" />
-          <Stop offset="1" stopColor="#C47A0B" />
-        </LinearGradient>
+        {/* The rim: a radial gold band, bright in the middle of the band. */}
+        <RadialGradient id={id('rim')} cx={CX} cy={CY} r={RIM_RADIUS} gradientUnits="userSpaceOnUse">
+          <Stop offset="0.74" stopColor="#C47A0B" />
+          <Stop offset="0.86" stopColor="#FFE58A" />
+          <Stop offset="0.93" stopColor="#F7C23A" />
+          <Stop offset="1" stopColor="#B86E08" />
+        </RadialGradient>
+        {SEGMENTS.map(([light, deep], i) => (
+          <RadialGradient key={i} id={id(`seg${i}`)} cx={CX} cy={CY} r={SEGMENT_RADIUS} gradientUnits="userSpaceOnUse">
+            <Stop offset="0.25" stopColor={deep} />
+            <Stop offset="0.8" stopColor={light} />
+            <Stop offset="1" stopColor={deep} />
+          </RadialGradient>
+        ))}
         <RadialGradient id={id('hub')} cx="0.35" cy="0.3" r="0.8">
           <Stop offset="0" stopColor="#FFF6C4" />
-          <Stop offset="1" stopColor="#E09A12" />
+          <Stop offset="0.6" stopColor="#FFC93C" />
+          <Stop offset="1" stopColor="#D88A0C" />
         </RadialGradient>
-        <LinearGradient id={id('pointer')} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#FF7A6B" />
-          <Stop offset="1" stopColor="#C93A2E" />
+        <RadialGradient id={id('gem')} cx="0.35" cy="0.3" r="0.8">
+          <Stop offset="0" stopColor="#FF9AAA" />
+          <Stop offset="1" stopColor="#C8243F" />
+        </RadialGradient>
+        <LinearGradient id={id('pointer')} x1="0" y1="0" x2="0.3" y2="1">
+          <Stop offset="0" stopColor="#FF8197" />
+          <Stop offset="1" stopColor="#C8243F" />
         </LinearGradient>
+        <ClipPath id={id('face')}>
+          <Circle cx={CX} cy={CY} r={RIM_RADIUS - 1.5} />
+        </ClipPath>
       </Defs>
 
       {/* Depth: the same disc, darker, offset down-left. */}
-      {show('base') && <Circle cx={CX - 1.5} cy={CY + 3} r={26} fill="#8E520A" />}
+      {show('base') && (
+        <G transform={DEPTH_OFFSET}>
+          <Circle cx={CX} cy={CY} r={RIM_RADIUS + 1.5} fill="#7A3E06" />
+        </G>
+      )}
       {show('wheel') && (
         <G>
           {/* Rim. */}
-          <Circle cx={CX} cy={CY} r={26} fill={ref('rim')} stroke={OUTLINE} strokeWidth={3} />
-          {/* Segments, divided by soft white spokes. */}
-          <G stroke={OUTLINE} strokeWidth={0.8} strokeOpacity={0.35}>
-            {WEDGES.map((d, i) => (
-              <Path key={i} d={d} fill={SEGMENT_COLORS[i]} />
-            ))}
-          </G>
-          <Path d={DIVIDERS} stroke="#FFFFFF" strokeOpacity={0.85} strokeWidth={1.8} strokeLinecap="round" />
-          <Circle cx={CX} cy={CY} r={SEGMENT_RADIUS} fill="none" stroke={OUTLINE} strokeOpacity={0.6} strokeWidth={1.6} />
-          {/* Rim studs. */}
-          <Circle
-            cx={CX}
-            cy={CY}
-            r={23}
-            fill="none"
-            stroke="#FFF7CC"
-            strokeWidth={2.2}
-            strokeLinecap="round"
-            strokeDasharray="0 9.03"
-          />
-          {/* Hub. */}
-          <Circle cx={CX} cy={CY} r={5.5} fill={ref('hub')} stroke={OUTLINE} strokeWidth={2} />
+          <Circle cx={CX} cy={CY} r={RIM_RADIUS} fill={ref('rim')} stroke={OUTLINE} strokeWidth={3} />
+          {/* Wedges, each shaded toward the hub. */}
+          {WEDGES.map((d, i) => (
+            <Path key={i} d={d} fill={ref(`seg${i}`)} />
+          ))}
+          <Path d={DIVIDERS} stroke="#FFFFFF" strokeOpacity={0.9} strokeWidth={1.6} strokeLinecap="round" />
+          <Circle cx={CX} cy={CY} r={SEGMENT_RADIUS} fill="none" stroke={OUTLINE} strokeWidth={2} />
+          {/* Rim studs: little white lights. */}
+          {STUDS.map((s, i) => (
+            <Circle
+              key={i}
+              cx={s.x}
+              cy={s.y}
+              r={s.big ? 1.9 : 1.3}
+              fill="#FFFFFF"
+              stroke={s.big ? '#B86E08' : undefined}
+              strokeWidth={s.big ? 0.6 : 0}
+              opacity={s.big ? 1 : 0.85}
+            />
+          ))}
+          {/* Hub with a pomegranate gem. */}
+          <Circle cx={CX} cy={CY} r={6.2} fill={ref('hub')} stroke={OUTLINE} strokeWidth={2} />
+          <Circle cx={CX} cy={CY} r={2.6} fill={ref('gem')} />
         </G>
       )}
       {show('top') && (
         <G>
-          {/* A soft highlight on the upper left. */}
+          {/* A still glass sheen over the upper-left of the face… */}
+          <G clipPath={ref('face')}>
+            <Path d="M2 36 C10 18 22 10 44 6 L4 4 Z" fill="#FFFFFF" opacity={0.18} />
+          </G>
+          {/* …and the family's soft highlight stroke on the rim. */}
+          <Highlight d="M13.5 26 A19.5 19.5 0 0 1 22.5 15.6" />
+          {/* Pointer: a rounded drop pointing down into the wheel, with its own depth. */}
+          <G transform={DEPTH_OFFSET}>
+            <Path
+              d="M25.6 3.8 Q32 0.8 38.4 3.8 Q40 5.3 38.9 7.3 L33.8 15.2 Q32 17.3 30.2 15.2 L25.1 7.3 Q24 5.3 25.6 3.8 Z"
+              fill="#7A1E2E"
+              opacity={0.55}
+            />
+          </G>
           <Path
-            d="M17 24 A17 17 0 0 1 28 15"
-            stroke="#FFFFFF"
-            strokeOpacity={0.55}
-            strokeWidth={3}
-            strokeLinecap="round"
-            fill="none"
-          />
-          {/* Pointer: a rounded drop pointing down into the wheel. */}
-          <Path
-            d="M26 3.5 Q32 1 38 3.5 Q39.5 5 38.5 7 L33.6 14.5 Q32 16.4 30.4 14.5 L25.5 7 Q24.5 5 26 3.5 Z"
+            d="M25.6 3.8 Q32 0.8 38.4 3.8 Q40 5.3 38.9 7.3 L33.8 15.2 Q32 17.3 30.2 15.2 L25.1 7.3 Q24 5.3 25.6 3.8 Z"
             fill={ref('pointer')}
             stroke={OUTLINE}
-            strokeWidth={2.2}
+            strokeWidth={2.4}
             strokeLinejoin="round"
           />
-          <Circle cx={30} cy={5.6} r={1.4} fill="#FFFFFF" fillOpacity={0.7} />
+          <Circle cx={29.6} cy={5.6} r={1.5} fill="#FFFFFF" fillOpacity={0.8} />
         </G>
       )}
     </Svg>

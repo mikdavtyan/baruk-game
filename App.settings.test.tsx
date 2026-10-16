@@ -1,5 +1,5 @@
-// The Settings tab (ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ): a dark-theme switch and a haptics switch
-// (both saved and back after a relaunch — the theme already on the first
+// The Settings tab (ԿԱՐԳԱՎՈՐՈՒՄՆԵՐ): a dark-theme switch, a haptics switch and
+// a sounds switch (all saved and back after a relaunch — the theme already on the first
 // render), how to play and about popups, the profile popup, a coming-soon
 // save-progress row, a feedback row, and a progress reset behind a
 // confirmation (it keeps the profile and the settings).
@@ -19,10 +19,24 @@ jest.mock('expo-haptics', () => ({
   notificationAsync: jest.fn(() => Promise.resolve()),
   selectionAsync: jest.fn(() => Promise.resolve()),
   performAndroidHapticsAsync: jest.fn(() => Promise.resolve()),
-  ImpactFeedbackStyle: { Light: 'light' },
-  NotificationFeedbackType: { Warning: 'warning' },
+  ImpactFeedbackStyle: { Light: 'light', Soft: 'soft' },
+  NotificationFeedbackType: { Warning: 'warning', Success: 'success' },
   AndroidHaptics: { Keyboard_Tap: 'keyboard-tap' },
 }));
+// Silent audio players, kept in a list of our own (lib/sounds.ts creates them
+// once, and clearAllMocks would forget a jest.fn's results).
+jest.mock('expo-audio', () => {
+  const players: unknown[] = [];
+  return {
+    __players: players,
+    createAudioPlayer: () => {
+      const player = { volume: 1, play: jest.fn(), seekTo: () => Promise.resolve(), remove: () => {} };
+      players.push(player);
+      return player;
+    },
+    setAudioModeAsync: () => Promise.resolve(),
+  };
+});
 jest.mock('./constants/playableWords.json', () => ['գարուն', 'ազնիվ', 'ազդում', 'բետոն', 'բդեշխ', 'բեկել']);
 jest.mock('expo-font', () => ({ useFonts: () => [true, null] }));
 jest.mock('./lib/measureWindow', () => ({ measureWindow: () => Promise.resolve(null) }));
@@ -95,7 +109,7 @@ const anyHaptic = () =>
     (fn) => (fn as jest.Mock).mock.calls.length > 0,
   );
 
-it('lists its rows: the two switches, how to play, about, profile, save, reset and feedback', async () => {
+it('lists its rows: the three switches, how to play, about, profile, save, reset and feedback', async () => {
   await renderApp();
   await openSettings();
   const labels = settings()
@@ -104,6 +118,7 @@ it('lists its rows: the two switches, how to play, about, profile, save, reset a
   expect(labels).toEqual([
     'ՄՈՒԳ ԹԵՄԱ',
     'ԹՐԹՌՈՑ',
+    'ՁԱՅՆԵՐ',
     'ԻՆՉՊԵ՞Ս ԽԱՂԱԼ',
     'ՊՐՈՖԻԼ',
     'ՊԱՀՊԱՆԵԼ ԱՐԴՅՈՒՆՔԸ',
@@ -173,6 +188,37 @@ describe('haptics', () => {
   });
 });
 
+// The audio players (lib/sounds.ts creates them once and reuses them).
+const audioPlayers = (): any[] => require('expo-audio').__players;
+const anySound = () => audioPlayers().some((p: any) => p.play.mock.calls.length > 0);
+const clearSounds = () => audioPlayers().forEach((p: any) => p.play.mockClear());
+
+describe('sounds', () => {
+  it('off: no sound at all (a key tap included); it is saved and stays off after a relaunch', async () => {
+    await renderApp();
+    await openSettings();
+    expect(switchOn('ՁԱՅՆԵՐ')).toBe(true);
+    await press('ՁԱՅՆԵՐ');
+    expect(switchOn('ՁԱՅՆԵՐ')).toBe(false);
+    expect(await stored('wordle:sounds')).toBe(false);
+    clearSounds();
+    await openClassic(root);
+    await act(async () => tapKey(root, letterLabel('ա')));
+    expect(anySound()).toBe(false);
+    await relaunch();
+    await openSettings();
+    expect(switchOn('ՁԱՅՆԵՐ')).toBe(false);
+  });
+
+  it('on (the default): a key tap plays its sound', async () => {
+    await renderApp();
+    clearSounds();
+    await openClassic(root);
+    await act(async () => tapKey(root, letterLabel('ա')));
+    expect(anySound()).toBe(true);
+  });
+});
+
 it('ԻՆՉՊԵ՞Ս ԽԱՂԱԼ opens the rules popup', async () => {
   await renderApp();
   await openSettings();
@@ -213,6 +259,7 @@ describe('resetting progress', () => {
       ['wordle:profile', JSON.stringify({ name: 'Աննա', avatarId: 'sky' })],
       ['wordle:darkMode', 'true'],
       ['wordle:haptics', 'false'],
+      ['wordle:sounds', 'false'],
     ]);
   };
 
@@ -247,6 +294,7 @@ describe('resetting progress', () => {
     expect(await stored('wordle:profile')).toEqual({ name: 'Աննա', avatarId: 'sky' });
     expect(await stored('wordle:darkMode')).toBe(true);
     expect(await stored('wordle:haptics')).toBe(false);
+    expect(await stored('wordle:sounds')).toBe(false);
     // The app starts over from the cleared state: Home, 0 points.
     expect(textsIn(menu(root))).toContain('0 ՄԻԱՎՈՐ');
   });

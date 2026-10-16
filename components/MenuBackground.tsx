@@ -1,11 +1,22 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, useWindowDimensions } from 'react-native';
-import { FONTS, MENU_BG_TILE_BORDER, MENU_BG_TILE_CORNER_RATIO, MENU_BG_TILES } from '../constants/theme';
+import Rosette from './Rosette';
+import {
+  FONTS,
+  HOME_ROSETTE_SIZE,
+  HOME_ROSETTE_TURN_MS,
+  MENU_BG_TILE_BORDER,
+  MENU_BG_TILE_CORNER_RATIO,
+  MENU_BG_TILES,
+} from '../constants/theme';
 import { letterLabel } from '../lib/letterDisplay';
 import { useTheme } from '../lib/ThemeContext';
 import { useAppActive } from '../lib/useAppActive';
+import { useLoopWhile } from '../lib/useLoopWhile';
 
-// The menu's calm background: a few very faint letter tiles (board-tile
+// The menu's calm background: an Armenian star rosette in faint gold turning
+// very slowly at the top (one native rotate loop, HOME_ROSETTE_TURN_MS a
+// turn, resuming where it stopped), and a few very faint letter tiles (board-tile
 // style) drifting slowly upward with a slight rotation, each at its own pace
 // (MENU_BG_TILES), looping seamlessly — a tile leaves above the screen and
 // comes back below it.
@@ -40,6 +51,27 @@ function MenuBackground({ paused }: { paused: boolean }) {
   );
 
   const running = !paused && appActive && !reduceMotion;
+  const [turn] = useState(() => new Animated.Value(0));
+  const [rosetteRotate] = useState(() => turn.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }));
+  const turnFromRef = useRef(0);
+  useLoopWhile(
+    running,
+    () =>
+      Animated.sequence([
+        // Finish the turn it was paused in, then whole turns.
+        Animated.timing(turn, {
+          toValue: 1,
+          duration: HOME_ROSETTE_TURN_MS * (1 - turnFromRef.current),
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(turn, { toValue: 0, duration: 0, useNativeDriver: true }),
+        Animated.loop(
+          Animated.timing(turn, { toValue: 1, duration: HOME_ROSETTE_TURN_MS, easing: Easing.linear, useNativeDriver: true }),
+        ),
+      ]),
+    () => turn.stopAnimation((v) => (turnFromRef.current = v % 1)),
+  );
   useEffect(() => {
     if (!running) return;
     const loops = tiles.map(({ clock }, i) =>
@@ -68,6 +100,14 @@ function MenuBackground({ paused }: { paused: boolean }) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
+      <Animated.View
+        style={[
+          styles.rosette,
+          { left: width / 2 - HOME_ROSETTE_SIZE / 2, transform: [{ rotate: rosetteRotate }] },
+        ]}
+      >
+        <Rosette size={HOME_ROSETTE_SIZE} />
+      </Animated.View>
       {MENU_BG_TILES.map((tile, i) => {
         const scored = tile.kind !== 'empty';
         return (
@@ -107,6 +147,12 @@ function MenuBackground({ paused }: { paused: boolean }) {
 export default memo(MenuBackground);
 
 const styles = StyleSheet.create({
+  rosette: {
+    position: 'absolute',
+    top: -HOME_ROSETTE_SIZE * 0.27,
+    width: HOME_ROSETTE_SIZE,
+    height: HOME_ROSETTE_SIZE,
+  },
   tile: {
     position: 'absolute',
     top: 0,
@@ -115,7 +161,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   letter: {
-    fontFamily: FONTS.tile,
+    fontFamily: FONTS.display,
     includeFontPadding: false,
   },
 });

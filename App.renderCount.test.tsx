@@ -6,7 +6,7 @@ import { describeCounts, startCounting, stopCounting } from './test-utils/render
 import React from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import App from './App';
-import { THEME_FADE_MS } from './constants/theme';
+import { THEME_REVEAL_MS } from './constants/theme';
 import { letterLabel } from './lib/letterDisplay';
 import { tapKey } from './test-utils/keyboardTouch';
 import { openClassic } from './test-utils/navigation';
@@ -132,7 +132,7 @@ it('one keystroke re-renders only the typed row (at most 2 tiles), and a theme t
   });
   const toggle = await measure(async () => {
     await press('Toggle dark mode');
-    await advance(THEME_FADE_MS * 2);
+    await advance(THEME_REVEAL_MS * 2);
   });
   console.log(
     [

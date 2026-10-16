@@ -1,13 +1,14 @@
 import { memo, RefObject } from 'react';
 import { StyleSheet, View } from 'react-native';
 import BowIcon from './BowIcon';
+import HintIcon from './HintIcon';
 import PowerUpButton from './PowerUpButton';
 import SubmitButton from './SubmitButton';
 import { WIN_FLOW_CONFIG } from '../constants/winFlow';
 import { GuessValidity } from '../lib/guessValidity';
-import { ThemedSymbol } from './ThemedSnapshot';
 
-const HINT_ICON = { ios: 'magnifyingglass', android: 'search', web: 'search' } as const;
+// One module-level element (fixed colors, never re-rendered by App).
+const HINT_ICON = <HintIcon size={26} />;
 
 // Each power-up shows its item count (a red badge) while any are held, and
 // its coin price (WIN_FLOW_CONFIG) once none are left — see PowerUpButton.
@@ -53,11 +54,7 @@ function BottomControls({
   return (
     <View style={styles.row}>
       <PowerUpButton
-        icon={
-          // A snapshot-tinted leaf (a SymbolView's tintColor can't take
-          // `color()`), so a theme toggle re-renders only the icon.
-          <ThemedSymbol name={HINT_ICON} size={24} token="keyText" />
-        }
+        icon={HINT_ICON}
         ref={hintButtonRef}
         label="Hint"
         price={WIN_FLOW_CONFIG.hintPrice}
